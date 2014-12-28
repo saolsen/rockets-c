@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #include "game.h"
 
 static int round_to_int(float n) {

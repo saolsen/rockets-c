@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <dlfcn.h>
-#include <sdl2/sdl.h>
+#include <SDL2/SDL.h>
 
 #include "game.h"
 
@@ -13,7 +13,6 @@ float sdl_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
 {
     return ((float)(current_counter - old_counter) /
             (float)SDL_GetPerformanceFrequency());
-
 }
 
 bool sdl_handle_event(SDL_Event *event)
@@ -63,13 +62,17 @@ int main(int argc, char* argv[])
                                           screen_height,
                                           SDL_WINDOW_RESIZABLE);
 
-    if (!window) printf("Error creating window: %s", SDL_GetError());
+    if (!window) {
+      printf("Error creating window: %s", SDL_GetError());
+    }
 
     SDL_Renderer *renderer = SDL_CreateRenderer(window,
                                                 -1,
                                                 0); // Is 0 accelerated?
 
-    if (!renderer) printf("Error creating renderer: %s", SDL_GetError());
+    if (!renderer) {
+      printf("Error creating renderer: %s", SDL_GetError());
+    }
 
     /* Let sdl stretch our texture to the real window size. */
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
@@ -80,8 +83,10 @@ int main(int argc, char* argv[])
                                              SDL_TEXTUREACCESS_STREAMING,
                                              screen_width,
                                              screen_height);
-
-    if (!texture) printf("Error creating texture: %s", SDL_GetError());
+    
+    if (!texture) {
+      printf("Error creating texture: %s", SDL_GetError());
+    }
 
     uint32_t *pixel_buffer;
     void *gamestate;
@@ -96,10 +101,11 @@ int main(int argc, char* argv[])
     while (running) {
 
         //todo(stephen): live reload of game
-        void* library_pointer = dlopen(GAME_LIBRARY, RTLD_LAZY);
-        if (!library_pointer)
+        void* handle = dlopen(GAME_LIBRARY, RTLD_NOW);
+        if (!handle) {
             printf("Error loading library %s\n", dlerror());
-        void (*fn)(uint32_t*, int) = dlsym(library_pointer, GAME_FUNCTION);
+        }
+        void (*fn)(uint32_t*, int) = dlsym(handle, GAME_FUNCTION);
         
         //todo(stephen): event handling
         SDL_Event event;
@@ -119,8 +125,9 @@ int main(int argc, char* argv[])
         SDL_RenderCopy(renderer, texture, NULL, NULL);
 
         /* delay the rest of the frame */
-        int seconds_elapsed = sdl_get_seconds_elapsed(last_counter,
-                                                      SDL_GetPerformanceCounter());
+        int seconds_elapsed =
+          sdl_get_seconds_elapsed(last_counter,
+                                  SDL_GetPerformanceCounter());
         if (seconds_elapsed < target_seconds_per_frame) {
             uint64_t time_to_sleep =
                 (uint64_t)(((target_seconds_per_frame - seconds_elapsed) *
@@ -141,7 +148,8 @@ int main(int argc, char* argv[])
         SDL_RenderPresent(renderer);
 
         uint64_t end_counter = SDL_GetPerformanceCounter();
-        /* float full_frame_seconds_elapsed = sdl_get_seconds_elapsed(last_counter, end_counter); */
+        /* float full_frame_seconds_elapsed =
+           sdl_get_seconds_elapsed(last_counter, end_counter); */
         last_counter = end_counter;
     
     }
