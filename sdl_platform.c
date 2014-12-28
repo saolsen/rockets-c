@@ -7,6 +7,7 @@
 
 const char *GAME_LIBRARY = "./libgame.so";
 const char *GAME_FUNCTION = "game_update_and_render";
+void *library_handle;
 void (*game_update_and_render_fn)(uint32_t*, int);
 
 float sdl_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
@@ -100,12 +101,18 @@ int main(int argc, char* argv[])
 
     while (running) {
 
-        //todo(stephen): live reload of game
-        void* handle = dlopen(GAME_LIBRARY, RTLD_NOW);
-        if (!handle) {
+        /* reload game if it's changed */
+        //todo(stephen): reload game only when it changes
+        if (library_handle != NULL) {
+            dlclose(library_handle);
+        }
+      
+        library_handle = dlopen(GAME_LIBRARY, RTLD_NOW);
+        if (!library_handle) {
             printf("Error loading library %s\n", dlerror());
         }
-        void (*fn)(uint32_t*, int) = dlsym(handle, GAME_FUNCTION);
+
+        game_update_and_render_fn = dlsym(library_handle, GAME_FUNCTION);
         
         //todo(stephen): event handling
         SDL_Event event;
@@ -115,9 +122,18 @@ int main(int argc, char* argv[])
             }
         }
     
-        //todo(stephen): game update and render
-        fn(pixel_buffer, screen_width);
-        /* game_update_and_render_fn(pixel_buffer, screen_width); */
+        /* clear buffer */
+        /* todo(stephen): decide if this is something you want
+                        the game to handle instead. */
+
+        for (int i = 0;
+             i < screen_width * screen_height;
+            i++) {
+            pixel_buffer[i] = 0;
+        }
+
+        /* run game tick */
+        game_update_and_render_fn(pixel_buffer, screen_width);
 
         /* update texture */
         SDL_UpdateTexture(texture, NULL, pixel_buffer, screen_width * 4);
