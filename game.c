@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "game.h"
 
@@ -18,8 +19,8 @@ static uint32_t round_to_uint(float n) {
     }
 }
 
-static void draw_rectangle(uint32_t pixel_buffer[],
-                           uint32_t pitch, //aka, screen_width
+
+static void draw_rectangle(PixelBuffer pixel_buffer,
                            float top_left_x,
                            float top_left_y,
                            float width,
@@ -40,14 +41,18 @@ static void draw_rectangle(uint32_t pixel_buffer[],
              column < start_x + round_to_int(width);
              column ++) {
 
-            int pixel = (row * pitch) + column;
+            int pixel = (row * pixel_buffer.width) + column;
 
-            pixel_buffer[pixel] = value;
+            pixel_buffer.buffer[pixel] = value;
         }
     }
 }
 
-void game_update_and_render(uint32_t *pixel_buffer, int screen_width)
+void game_update_and_render(PixelBuffer pixel_buffer)
 {
-    draw_rectangle(pixel_buffer, screen_width, 100.0f, 200.0f, 100.0f, 100.0f, 1.0f, 0.0f, 0.0f);
+    // screen_width aka pitch should go in a struct with the pixel buffer
+    printf("hitting here at least\n");
+    draw_rectangle(pixel_buffer,
+                   100.0f, 200.0f, 100.0f, 300.0f,
+                   1.0f, 0.0f, 0.0f);
 }

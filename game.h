@@ -1,3 +1,16 @@
 //#include <stdlib.h>
 
-extern void game_update_and_render(uint32_t *pixel_buffer, int screen_width);
+// Shared structs
+typedef struct {
+    uint32_t *buffer;
+    int width;
+    int height;
+} PixelBuffer;
+
+// Game interface
+typedef void (*UpdateFunction)(PixelBuffer);
+//todo(stephen): how do I declare that game_update_and_render
+// has type UpdateFunction.
+void game_update_and_render(PixelBuffer pixel_buffer);
+
+// Game structs

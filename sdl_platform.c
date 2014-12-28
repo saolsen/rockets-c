@@ -5,10 +5,12 @@
 
 #include "game.h"
 
+// todo(stephen): could move this stuff into the h file.
 const char *GAME_LIBRARY = "./libgame.so";
 const char *GAME_FUNCTION = "game_update_and_render";
 void *library_handle;
-void (*game_update_and_render_fn)(uint32_t*, int);
+/* void (*game_update_and_render_fn)(uint32_t*, int); */
+UpdateFunction game_update_and_render_fn;
 
 float sdl_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
 {
@@ -89,12 +91,13 @@ int main(int argc, char* argv[])
       printf("Error creating texture: %s", SDL_GetError());
     }
 
-    uint32_t *pixel_buffer;
+    PixelBuffer pixel_buffer = {.width = screen_width,
+                                .height = screen_height};
     void *gamestate;
 
     // Don't really know how big this is going to be yet.
     gamestate = malloc(10000);
-    pixel_buffer = (uint32_t *) malloc(screen_width * screen_height * 4);
+    pixel_buffer.buffer = (uint32_t *) malloc(screen_width * screen_height * 4);
 
     bool running = true;
     uint64_t last_counter = SDL_GetPerformanceCounter();
@@ -103,6 +106,7 @@ int main(int argc, char* argv[])
 
         /* reload game if it's changed */
         //todo(stephen): reload game only when it changes
+        // look into kqueue
         if (library_handle != NULL) {
             dlclose(library_handle);
         }
@@ -125,18 +129,17 @@ int main(int argc, char* argv[])
         /* clear buffer */
         /* todo(stephen): decide if this is something you want
                         the game to handle instead. */
-
         for (int i = 0;
              i < screen_width * screen_height;
             i++) {
-            pixel_buffer[i] = 0;
+            pixel_buffer.buffer[i] = 0;
         }
 
         /* run game tick */
-        game_update_and_render_fn(pixel_buffer, screen_width);
+        game_update_and_render_fn(pixel_buffer);
 
         /* update texture */
-        SDL_UpdateTexture(texture, NULL, pixel_buffer, screen_width * 4);
+        SDL_UpdateTexture(texture, NULL, pixel_buffer.buffer, screen_width * 4);
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
 
