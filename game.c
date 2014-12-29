@@ -11,6 +11,7 @@ static int round_to_int(float n) {
     }
 }
 
+
 static uint32_t round_to_uint(float n) {
     if (n >= 0.0) {
         return (uint32_t)(n + 0.5);
@@ -19,7 +20,7 @@ static uint32_t round_to_uint(float n) {
     }
 }
 
-
+// todo(stephen): make draw_rectangle not crash on out of bounds areas.
 static void draw_rectangle(PixelBuffer pixel_buffer,
                            float top_left_x,
                            float top_left_y,
@@ -48,11 +49,51 @@ static void draw_rectangle(PixelBuffer pixel_buffer,
     }
 }
 
+
 void game_update_and_render(PixelBuffer pixel_buffer)
 {
-    // screen_width aka pitch should go in a struct with the pixel buffer
-    printf("hitting here at least\n");
-    draw_rectangle(pixel_buffer,
-                   100.0f, 200.0f, 100.0f, 300.0f,
-                   1.0f, 0.0f, 0.0f);
+    /* first test, just going to do a tile map and then test some A* pathfinding
+     * fun tests
+     */
+
+    // todo(stephen): I need a gamestate to do A* pathfinding.
+    //                also I know some stuff will change with the
+    //                way I do tile maps, like how I wont necessesarily
+    //                even use one. Definately not (1 per screen)
+    const int tile_map_width = 18;
+    const int tile_map_height = 10;
+
+    int tile_map[10][18] =
+        {{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+         {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0},
+         {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
+         {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0},
+         {0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0},
+         {0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+         {0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+         {0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
+         {0, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
+         {0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0}};
+
+    float tile_width = 50.0f;
+    float tile_height = 50.0f;
+    
+    for (int i = 0; i < tile_map_height; i++) {
+        for (int j = 0; j < tile_map_width; j++) {
+
+            int is_filled = tile_map[i][j];
+            float gray_val = 0.75;
+
+            if (is_filled == 1) {
+                gray_val = 0.25;
+            }
+            
+            draw_rectangle(pixel_buffer,
+                           j * tile_width,
+                           i * tile_height,
+                           tile_width,
+                           tile_height,
+                           gray_val, gray_val, gray_val);
+        }
+    }
 }

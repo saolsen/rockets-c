@@ -6,6 +6,7 @@
 #include "game.h"
 
 // todo(stephen): could move this stuff into the h file.
+// can't these also be #define's
 const char *GAME_LIBRARY = "./libgame.so";
 const char *GAME_FUNCTION = "game_update_and_render";
 void *library_handle;
@@ -41,8 +42,7 @@ bool sdl_handle_event(SDL_Event *event)
         break;
     }
 
-    return should_quit;
-  
+    return should_quit; 
 }
 
 
