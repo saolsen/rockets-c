@@ -5,10 +5,17 @@
 
 #include "game.h"
 
+// want game to really run at 1920 x 1080
+// half that is 960 x 540
+// but for comfortable development on my laptop I'm just going to develop at
+#define SCREEN_WIDTH  869
+#define SCREEN_HEIGHT 486
+
 // todo(stephen): could move this stuff into the h file.
 // can't these also be #define's
 const char *GAME_LIBRARY = "./libgame.so";
 const char *GAME_FUNCTION = "game_update_and_render";
+
 void *library_handle;
 /* void (*game_update_and_render_fn)(uint32_t*, int); */
 UpdateFunction game_update_and_render_fn;
@@ -48,8 +55,7 @@ bool sdl_handle_event(SDL_Event *event)
 
 int main(int argc, char* argv[])
 {
-    int screen_width = 960;
-    int screen_height = 540;
+
 
     float game_update_hz = 30.0;
     float target_seconds_per_frame = 1.0 / game_update_hz;
@@ -61,8 +67,8 @@ int main(int argc, char* argv[])
     SDL_Window *window = SDL_CreateWindow("animal game",
                                           SDL_WINDOWPOS_UNDEFINED,
                                           SDL_WINDOWPOS_UNDEFINED,
-                                          screen_width,
-                                          screen_height,
+                                          SCREEN_WIDTH,
+                                          SCREEN_HEIGHT,
                                           SDL_WINDOW_RESIZABLE);
 
     if (!window) {
@@ -79,30 +85,35 @@ int main(int argc, char* argv[])
 
     /* Let sdl stretch our texture to the real window size. */
     SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "linear");
-    SDL_RenderSetLogicalSize(renderer, screen_width, screen_height);
+    SDL_RenderSetLogicalSize(renderer, SCREEN_WIDTH, SCREEN_HEIGHT);
 
     SDL_Texture *texture = SDL_CreateTexture(renderer,
                                              SDL_PIXELFORMAT_ARGB8888,
                                              SDL_TEXTUREACCESS_STREAMING,
-                                             screen_width,
-                                             screen_height);
+                                             SCREEN_WIDTH,
+                                             SCREEN_HEIGHT);
     
     if (!texture) {
       printf("Error creating texture: %s", SDL_GetError());
     }
 
-    PixelBuffer pixel_buffer = {.width = screen_width,
-                                .height = screen_height};
+    PixelBuffer pixel_buffer = {.width = SCREEN_WIDTH,
+                                .height = SCREEN_HEIGHT};
     void *gamestate;
 
     // Don't really know how big this is going to be yet.
     gamestate = malloc(10000);
-    pixel_buffer.buffer = (uint32_t *) malloc(screen_width * screen_height * 4);
+    pixel_buffer.buffer =
+        (uint32_t *) malloc(SCREEN_WIDTH * SCREEN_HEIGHT * 4);
 
     bool running = true;
     uint64_t last_counter = SDL_GetPerformanceCounter();
 
     while (running) {
+
+        /* int width, height; */
+        /* SDL_GetWindowSize(window, &width, &height); */
+        /* printf("%dx%d\n", width, height); */
 
         /* reload game if it's changed */
         //todo(stephen): reload game only when it changes
@@ -130,7 +141,7 @@ int main(int argc, char* argv[])
         /* todo(stephen): decide if this is something you want
                         the game to handle instead. */
         for (int i = 0;
-             i < screen_width * screen_height;
+             i < SCREEN_WIDTH * SCREEN_HEIGHT;
             i++) {
             pixel_buffer.buffer[i] = 0;
         }
@@ -139,7 +150,10 @@ int main(int argc, char* argv[])
         game_update_and_render_fn(pixel_buffer);
 
         /* update texture */
-        SDL_UpdateTexture(texture, NULL, pixel_buffer.buffer, screen_width * 4);
+        SDL_UpdateTexture(texture,
+                          NULL,
+                          pixel_buffer.buffer,
+                          SCREEN_WIDTH * 4);
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
 

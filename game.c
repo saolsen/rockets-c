@@ -4,8 +4,8 @@
 
 #include "game.h"
 
-#define TILE_MAP_WIDTH 18
-#define TILE_MAP_HEIGHT 10
+#define TILE_MAP_WIDTH 16
+#define TILE_MAP_HEIGHT 9
 
 static int round_to_int(float n) {
     if (n >= 0.0) {
@@ -84,7 +84,7 @@ static void draw_tiger(PixelBuffer pixel_buffer,
 
 void game_update_and_render(PixelBuffer pixel_buffer)
 {
-    /* first test, just going to do a tile map and then test some A* pathfinding
+    /* first test, just do a tile map and then test some A* pathfinding
      * fun tests
      */
 
@@ -94,16 +94,15 @@ void game_update_and_render(PixelBuffer pixel_buffer)
     //                even use one. Definately not (1 per screen)
 
     int tile_map[TILE_MAP_HEIGHT][TILE_MAP_WIDTH] =
-        {{1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-         {0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0},
-         {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0},
-         {0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 0, 0},
-         {0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0},
-         {0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-         {0, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-         {0, 0, 1, 1, 0, 0, 1, 0, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0},
-         {1, 0, 1, 1, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0},
-         {0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0}};
+        {{1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {1, 1, 1, 1,  1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0}};
 
     float tile_width = 50.0f;
     float tile_height = 50.0f;
@@ -129,5 +128,5 @@ void game_update_and_render(PixelBuffer pixel_buffer)
 
     draw_tiger(pixel_buffer, 50.0, 50.0);
     
-    draw_rectangle(pixel_buffer, 0.0, 0.0, 0.0, 10.0, 1.0, 1.0, 0.4);
+    /* draw_rectangle(pixel_buffer, 0.0, 0.0, 0.0, 10.0, 1.0, 1.0, 0.4); */
 }
