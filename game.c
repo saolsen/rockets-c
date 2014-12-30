@@ -25,7 +25,7 @@ static uint32_t round_to_uint(float n) {
 }
 
 
-// todo(stephen): make draw_rectangle not crash on out of bounds areas.
+// todo(stephen): make draw_rectangle not overflow rows
 // todo(stephen): sub-pixel rendering so the tiger looks good.
 static void draw_rectangle(PixelBuffer pixel_buffer,
                            float top_left_x,
@@ -35,12 +35,12 @@ static void draw_rectangle(PixelBuffer pixel_buffer,
                            float red, float green, float blue)
 {
     assert(red >=0.0 && red <= 1.0);
+    assert(green >=0.0 && green <= 1.0);
+    assert(blue >=0.0 && blue <= 1.0);
     
     int start_y = round_to_int(top_left_y);
     int start_x = round_to_int(top_left_x);
 
-    //todo(stephen): need to make sure red, green and blue are between
-    //               0 and 1
     uint32_t value = ((round_to_uint(red * 255.0) << 16) +
                       (round_to_uint(green * 255.0) << 8) +
                       (round_to_uint(blue * 255.0)));
@@ -53,7 +53,9 @@ static void draw_rectangle(PixelBuffer pixel_buffer,
              column ++) {
 
             int pixel = (row * pixel_buffer.width) + column;
-            if (pixel > 0 && pixel < pixel_buffer.width * pixel_buffer.height) {
+            if (pixel > 0 &&
+                pixel < pixel_buffer.width * pixel_buffer.height) {
+                
                 pixel_buffer.buffer[pixel] = value;
             }
         }
@@ -127,6 +129,4 @@ void game_update_and_render(PixelBuffer pixel_buffer)
     }
 
     draw_tiger(pixel_buffer, 50.0, 50.0);
-    
-    /* draw_rectangle(pixel_buffer, 0.0, 0.0, 0.0, 10.0, 1.0, 1.0, 0.4); */
 }
