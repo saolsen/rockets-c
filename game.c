@@ -84,8 +84,9 @@ static void draw_tiger(PixelBuffer pixel_buffer,
 }
 
 
-void game_update_and_render(PixelBuffer pixel_buffer)
+void game_update_and_render(PixelBuffer pixel_buffer, void *state, float dt)
 {
+    GameState *gamestate = (GameState*)state;
     /* first test, just do a tile map and then test some A* pathfinding
      * fun tests
      */
@@ -94,6 +95,12 @@ void game_update_and_render(PixelBuffer pixel_buffer)
     //                also I know some stuff will change with the
     //                way I do tile maps, like how I wont necessesarily
     //                even use one. Definately not (1 per screen)
+
+    if (!gamestate->is_initialized) {
+        gamestate->pos_x = 54.0;
+        gamestate->pos_y = 50.0;
+        gamestate->is_initialized = true;
+    }
 
     int tile_map[TILE_MAP_HEIGHT][TILE_MAP_WIDTH] =
         {{1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
@@ -128,5 +135,8 @@ void game_update_and_render(PixelBuffer pixel_buffer)
         }
     }
 
-    draw_tiger(pixel_buffer, 50.0, 50.0);
+    // todo(stephen): figure out why it's so jerky
+    gamestate->pos_x += 100 * dt;
+
+    draw_tiger(pixel_buffer, gamestate->pos_x, gamestate->pos_y);
 }

@@ -147,7 +147,8 @@ int main(int argc, char* argv[])
         }
 
         /* run game tick */
-        game_update_and_render_fn(pixel_buffer);
+        game_update_and_render_fn(pixel_buffer, gamestate,
+                                  target_seconds_per_frame);
 
         /* update texture */
         SDL_UpdateTexture(texture,
