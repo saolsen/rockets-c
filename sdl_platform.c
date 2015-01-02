@@ -7,14 +7,15 @@
 
 // want game to really run at 1920 x 1080
 // half that is 960 x 540
-// but for comfortable development on my laptop I'm just going to develop at
-#define SCREEN_WIDTH  869
-#define SCREEN_HEIGHT 486
+#define SCREEN_WIDTH  960
+#define SCREEN_HEIGHT 540
 
 // todo(stephen): could move this stuff into the h file.
 // can't these also be #define's
-const char *GAME_LIBRARY = "./libgame.so";
-const char *GAME_FUNCTION = "game_update_and_render";
+#define GAME_LIBRARY "./libgame.so"
+#define GAME_FUNCTION "game_update_and_render"
+/* const char *GAME_LIBRARY = "./libgame.so"; */
+/* const char *GAME_FUNCTION = "game_update_and_render"; */
 
 void *library_handle;
 /* void (*game_update_and_render_fn)(uint32_t*, int); */
@@ -26,7 +27,7 @@ float sdl_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
             (float)SDL_GetPerformanceFrequency());
 }
 
-bool sdl_handle_event(SDL_Event *event)
+bool sdl_handle_event(SDL_Event *event, int *other_events_this_tick)
 {
     bool should_quit = false;
 
@@ -46,6 +47,7 @@ bool sdl_handle_event(SDL_Event *event)
 
     default:
         //todo(stephen): print out that other events happened for debugging
+        *other_events_this_tick+= 1;
         break;
     }
 
@@ -131,10 +133,14 @@ int main(int argc, char* argv[])
         
         //todo(stephen): event handling
         SDL_Event event;
+        int other_events_this_tick = 0;
         while (SDL_PollEvent(&event)) {
-            if (sdl_handle_event(&event)) {
+            if (sdl_handle_event(&event, &other_events_this_tick)) {
                 running = false;
             }
+        }
+        if (other_events_this_tick > 0) {
+            printf("%d unhandled events this tick.\n", other_events_this_tick);
         }
     
         /* clear buffer */
@@ -157,11 +163,15 @@ int main(int argc, char* argv[])
                           SCREEN_WIDTH * 4);
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
+                /* update the screen */
+        SDL_RenderPresent(renderer);
 
         /* delay the rest of the frame */
         int seconds_elapsed =
           sdl_get_seconds_elapsed(last_counter,
                                   SDL_GetPerformanceCounter());
+
+
         if (seconds_elapsed < target_seconds_per_frame) {
             uint64_t time_to_sleep =
                 (uint64_t)(((target_seconds_per_frame - seconds_elapsed) *
@@ -171,15 +181,17 @@ int main(int argc, char* argv[])
             }
 
             /* wait the rest of the time till render */
+
             while (sdl_get_seconds_elapsed(last_counter,
                                            SDL_GetPerformanceCounter()) <
                    target_seconds_per_frame) {
-                // waiting
+                // waiting                
             }
+
         }
 
-        /* update the screen */
-        SDL_RenderPresent(renderer);
+        /* /\* update the screen *\/ */
+        /* SDL_RenderPresent(renderer); */
 
         uint64_t end_counter = SDL_GetPerformanceCounter();
         /* float full_frame_seconds_elapsed =

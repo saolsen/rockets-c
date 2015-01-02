@@ -1,0 +1,34 @@
+Here is what I think I want the game to be.
+
+Multiplayer (eventuially)
+
+You control a guy, he can interact and train animals in the world. Animals are not real animals tho, they are just little iconic things like that game exo.
+
+Multiplayer combat maybe, maybe coop and you have to go fight hard guys or do stuff that requires you to train different animals for different purposes.
+
+This can be combinatorically strong, with various effects and stuff, could also even make better art later if I really wanted to.
+
+
+we'll have a player with player movement.
+For interactions we'll have a way to click them and pick an action from a right stick select menu.
+This should work on ipad too, letting us just tap the thing we want.
+
+what do I need in my controller then?
+
+maybe drones or something can let you communicate from not yourself
+psycic linking or something dope
+
+wasd for movement
+right click, left click for giving orders and selecting units.
+(triggers and shoulder buttons might work here too)
+menu for training and orders, needs thinking to work on ios pc and xbox
+couple other buttons maybe, a b x y, q e f shift
+
+mouse position and clicks
+mmo because you have orders, can be played async
+
+wasd, clicks, mouse position, drags
+ipad will be similar, 
+I really want building to be a part of the game. Freeform building like in minecraft. You can build a castle and assign guards to it and another player can try to attack you.
+
+think like an ipad tho.

@@ -1,11 +1,39 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <math.h>
 
 #include "game.h"
 
 #define TILE_MAP_WIDTH 16
 #define TILE_MAP_HEIGHT 9
+
+// todo(stephen): use Point instead of Vector or even have both!
+
+static Vector normalize(Vector v) {
+    float mag = sqrt(v.x * v.x + v.y * v.y);;
+    v.x /= mag;
+    v.y /= mag;
+    return v;
+}
+
+static Vector smul(Vector v, float n) {
+    v.x *= n;
+    v.y *= n;
+    return v;
+}
+
+static Vector add(Vector a, Vector b) {
+    a.x += b.x;
+    a.y += b.y;
+    return a;
+}
+
+static Vector subtract(Vector a, Vector b) {
+    a.x -= b.x;
+    a.y -= b.y;
+    return a;
+}
 
 static int round_to_int(float n) {
     if (n >= 0.0) {
@@ -14,7 +42,6 @@ static int round_to_int(float n) {
         return (int)(n - 0.5);
     }
 }
-
 
 static uint32_t round_to_uint(float n) {
     if (n >= 0.0) {
@@ -48,6 +75,7 @@ static void draw_rectangle(PixelBuffer pixel_buffer,
     for (int row = start_y;
          row < start_y + round_to_int(height);
          row++) {
+
         for (int column = start_x;
              column < start_x + round_to_int(width);
              column ++) {
@@ -84,9 +112,11 @@ static void draw_tiger(PixelBuffer pixel_buffer,
 }
 
 
-void game_update_and_render(PixelBuffer pixel_buffer, void *state, float dt)
+void game_update_and_render(PixelBuffer pixel_buffer,
+                            void *gamestate,
+                            float dt)
 {
-    GameState *gamestate = (GameState*)state;
+    GameState *state = (GameState*)gamestate;
     /* first test, just do a tile map and then test some A* pathfinding
      * fun tests
      */
@@ -96,21 +126,23 @@ void game_update_and_render(PixelBuffer pixel_buffer, void *state, float dt)
     //                way I do tile maps, like how I wont necessesarily
     //                even use one. Definately not (1 per screen)
 
-    if (!gamestate->is_initialized) {
-        gamestate->pos_x = 54.0;
-        gamestate->pos_y = 50.0;
-        gamestate->is_initialized = true;
+    if (!state->is_initialized) {
+        state->pos.x = 75.0;
+        state->pos.y = 75.0;
+        state->target.x = 375;
+        state->target.y = 25;
+        state->is_initialized = true;
     }
 
     int tile_map[TILE_MAP_HEIGHT][TILE_MAP_WIDTH] =
-        {{1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-         {0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
-         {1, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+        {{1, 0, 0, 0,  0, 0, 1, 0,  0, 0, 0, 0,  0, 0, 0, 0},
+         {0, 0, 0, 0,  0, 0, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 1,  1, 1, 0, 0,  1, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 0,  0, 1, 1, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 1,  0, 0, 1, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 1,  0, 0, 1, 1,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 1,  0, 0, 1, 0,  0, 0, 0, 0},
+         {1, 0, 0, 0,  0, 0, 0, 1,  0, 0, 1, 0,  0, 0, 0, 0},
          {1, 1, 1, 1,  1, 1, 1, 1,  0, 0, 0, 0,  0, 0, 0, 0}};
 
     float tile_width = 50.0f;
@@ -135,8 +167,19 @@ void game_update_and_render(PixelBuffer pixel_buffer, void *state, float dt)
         }
     }
 
-    // todo(stephen): figure out why it's so jerky
-    gamestate->pos_x += 100 * dt;
+    // todo(stephen): collision detection.
+    // todo(stephen): pathfinding
+    // move tiger towards target point.
+    // this is basically impossible without vectors.
+    /* float speed = 20.0; */
+    /* if (state->pos.x != state->target.x) { */
+    /*     Vector direction = normalize(subtract(state->target, state->pos)); */
+    /*     state->pos = add(state->pos, smul(direction, dt * speed)); */
+    /* } */
 
-    draw_tiger(pixel_buffer, gamestate->pos_x, gamestate->pos_y);
+    // move tiger based on player input.
+    
+
+
+    draw_tiger(pixel_buffer, state->pos.x, state->pos.y);
 }
