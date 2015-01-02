@@ -5,17 +5,14 @@
 
 #include "game.h"
 
-// want game to really run at 1920 x 1080
-// half that is 960 x 540
-#define SCREEN_WIDTH  960
-#define SCREEN_HEIGHT 540
+// 2048‑by‑1536 is the real resolution
+// todo(stephen): figure out if I need to draw to that for text.
+#define SCREEN_WIDTH  1024
+#define SCREEN_HEIGHT 768
 
-// todo(stephen): could move this stuff into the h file.
-// can't these also be #define's
+// todo(stephen): provide a way to statically link this for release builds.
 #define GAME_LIBRARY "./libgame.so"
 #define GAME_FUNCTION "game_update_and_render"
-/* const char *GAME_LIBRARY = "./libgame.so"; */
-/* const char *GAME_FUNCTION = "game_update_and_render"; */
 
 void *library_handle;
 /* void (*game_update_and_render_fn)(uint32_t*, int); */
@@ -27,13 +24,37 @@ float sdl_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
             (float)SDL_GetPerformanceFrequency());
 }
 
-bool sdl_handle_event(SDL_Event *event, int *other_events_this_tick)
+// I'm just prototyping on my mac for awhile. Not going to get set up for an actual ipad until later
+// so for now just get going with the mouse.
+bool sdl_handle_event(SDL_Event *event, int *other_events_this_tick, ControllerState *controller_state)
 {
     bool should_quit = false;
 
     switch(event->type) {
     case SDL_QUIT:
         should_quit = true;
+        break;
+
+        // Going to use mouse events for now.
+        // todo(stephen): use touch events when ready to port to ipad.
+        // todo(stephen): figure out how to just do a click.
+        // might want zooming
+    case SDL_MOUSEBUTTONDOWN:
+        printf("mouse down\n");
+        controller_state->click = true;
+        controller_state->is_dragging = true;
+        break;
+
+    case SDL_MOUSEBUTTONUP:
+        printf("mouse up\n");
+        controller_state->is_dragging = false;
+        controller_state->end_dragging = true;
+        break;
+        // todo(stephen): there is a bug with window resizing here. I need the position to match the
+        //                logical screen size, not the real one.
+    case SDL_MOUSEMOTION:
+        controller_state->mouse_x = event->motion.x;
+        controller_state->mouse_y = event->motion.y;
         break;
 
     case SDL_KEYDOWN: {
@@ -57,8 +78,6 @@ bool sdl_handle_event(SDL_Event *event, int *other_events_this_tick)
 
 int main(int argc, char* argv[])
 {
-
-
     float game_update_hz = 30.0;
     float target_seconds_per_frame = 1.0 / game_update_hz;
 
@@ -99,9 +118,15 @@ int main(int argc, char* argv[])
       printf("Error creating texture: %s", SDL_GetError());
     }
 
+
     PixelBuffer pixel_buffer = {.width = SCREEN_WIDTH,
                                 .height = SCREEN_HEIGHT};
     void *gamestate;
+    ControllerState controller_state = {.mouse_x = 0,
+                                        .mouse_y = 0,
+                                        .click = false,
+                                        .is_dragging = false,
+                                        .end_dragging = false};
 
     // Don't really know how big this is going to be yet.
     gamestate = malloc(10000);
@@ -134,14 +159,20 @@ int main(int argc, char* argv[])
         //todo(stephen): event handling
         SDL_Event event;
         int other_events_this_tick = 0;
+
+        controller_state.end_dragging = false;;
+        controller_state.click = false;
+        
         while (SDL_PollEvent(&event)) {
-            if (sdl_handle_event(&event, &other_events_this_tick)) {
+            if (sdl_handle_event(&event, &other_events_this_tick, &controller_state)) {
                 running = false;
             }
         }
         if (other_events_this_tick > 0) {
             printf("%d unhandled events this tick.\n", other_events_this_tick);
         }
+
+        /* SDL_GetMouseState(&controller_state.mouse_x, &controller_state.mouse_y); */
     
         /* clear buffer */
         /* todo(stephen): decide if this is something you want
@@ -153,7 +184,7 @@ int main(int argc, char* argv[])
         }
 
         /* run game tick */
-        game_update_and_render_fn(pixel_buffer, gamestate,
+        game_update_and_render_fn(pixel_buffer, gamestate, controller_state,
                                   target_seconds_per_frame);
 
         /* update texture */
@@ -163,8 +194,6 @@ int main(int argc, char* argv[])
                           SCREEN_WIDTH * 4);
         SDL_RenderClear(renderer);
         SDL_RenderCopy(renderer, texture, NULL, NULL);
-                /* update the screen */
-        SDL_RenderPresent(renderer);
 
         /* delay the rest of the frame */
         int seconds_elapsed =
@@ -181,7 +210,6 @@ int main(int argc, char* argv[])
             }
 
             /* wait the rest of the time till render */
-
             while (sdl_get_seconds_elapsed(last_counter,
                                            SDL_GetPerformanceCounter()) <
                    target_seconds_per_frame) {
@@ -190,8 +218,8 @@ int main(int argc, char* argv[])
 
         }
 
-        /* /\* update the screen *\/ */
-        /* SDL_RenderPresent(renderer); */
+        /* update the screen */
+        SDL_RenderPresent(renderer);
 
         uint64_t end_counter = SDL_GetPerformanceCounter();
         /* float full_frame_seconds_elapsed =

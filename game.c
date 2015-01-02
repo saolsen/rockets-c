@@ -114,6 +114,7 @@ static void draw_tiger(PixelBuffer pixel_buffer,
 
 void game_update_and_render(PixelBuffer pixel_buffer,
                             void *gamestate,
+                            ControllerState controller_state,
                             float dt)
 {
     GameState *state = (GameState*)gamestate;
@@ -121,6 +122,9 @@ void game_update_and_render(PixelBuffer pixel_buffer,
      * fun tests
      */
 
+    if (controller_state.is_dragging) {
+        printf("dragging: %d ,%d\n", controller_state.mouse_x, controller_state.mouse_y);
+    }
     // todo(stephen): I need a gamestate to do A* pathfinding.
     //                also I know some stuff will change with the
     //                way I do tile maps, like how I wont necessesarily
@@ -129,8 +133,7 @@ void game_update_and_render(PixelBuffer pixel_buffer,
     if (!state->is_initialized) {
         state->pos.x = 75.0;
         state->pos.y = 75.0;
-        state->target.x = 375;
-        state->target.y = 25;
+
         state->is_initialized = true;
     }
 
@@ -178,7 +181,10 @@ void game_update_and_render(PixelBuffer pixel_buffer,
     /* } */
 
     // move tiger based on player input.
-    
+    if (controller_state.is_dragging) {
+        state->pos.x = controller_state.mouse_x;
+        state->pos.y = controller_state.mouse_y;
+    }
 
 
     draw_tiger(pixel_buffer, state->pos.x, state->pos.y);

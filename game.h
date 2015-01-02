@@ -1,30 +1,34 @@
 //#include <stdlib.h>
 #include <stdbool.h>
 
-// Shared structs
+/* Shared structs */
 typedef struct {
     uint32_t *buffer;
     int width;
     int height;
 } PixelBuffer;
 
-// aparently floating point math is faster than ints
 typedef struct {
+    // position
     int mouse_x;
     int mouse_y;
-    // buttons, press or isdown? casey's thing?
-    // mouse position and clicks and drags.
+    // if it's a normal click
+    bool click;
+    // todo(stephen): is there a better way to handle a drag?
+    bool is_dragging;
+    bool end_dragging;
 } ControllerState;
 
-// Game interface
-typedef void (*UpdateFunction)(PixelBuffer, void*, float);
+/* Game interface */
+typedef void (*UpdateFunction)(PixelBuffer, void*, ControllerState, float);
 //todo(stephen): how do I declare that game_update_and_render
 // has type UpdateFunction.
 void game_update_and_render(PixelBuffer pixel_buffer,
                             void* gamestate,
+                            ControllerState controller_state,
                             float dt);
 
-// Game structs
+/* Game structs. These could just go in game.c */
 typedef struct {
     float x;
     float y;
@@ -32,6 +36,6 @@ typedef struct {
 
 typedef struct {
     Vector pos;
-    Vector target;
+    bool dragging_tiger;
     bool is_initialized;
 } GameState;
