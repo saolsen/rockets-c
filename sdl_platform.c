@@ -120,7 +120,7 @@ int main(int argc, char* argv[])
 
 
     PixelBuffer pixel_buffer = {.width = SCREEN_WIDTH,
-                                .height = SCREEN_HEIGHT};
+                                .height = SCREEN_HEIGHT };
     void *gamestate;
     ControllerState controller_state = {.mouse_x = 0,
                                         .mouse_y = 0,

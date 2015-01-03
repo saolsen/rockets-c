@@ -1,7 +1,12 @@
 //#include <stdlib.h>
+#ifndef _game_h
+#define _game_h
 #include <stdbool.h>
 
 /* Shared structs */
+// had just pixel_buffer before but I need access to the renderer and will be making textures
+// and shit now because I'm using the sdl2 rendering. bleh
+// some day maybe write my own 
 typedef struct {
     uint32_t *buffer;
     int width;
@@ -28,14 +33,4 @@ void game_update_and_render(PixelBuffer pixel_buffer,
                             ControllerState controller_state,
                             float dt);
 
-/* Game structs. These could just go in game.c */
-typedef struct {
-    float x;
-    float y;
-} Vector;
-
-typedef struct {
-    Vector pos;
-    bool dragging_tiger;
-    bool is_initialized;
-} GameState;
+#endif
