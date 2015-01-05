@@ -152,8 +152,8 @@ static void draw_rectangle(PixelBuffer pixel_buffer,
 
 void draw_node(PixelBuffer pixel_buffer, Node node) {
 
-    float r, g, b;
-    int width, height;
+    /* float r, g, b; */
+    /* int width, height; */
 
     /* switch (node->type) { */
     /* case PREDICATE: */
@@ -192,6 +192,8 @@ void game_update_and_render(PixelBuffer pixel_buffer,
                      .id = next_id(&state->last_id),
                      .position = {.x = 110.0, .y = 100.0},
                      .thruster = BOOST };
+
+    // I should be able to work on 
 
     draw_node(pixel_buffer, thruster);
 }

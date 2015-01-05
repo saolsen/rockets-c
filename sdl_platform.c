@@ -40,13 +40,13 @@ bool sdl_handle_event(SDL_Event *event, int *other_events_this_tick, ControllerS
         // todo(stephen): figure out how to just do a click.
         // might want zooming
     case SDL_MOUSEBUTTONDOWN:
-        printf("mouse down\n");
+        /* printf("mouse down\n"); */
         controller_state->click = true;
         controller_state->is_dragging = true;
         break;
 
     case SDL_MOUSEBUTTONUP:
-        printf("mouse up\n");
+        /* printf("mouse up\n"); */
         controller_state->is_dragging = false;
         controller_state->end_dragging = true;
         break;
@@ -169,7 +169,7 @@ int main(int argc, char* argv[])
             }
         }
         if (other_events_this_tick > 0) {
-            printf("%d unhandled events this tick.\n", other_events_this_tick);
+            /* printf("%d unhandled events this tick.\n", other_events_this_tick); */
         }
 
         /* SDL_GetMouseState(&controller_state.mouse_x, &controller_state.mouse_y); */
