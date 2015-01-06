@@ -3,16 +3,6 @@
 #define _game_h
 #include <stdbool.h>
 
-/* Shared structs */
-// had just pixel_buffer before but I need access to the renderer and will be making textures
-// and shit now because I'm using the sdl2 rendering. bleh
-// some day maybe write my own 
-typedef struct {
-    uint32_t *buffer;
-    int width;
-    int height;
-} PixelBuffer;
-
 typedef struct {
     // position
     int mouse_x;
@@ -22,15 +12,21 @@ typedef struct {
     // todo(stephen): is there a better way to handle a drag?
     bool is_dragging;
     bool end_dragging;
+    // todo(stephen): flesh this out with useful shit.
 } ControllerState;
 
-/* Game interface */
-typedef void (*UpdateFunction)(PixelBuffer, void*, ControllerState, float);
-//todo(stephen): how do I declare that game_update_and_render
-// has type UpdateFunction.
-void game_update_and_render(PixelBuffer pixel_buffer,
-                            void* gamestate,
-                            ControllerState controller_state,
-                            float dt);
+//todo(stephen): you may need to add a handler for the keyboard and mouse
+//               movement callbacks if sdl is laggy polling the input.
+
+struct game_api {
+    /* Returns the initial state for the game. */
+    void* (*init)();
+    /* Passed the game state, controller input and the seconds elapsed */
+    void (*update_and_render)(void* game_state,
+                              ControllerState controller_state,
+                              float dt);
+};
+
+extern const struct game_api GAME_API;
 
 #endif
