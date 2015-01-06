@@ -19,37 +19,12 @@
 // todo(stephen): provide a way to statically link this for release builds.
 // todo(stephen): pass this in on the command line for which game to load.
 #define GAME_LIBRARY "./libgame.so"
-/* #define GAME_FUNCTION "game_update_and_render" */
-/* #define SETUP_FUNCTION "game_setup" */
-
-/* void *library_handle; */
-/* /\* void (*game_update_and_render_fn)(uint32_t*, int); *\/ */
-/* UpdateFunction game_update_and_render_fn; */
-/* SetupFunction game_setup_fn; */
 
 typedef struct Game {
     void *handle;
     ino_t id;
     struct game_api api;
 } Game;
-
-/* if (library_handle != NULL) { */
-/*     dlclose(library_handle); */
-/* } */
-      
-/* library_handle = dlopen(GAME_LIBRARY, RTLD_NOW); */
-/* if (!library_handle) { */
-/*     printf("Error loading library %s\n", dlerror()); */
-/* } */
-
-/* game_setup_fn = dlsym(library_handle, SETUP_FUNCTION); */
-
-/* gamestate = game_setup_fn(); */
-
-
-/* int reload_game(Game *game) { */
-    
-/* } */
 
 float sdl_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
 {
@@ -143,9 +118,9 @@ int main(int argc, char* argv[])
 
     SDL_GLContext context = SDL_GL_CreateContext(window);
 
-    //Use Vsync
+    // Use Vsync
     if( SDL_GL_SetSwapInterval( 1 ) < 0 ) {
-        printf( "Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError() );
+        printf( "Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError());
     }
 
     void *gamestate;
@@ -171,12 +146,10 @@ int main(int argc, char* argv[])
     struct game_api *api = dlsym(game.handle, "GAME_API");
     game.api = *api;
 
-    // Don't really know how big this is going to be yet.
+    gamestate = game.api.init();
 
     bool running = true;
     uint64_t last_counter = SDL_GetPerformanceCounter();
-
-    gamestate = game.api.init();
 
     while (running) {
         // reload library
@@ -192,9 +165,8 @@ int main(int argc, char* argv[])
 
         struct game_api *api = dlsym(game.handle, "GAME_API");
         game.api = *api;
-
         
-        //todo(stephen): event handling
+        //todo(stephen): better event handling
         SDL_Event event;
         int other_events_this_tick = 0;
 
@@ -216,31 +188,6 @@ int main(int argc, char* argv[])
         /* run game tick */
         game.api.update_and_render(gamestate, controller_state,
                                    target_seconds_per_frame);
-
-        //todo(stephen): decide if I can take out this delay code since I'm
-        //               using vsync now.
-        /* /\* delay the rest of the frame *\/ */
-        /* int seconds_elapsed = */
-        /*   sdl_get_seconds_elapsed(last_counter, */
-        /*                           SDL_GetPerformanceCounter()); */
-
-
-        /* if (seconds_elapsed < target_seconds_per_frame) { */
-        /*     uint64_t time_to_sleep = */
-        /*         (uint64_t)(((target_seconds_per_frame - seconds_elapsed) * */
-        /*                     1000.0) - 1.0); */
-        /*     if (time_to_sleep > 0) { */
-        /*         SDL_Delay(time_to_sleep); */
-        /*     } */
-
-        /*     /\* wait the rest of the time till render *\/ */
-        /*     while (sdl_get_seconds_elapsed(last_counter, */
-        /*                                    SDL_GetPerformanceCounter()) < */
-        /*            target_seconds_per_frame) { */
-        /*         // waiting */
-        /*     } */
-
-        /* } */
 
         /* update the screen */
         SDL_GL_SwapWindow(window);
