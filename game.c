@@ -9,7 +9,7 @@
 #include "game.h"
 
 // Not really good, should return an int and do error checking the c way.
-char* read_whole_file(char* filename)
+const char* read_whole_file(const char* filename)
 {
     FILE *fp = fopen(filename, "r");
     char* buffer = 0;
@@ -20,12 +20,12 @@ char* read_whole_file(char* filename)
 
     /* stat(filename, &sb); */
     
-    if(fp) {
+    if (fp) {
         fseek(fp, 0, SEEK_END);
         length = ftell(fp);
         fseek(fp, 0, SEEK_SET);
         buffer = malloc(length + 1);
-        if(buffer) {
+        if (buffer) {
             length = fread(buffer, 1, length, fp);
             buffer[length] = 0;
         }
@@ -35,31 +35,83 @@ char* read_whole_file(char* filename)
     return buffer;
 }
 
+const float vertex_data[] = {
+    0.75f, 0.75f, 0.0f, 1.0f,
+    0.75f, -0.75f, 0.0f, 1.0f,
+    -0.75f, -0.75f, 0.0f, 1.0f,
+};
+
 
 typedef struct {
     // opengl shit
-    
+    GLuint positionBufferObject;
+    GLuint theProgram;
+    GLuint vao;
 } GameState;
 
 
-void* game_setup()
+static void* game_setup()
 {
-    GameState *gamestate = malloc(sizeof(gamestate));
+    GameState *state = malloc(sizeof(GameState));
+
+    // Initialize Program
+    const char* vertex_src = read_whole_file("test_vert.glsl");
+    GLuint v_shader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(v_shader, 1, &vertex_src, NULL);
+    glCompileShader(v_shader);
+
+    const char* fragment_src = read_whole_file("test_frag.glsl");
+    GLuint f_shader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(f_shader, 1, &fragment_src, NULL);
+    glCompileShader(f_shader);
+
+    GLuint program = glCreateProgram();
+    glAttachShader(program, v_shader);
+    glAttachShader(program, f_shader);
+    glLinkProgram(program);
+    state->theProgram = program;
+
+    //todo(stephen): check for compilation errors.
+
+    // Initialize Vertex Buffer
+    GLuint buffer_object;
+    glGenBuffers(1, &buffer_object);
+    glBindBuffer(GL_ARRAY_BUFFER, buffer_object);
+    glBufferData(GL_ARRAY_BUFFER,
+                 sizeof(vertex_data),
+                 vertex_data,
+                 GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    state->positionBufferObject = buffer_object;
+
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    state->vao = vao;
     
-    return gamestate;
+    return state;
 }
 
-void game_update_and_render(void *gamestate,
+static void game_update_and_render(void *gamestate,
                             ControllerState controller_state,
                             float dt)
 {
     GameState *state = (GameState*)gamestate;
 
     /* clear window to black */
-    glClearColor(1,0,0,1);
+    glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
     glClear(GL_COLOR_BUFFER_BIT);
 
+    glUseProgram(state->theProgram);
 
+    glBindBuffer(GL_ARRAY_BUFFER, state->positionBufferObject);
+    glEnableVertexAttribArray(0);
+    glVertexAttribPointer(0, 4, GL_FLOAT, GL_FALSE, 0, 0);
+
+    glDrawArrays(GL_TRIANGLES, 0, 3);
+
+    glDisableVertexAttribArray(0);
+    glUseProgram(0);
 }
 
 const struct game_api GAME_API = {

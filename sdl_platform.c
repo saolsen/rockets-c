@@ -57,8 +57,6 @@ bool sdl_handle_event(SDL_Event *event, int *other_events_this_tick,
         controller_state->is_dragging = false;
         controller_state->end_dragging = true;
         break;
-        // todo(stephen): there is a bug with window resizing here. I need the
-        // position to match the logical screen size, not the real one.
     case SDL_MOUSEMOTION:
         controller_state->mouse_x = event->motion.x;
         controller_state->mouse_y = event->motion.y;
@@ -69,7 +67,7 @@ bool sdl_handle_event(SDL_Event *event, int *other_events_this_tick,
         printf("keypress\n");
         SDL_Keycode keycode = event->key.keysym.sym;
 
-        if (keycode == SDLK_ESCAPE) {
+        if (SDLK_ESCAPE == keycode) {
             should_quit = true;
         }
     } break;
@@ -94,7 +92,7 @@ int main(int argc, char* argv[])
     //todo(stephen): have a better error handling scheme that has all of these
     //               goto the end and write an error message instead of a bunch
     //               of different checks.
-    if (SDL_Init(SDL_INIT_VIDEO) != 0) {
+    if (0 != SDL_Init(SDL_INIT_VIDEO)) {
         printf("Error initializing SDL: %s", SDL_GetError());
     }
 
@@ -119,7 +117,7 @@ int main(int argc, char* argv[])
     SDL_GLContext context = SDL_GL_CreateContext(window);
 
     // Use Vsync
-    if( SDL_GL_SetSwapInterval( 1 ) < 0 ) {
+    if (SDL_GL_SetSwapInterval( 1 ) < 0) {
         printf( "Warning: Unable to set VSync! SDL Error: %s\n", SDL_GetError());
     }
 
