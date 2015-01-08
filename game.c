@@ -4,9 +4,9 @@
 #include <math.h>
 #include <sys/stat.h>
 
-#include <OpenGL/gl3.h>
+/* #include <OpenGL/gl3.h> */
 
-#include "game.h"
+#include "gameguy.h"
 
 // Not really good, should return an int and do error checking the c way.
 const char* read_whole_file(const char* filename)
@@ -55,12 +55,13 @@ static void* game_setup()
     GameState *state = malloc(sizeof(GameState));
 
     // Initialize Program
-    const char* vertex_src = read_whole_file("test_vert.glsl");
+    // todo(stephen): Figure out shader loading, right now path convention.
+    const char* vertex_src = read_whole_file("shaders/test_vert.glsl");
     GLuint v_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(v_shader, 1, &vertex_src, NULL);
     glCompileShader(v_shader);
 
-    const char* fragment_src = read_whole_file("test_frag.glsl");
+    const char* fragment_src = read_whole_file("shaders/test_frag.glsl");
     GLuint f_shader = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(f_shader, 1, &fragment_src, NULL);
     glCompileShader(f_shader);
@@ -93,8 +94,8 @@ static void* game_setup()
 }
 
 static void game_update_and_render(void *gamestate,
-                            ControllerState controller_state,
-                            float dt)
+                                   gg_Input input,
+                                   float dt)
 {
     GameState *state = (GameState*)gamestate;
 
@@ -114,7 +115,7 @@ static void game_update_and_render(void *gamestate,
     glUseProgram(0);
 }
 
-const struct game_api GAME_API = {
+const gg_Game gg_game_api = {
     .init = game_setup,
     .update_and_render = game_update_and_render
 };

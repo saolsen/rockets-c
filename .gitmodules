@@ -1,0 +1,3 @@
+[submodule "gameguy"]
+	path = gameguy
+	url = https://github.com/saolsen/gameguy.git

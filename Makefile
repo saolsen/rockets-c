@@ -1,26 +1,30 @@
 MACHINE= $(shell uname -s)
+GAMELIB= gamelib.so
+BUILD_DIR?= bin
+EXE_NAME?= game
 
 ifeq ($(MACHINE),Darwin)
-	OPENGL_INC= -FOpenGL
 	OPENGL_LIB= -framework OpenGL
 else
-	OPENGL_INC= -I/usr/X11R6/include
 	OPENGL_LIB= -I/usr/lib64 -lGL -lGLEW
 endif
 
-CFLAGS=`pkg-config --cflags sdl2` $(OPENGL_INC) -std=c99 -g -Wall -O0
-LDFLAGS=`pkg-config --libs sdl2` $(OPENGL_LIB) -ldl
+CFLAGS= -Igameguy/include -std=c99 -g -Wall -O0
 
-all: main libgame.so
+all: game lib
 
-main: sdl_platform.c game.h
-	clang $(CFLAGS) $(LDFLAGS) -o game sdl_platform.c
+.PHONY: game
+game:
+	cd gameguy && $(MAKE) BUILD_DIR=../$(BUILD_DIR) EXE_NAME=$(EXE_NAME) gameguy
 
-libgame.so: game.c game.h
-	clang $(CFLAGS) -shared $(LDFLAGS) -o libgame.so game.c
+lib: game.c
+	clang $(CFLAGS) $(OPENGL_LIB) -shared -o $(BUILD_DIR)/$(GAMELIB) game.c
+
+# libgame.so: game.c game.h
+# 	clang $(CFLAGS) -shared $(LDFLAGS) -o libgame.so game.c
 
 clean:
-	rm -rf *o *.dSYM game
+	rm -rf *o *.dSYM $(BUILD_DIR)/*
 
 check-syntax:
-	clang -o /dev/null $(CFLAGS) $(LDFLAGS) -S ${CHK_SOURCES}
+	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
