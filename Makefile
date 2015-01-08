@@ -20,9 +20,6 @@ game:
 lib: game.c
 	clang $(CFLAGS) $(OPENGL_LIB) -shared -o $(BUILD_DIR)/$(GAMELIB) game.c
 
-# libgame.so: game.c game.h
-# 	clang $(CFLAGS) -shared $(LDFLAGS) -o libgame.so game.c
-
 clean:
 	rm -rf *o *.dSYM $(BUILD_DIR)/*
 
