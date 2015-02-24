@@ -16,5 +16,8 @@ the c version, currently only works on osx
 # Make and run rockets
 `make`
 
+# Run the game
+`./rockets`
+
 # Recompile any changes to game.c and reload while running.
 `make`
