@@ -279,6 +279,11 @@ nodestore_load_test_nodes(NodeStore* ns)
     int b = nodestore_add_constant(ns, 0, 0, 180);
     int c = nodestore_add_predicate(ns, 75, 50, NEQ);
 
+    int d = nodestore_add_signal(ns, 0, 0, ROTATION);
+    int e = nodestore_add_constant(ns, 0, 0, 180);
+    int f = nodestore_add_predicate(ns, 75, 50, NEQ);
+
+    int g = nodestore_add_gate(ns, 100, 100, AND);
 }
 
 
@@ -319,16 +324,16 @@ game_update_and_render(void* gamestate,
                        float dt)
 {
     GameState* state = (GameState*)gamestate;
+    
 
-    nvgBeginPath(vg);
-    nvgRect(vg, 100,100, 120,30);
-    nvgFillColor(vg, nvgRGBf(0.5, 0.0, 0.0));
-    nvgFill(vg);
 
-    /* nodestore_render(vg, &state->node_store); */
+    nodestore_render(vg, &state->node_store);
     /* nvgBeginPath(vg); */
     /* nvgRect(vg, 10.0, 10.0, 100.0, 100.0); */
     /* nvgFillColor(vg, nvgRGB(1.0, 0.0, 0.0)); */
+    /* nvgFill(vg); */
+    /* nvgBeginPath(vg); */
+
     /* nvgFill(vg); */
 
 }
