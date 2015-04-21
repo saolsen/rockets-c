@@ -43,11 +43,50 @@ typedef struct Node {
     };
 } Node;
 
-// Functions needed to interact with nodes.
-// Create and Remove Nodes.
-// Move nodes around.
-// Connect nodes to eachother.
-// Render nodes.
+// Id is just index, this doesn't work when I want to remove elements
+// todo(stephen): Revisit this.
+typedef struct {
+    Node* array;
+    size_t size;
+    size_t next_id;
+} NodeStore;
+
+
+void
+draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
+{
+    nvgSave(vg);
+    {
+        // Setup Text
+        nvgFontSize(vg, 24);
+
+        // Get Text Bounds
+        float bounds[4];
+        nvgTextBounds(vg, x, y, txt, NULL, bounds);
+
+        float x_padding = 12.0;
+        float y_padding = 12.0;
+
+        // Draw Background
+        nvgSave(vg);
+        {
+            nvgBeginPath(vg);
+            nvgRect(vg,
+                    bounds[0] - x_padding,
+                    bounds[1] - y_padding,
+                    bounds[2] - bounds[0] + 2 * x_padding,
+                    bounds[3] - bounds[1] + 2 * y_padding);
+            nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
+            nvgFill(vg);
+        }
+        nvgRestore(vg);
+
+        // Draw Text
+        nvgText(vg, x, y, txt, NULL);
+    }
+    nvgRestore(vg);
+}
+
 
 
 // todo(stephen): Have a type of thing to draw for selecting a new node.
@@ -73,36 +112,7 @@ node_draw_gate(NVGcontext* vg, Node node)
         } break;
     }
 
-    nvgSave(vg);
-    {
-        // Setup Text
-        nvgFontSize(vg, 24);
-
-        // Get Text Bounds
-        float bounds[4];
-        nvgTextBounds(vg, node.position.x, node.position.y, txt, NULL, bounds);
-
-        float x_padding = 12.0;
-        float y_padding = 12.0;
-
-        // Draw Background
-        nvgSave(vg);
-        {
-            nvgBeginPath(vg);
-            nvgRect(vg,
-                    bounds[0] - x_padding,
-                    bounds[1] - y_padding,
-                    bounds[2] - bounds[0] + 2 * x_padding,
-                    bounds[3] - bounds[1] + 2 * y_padding);
-            nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
-            nvgFill(vg);
-        }
-        nvgRestore(vg);
-
-        // Draw Text
-        nvgText(vg, node.position.x, node.position.y, txt, NULL);
-    }
-    nvgRestore(vg);
+    draw_text_box(vg, txt, node.position.x, node.position.y);
 }
 
 
@@ -114,22 +124,92 @@ node_draw_thruster(NVGcontext* vg, Node* node)
 
 
 void
+node_get_text(Node* node, char* buffer)
+{
+    const char* txt = NULL;
+    
+    switch(node->type) {
+    case SIGNAL: {
+        switch(node->signal) {
+        case POS_X:
+            txt = "pos-x";
+            break;
+        case POS_Y:
+            txt = "pos-y";
+            break;
+        case ROTATION:
+            txt = "rotation";
+            break;
+        }
+    } break;
+    case CONSTANT: {
+        char str[15];
+        sprintf(str, "%d", node->signal);
+        txt = str;
+        break;
+    } break;
+    case PREDICATE: {
+        switch(node->predicate) {
+        case LT:
+            txt = "<";
+            break;
+        case GT:
+            txt = ">";
+            break;
+        case LEQT:
+            txt = "<=";
+            break;
+        case GEQT:
+            txt = ">=";
+            break;
+        case EQ:
+            txt = "==";
+            break;
+        case NEQ:
+            txt = "<>";
+            break;
+        }
+    } break;
+    default:
+        break;
+    }
+    
+    strcpy(buffer, txt);
+}
+
+void
 node_draw_predicate(NVGcontext* vg, Node* node, Node* lhs, Node* rhs)
 {
     // check if lhs or rhs are NULL.
-
-
+    char buf[256];
+    char str[15];
+    size_t max_len = sizeof buf - 1;
+ 
+    if (NULL != lhs) {
+        node_get_text(lhs, str);
+        log_info("lhs_text: %s", str);
+        strncat(buf, str, max_len);
+        strncat(buf, " ", max_len - strlen(buf));
+        str[0] = '\0';
+    }
+ 
+    node_get_text(node, str);
+    log_info("pred_text: %s", str);
+    strncat(buf, str, max_len - strlen(buf));
+    str[0] = '\0';
+ 
+    if (NULL != rhs) {
+        node_get_text(rhs, str);
+        log_info("rhs_text: %s", str);
+        strncat(buf, " ", max_len- strlen(buf));
+        strncat(buf, str, max_len - strlen(buf));
+        str[0] = '\0';
+    }
+ 
+    log_info("buffer: %s", buf);
+ 
+    draw_text_box(vg, buf, node->position.x, node->position.y);
 }
-
-
-// Id is just index, this doesn't work when I want to remove elements
-// todo(stephen): Revisit this.
-typedef struct {
-    Node* array;
-    size_t size;
-    size_t next_id;
-} NodeStore;
-
 
 void
 nodestore_init(NodeStore* ns, size_t init_size)
@@ -153,7 +233,7 @@ nodestore_resize(NodeStore* ns)
 Node*
 nodestore_get_node_by_id(NodeStore* ns, int id)
 {
-    if (id > 0 && id < ns->next_id) {
+    if (id >= 0 && id < ns->next_id) {
         Node* node = &(ns->array[id]);
         return node;
     } else {
@@ -224,6 +304,17 @@ nodestore_add_constant(NodeStore* ns, float pos_x, float pos_y, int val)
 }
 
 
+int
+nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y, Thruster thruster)
+{
+    Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
+    node->type = THRUSTER;
+    node->thruster = thruster;
+    
+    return node->id;
+}
+
+
 void
 nodestore_render(NVGcontext* vg, NodeStore* ns)
 {
@@ -278,12 +369,25 @@ nodestore_load_test_nodes(NodeStore* ns)
     int a = nodestore_add_signal(ns, 0, 0, ROTATION);
     int b = nodestore_add_constant(ns, 0, 0, 180);
     int c = nodestore_add_predicate(ns, 75, 50, NEQ);
+    Node* node_c = nodestore_get_node_by_id(ns, c);
+    node_c->input.lhs = a;
+    node_c->input.rhs = b;
 
-    int d = nodestore_add_signal(ns, 0, 0, ROTATION);
-    int e = nodestore_add_constant(ns, 0, 0, 180);
-    int f = nodestore_add_predicate(ns, 75, 50, NEQ);
+    /* int d = nodestore_add_signal(ns, 0, 0, ROTATION); */
+    /* int e = nodestore_add_constant(ns, 0, 0, 180); */
+    /* int f = nodestore_add_predicate(ns, 75, 50, NEQ); */
+    /* Node* node_f = nodestore_get_node_by_id(ns, f); */
+    /* node_f->input.lhs = d; */
+    /* node_f->input.rhs = e; */
 
-    int g = nodestore_add_gate(ns, 100, 100, AND);
+    /* int g = nodestore_add_gate(ns, 100, 100, AND); */
+    /* Node* node_g = nodestore_get_node_by_id(ns, g); */
+    /* node_g->input.lhs = c; */
+    /* node_g->input.rhs = f; */
+
+    /* int h = nodestore_add_thruster(ns, 200, 200, BOOST); */
+    /* Node* node_h = nodestore_get_node_by_id(ns, h); */
+    /* node_h->parent = g; */
 }
 
 
