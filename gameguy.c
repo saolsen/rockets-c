@@ -133,7 +133,7 @@ int main(int argc, char* argv[])
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
     // todo(stephen): Have window name come from config object.
-    SDL_Window *window = SDL_CreateWindow("animal game",
+    SDL_Window *window = SDL_CreateWindow("rockets",
             SDL_WINDOWPOS_UNDEFINED,
             SDL_WINDOWPOS_UNDEFINED,
             SCREEN_WIDTH,
