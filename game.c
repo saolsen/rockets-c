@@ -1,72 +1,7 @@
 #include "gameguy.h"
+#include "game.h"
 
-// For now I've been using malloc so I need to make sure this lib is dynamically
-// linked
-// against stdlib not statically so that the game code will still own all the
-// memory. In the future I should look into doing things the handmade hero way
-// and slicing up a chunk of preallocated memory myself.
-
-typedef struct {
-    float x;
-    float y;
-} Point;
-
-
-typedef enum { THRUSTER, PREDICATE, SIGNAL, CONSTANT, GATE } NodeType;
-typedef enum { BP, BS, SP, SS, BOOST }                       Thruster;
-typedef enum { LT, GT, LEQT, GEQT, EQ, NEQ }                 Predicate;
-typedef enum { POS_X, POS_Y, ROTATION }                      Signal;
-typedef enum { AND, OR, NOT }                                Gate;
-
-
-typedef struct Thrusters {
-    bool bp;
-    bool bs;
-    bool sp;
-    bool ss;
-    bool boost;
-} Thrusters;
-
-
-typedef struct Ship {
-    Point position;
-    float rotation;
-    Thrusters thrusters;
-} Ship;
-
-// todo(stephen): Because the links are int they will start as 0 which is
-//                bad because then I'll have all elements linking to the 0th.
-//                Need a value like -1 or something for null.
-
-// todo(stephen): Typedef the id so I can change it later.
-typedef struct Node {
-    int id;
-    NodeType type;
-    Point position;
-
-    union {
-        struct {
-            int lhs;
-            int rhs; } input;
-        int parent;
-    };
-    union {
-        Thruster  thruster;
-        Predicate predicate;
-        Signal    signal;
-        int       constant;
-        Gate      gate;
-    };
-} Node;
-
-// Id is just index, this doesn't work when I want to remove elements
-// todo(stephen): Revisit this.
-typedef struct {
-    Node* array;
-    size_t size;
-    size_t next_id;
-} NodeStore;
-
+// Rendering Code
 
 void
 draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
@@ -293,7 +228,6 @@ node_get_text(Node* node, char* buffer)
 void
 node_draw_predicate(NVGcontext* vg, Node* node, Node* lhs, Node* rhs)
 {
-    // check if lhs or rhs are NULL.
     char buf[256] = {'\0'};
     char str[15] = {'\0'};
     size_t max_len = sizeof buf - 1;
@@ -322,109 +256,6 @@ node_draw_predicate(NVGcontext* vg, Node* node, Node* lhs, Node* rhs)
     /* log_info("buffer: %s", buf); */
  
     draw_text_box(vg, buf, node->position.x, node->position.y);
-}
-
-void
-nodestore_init(NodeStore* ns, size_t init_size)
-{
-    ns->array = (Node *)malloc(init_size * sizeof(Node));
-    ns->size = init_size;
-    ns->next_id = 0;
-}
-
-
-void
-nodestore_resize(NodeStore* ns)
-{
-    if (ns->next_id == ns->size) {
-        ns->size *= 2;
-        ns->array = (Node *)realloc(ns->array, ns->size * sizeof(Node));
-    }
-}
-
-
-Node*
-nodestore_get_node_by_id(NodeStore* ns, int id)
-{
-    if (id >= 0 && id < ns->next_id) {
-        Node* node = &(ns->array[id]);
-        return node;
-    } else {
-        return NULL;
-    }
-}
-
-
-Node*
-nodestore_init_new_node(NodeStore* ns, float pos_x, float pos_y)
-{
-    nodestore_resize(ns);
-
-    int id = ns->next_id++;
-    Node* node = &(ns->array[id]);
-
-    node->id = (int)id;
-    node->position.x = pos_x;
-    node->position.y = pos_y;
-    node->input.lhs = -1;
-    node->input.rhs = -1;
-
-    return node;
-}
-
-
-int
-nodestore_add_gate(NodeStore* ns, float pos_x, float pos_y, Gate type)
-{
-    Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
-    node->type = GATE;
-    node->gate = type;
-
-    return node->id;
-}
-
-
-int
-nodestore_add_predicate(NodeStore* ns, float pos_x, float pos_y, Predicate type)
-{
-    Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
-    node->type = PREDICATE;
-    node->predicate = type;
-
-    return node->id;
-}
-
-
-int
-nodestore_add_signal(NodeStore* ns, float pos_x, float pos_y, Signal type)
-{
-    Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
-    node->type = SIGNAL;
-    node->signal = type;
-
-    return node->id;
-}
-
-
-int
-nodestore_add_constant(NodeStore* ns, float pos_x, float pos_y, int val)
-{
-    Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
-    node->type = CONSTANT;
-    node->constant = val;
-
-    return node->id;
-}
-
-
-int
-nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y, Thruster thruster)
-{
-    Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
-    node->type = THRUSTER;
-    node->thruster = thruster;
-    
-    return node->id;
 }
 
 
@@ -462,6 +293,7 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
     // Draw Connections
     // todo(stephen)
 }
+
 
 void
 nodestore_load_test_nodes(NodeStore* ns)
@@ -537,12 +369,6 @@ nodestore_load_test_nodes(NodeStore* ns)
 }
 
 
-typedef struct {
-    NodeStore node_store;
-    Ship player_ship;
-} GameState;
-
-
 static void*
 game_setup(NVGcontext* vg)
 {
@@ -576,6 +402,11 @@ game_update_and_render(void* gamestate,
 {
     GameState* state = (GameState*)gamestate;
 
+    // todo(stephen): I need to translate to the place I really want to render
+    // this stuff before drawing.
+
+    // Draw some bounding frames or something.
+    
     nodestore_render(vg, &state->node_store);
 
     draw_ship(vg,
