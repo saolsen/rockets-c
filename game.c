@@ -39,7 +39,6 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
 }
 
 
-
 // todo(stephen): Have a type of thing to draw for selecting a new node.
 //                used during creation.
 void

@@ -1,3 +1,6 @@
+#ifndef _game_h
+#define _game_h
+
 typedef struct {
     float x;
     float y;
@@ -163,3 +166,5 @@ typedef struct {
     NodeStore node_store;
     Ship player_ship;
 } GameState;
+
+#endif
