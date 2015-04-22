@@ -17,6 +17,13 @@ typedef enum { LT, GT, LEQT, GEQT, EQ, NEQ }                 Predicate;
 typedef enum { POS_X, POS_Y, ROTATION }                      Signal;
 typedef enum { AND, OR, NOT }                                Gate;
 
+typedef struct Thrusters {
+    bool bp;
+    bool bs;
+    bool sp;
+    bool ss;
+    bool boost;
+} Thrusters;
 
 // todo(stephen): Because the links are int they will start as 0 which is
 //                bad because then I'll have all elements linking to the 0th.
@@ -115,11 +122,85 @@ node_draw_gate(NVGcontext* vg, Node node)
     draw_text_box(vg, txt, node.position.x, node.position.y);
 }
 
+void
+draw_ship(NVGcontext* vg, float x, float y, Thrusters thrusters, bool grayscale)
+{
+    // Something is wrong with how this whole thing is scaled. Need to dig into
+    // the retina stuff some more I think.
+    // Using coordinates from the clojure port but that makes things a bit fat.
+    nvgSave(vg);
+    {
+        if (grayscale) {
+            nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
+        } else {
+            nvgFillColor(vg, nvgRGBf(1.0, 0.0, 0.0));
+
+        }
+
+        // Ship body
+        nvgBeginPath(vg);
+        nvgRect(vg, x-10.0, y-25.0, 20.0, 40.0);
+        nvgFill(vg);
+        nvgBeginPath(vg);
+        nvgRect(vg, x-20.0, y-5.0, 15.0, 30.0);
+        nvgFill(vg);
+        nvgBeginPath(vg);
+        nvgRect(vg, x+5.0, y-5.0, 15.0, 30.0);
+        nvgFill(vg);
+
+        // Ship thrusters
+        if (!grayscale) {
+            nvgFillColor(vg, nvgRGBf(1.0, 1.0, 0.0));
+        }
+
+        if (thrusters.bp) {
+            nvgBeginPath(vg);
+            nvgRect(vg, x-20.0, y-25.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        if (thrusters.bs) {
+            nvgBeginPath(vg);
+            nvgRect(vg, x+10.0, y-25.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        if (thrusters.sp) {
+            nvgBeginPath(vg);
+            nvgRect(vg, x-30.0, y+15.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        if (thrusters.ss) {
+            nvgBeginPath(vg);
+            nvgRect(vg, x+20.0, y+15.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        if (thrusters.boost) {
+            nvgBeginPath(vg);
+            nvgRect(vg, x-17.5, y+25.0, 10, 10);
+            nvgFill(vg);
+            nvgBeginPath(vg);
+            nvgRect(vg, x+7.5, y+25.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        // Center (for debugging)
+        nvgBeginPath(vg);
+        nvgCircle(vg, x, y, 1.0);
+        nvgFillColor(vg, nvgRGBf(1.0, 1.0, 1.0));
+        nvgFill(vg);
+    }
+
+    nvgRestore(vg);
+}
+
 
 void
 node_draw_thruster(NVGcontext* vg, Node* node)
 {
-
+    
 }
 
 
@@ -187,26 +268,26 @@ node_draw_predicate(NVGcontext* vg, Node* node, Node* lhs, Node* rhs)
  
     if (NULL != lhs) {
         node_get_text(lhs, str);
-        log_info("lhs_text: %s", str);
+        /* log_info("lhs_text: %s", str); */
         strncat(buf, str, max_len);
         strncat(buf, " ", max_len - strlen(buf));
         str[0] = '\0';
     }
  
     node_get_text(node, str);
-    log_info("pred_text: %s", str);
+    /* log_info("pred_text: %s", str); */
     strncat(buf, str, max_len - strlen(buf));
     str[0] = '\0';
  
     if (NULL != rhs) {
         node_get_text(rhs, str);
-        log_info("rhs_text: %s", str);
+        /* log_info("rhs_text: %s", str); */
         strncat(buf, " ", max_len- strlen(buf));
         strncat(buf, str, max_len - strlen(buf));
         str[0] = '\0';
     }
  
-    log_info("buffer: %s", buf);
+    /* log_info("buffer: %s", buf); */
  
     draw_text_box(vg, buf, node->position.x, node->position.y);
 }
@@ -432,6 +513,13 @@ game_update_and_render(void* gamestate,
 
 
     nodestore_render(vg, &state->node_store);
+
+    Thrusters thrusts = {.bp=true,
+                         .bs=true,
+                         .sp=true,
+                         .ss=true,
+                         .boost=true};
+    draw_ship(vg, 300, 300, thrusts, false);
     /* nvgBeginPath(vg); */
     /* nvgRect(vg, 10.0, 10.0, 100.0, 100.0); */
     /* nvgFillColor(vg, nvgRGB(1.0, 0.0, 0.0)); */
