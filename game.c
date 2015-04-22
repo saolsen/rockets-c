@@ -1,9 +1,10 @@
 #include "gameguy.h"
 
-// For now I've been using malloc so I need to make sure this lib is dynamically linked
-// against stdlib not statically so that the game code will still own all the memory.
-// In the future I should look into doing things the handmade hero way and slicing up
-// a chunk of preallocated memory myself.
+// For now I've been using malloc so I need to make sure this lib is dynamically
+// linked
+// against stdlib not statically so that the game code will still own all the
+// memory. In the future I should look into doing things the handmade hero way
+// and slicing up a chunk of preallocated memory myself.
 
 typedef struct {
     float x;
@@ -17,6 +18,7 @@ typedef enum { LT, GT, LEQT, GEQT, EQ, NEQ }                 Predicate;
 typedef enum { POS_X, POS_Y, ROTATION }                      Signal;
 typedef enum { AND, OR, NOT }                                Gate;
 
+
 typedef struct Thrusters {
     bool bp;
     bool bs;
@@ -24,6 +26,13 @@ typedef struct Thrusters {
     bool ss;
     bool boost;
 } Thrusters;
+
+
+typedef struct Ship {
+    Point position;
+    float rotation;
+    Thrusters thrusters;
+} Ship;
 
 // todo(stephen): Because the links are int they will start as 0 which is
 //                bad because then I'll have all elements linking to the 0th.
@@ -134,22 +143,25 @@ draw_ship(NVGcontext* vg, float x, float y, Thrusters thrusters, bool grayscale)
             nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
         } else {
             nvgFillColor(vg, nvgRGBf(1.0, 0.0, 0.0));
-
         }
 
         // Ship body
         nvgBeginPath(vg);
         nvgRect(vg, x-10.0, y-25.0, 20.0, 40.0);
         nvgFill(vg);
+        
         nvgBeginPath(vg);
         nvgRect(vg, x-20.0, y-5.0, 15.0, 30.0);
         nvgFill(vg);
+        
         nvgBeginPath(vg);
         nvgRect(vg, x+5.0, y-5.0, 15.0, 30.0);
         nvgFill(vg);
 
         // Ship thrusters
-        if (!grayscale) {
+        if (grayscale) {
+            nvgFillColor(vg, nvgRGBf(0.75, 0.75, 0.75));
+        } else {
             nvgFillColor(vg, nvgRGBf(1.0, 1.0, 0.0));
         }
 
@@ -187,10 +199,10 @@ draw_ship(NVGcontext* vg, float x, float y, Thrusters thrusters, bool grayscale)
         }
 
         // Center (for debugging)
-        nvgBeginPath(vg);
-        nvgCircle(vg, x, y, 1.0);
-        nvgFillColor(vg, nvgRGBf(1.0, 1.0, 1.0));
-        nvgFill(vg);
+        /* nvgBeginPath(vg); */
+        /* nvgCircle(vg, x, y, 1.0); */
+        /* nvgFillColor(vg, nvgRGBf(1.0, 1.0, 1.0)); */
+        /* nvgFill(vg); */
     }
 
     nvgRestore(vg);
@@ -200,7 +212,27 @@ draw_ship(NVGcontext* vg, float x, float y, Thrusters thrusters, bool grayscale)
 void
 node_draw_thruster(NVGcontext* vg, Node* node)
 {
-    
+    // TODO(stephen): draw bounding box
+    Thrusters thrusts = {};
+    switch(node->thruster) {
+    case BP:
+        thrusts.bp = true;
+        break;
+    case BS:
+        thrusts.bs = true;
+        break;
+    case SP:
+        thrusts.sp = true;
+        break;
+    case SS:
+        thrusts.ss = true;
+        break;
+    case BOOST:
+        thrusts.boost = true;
+        break;
+    }
+
+    draw_ship(vg, node->position.x, node->position.y, thrusts, true);
 }
 
 
@@ -262,8 +294,8 @@ void
 node_draw_predicate(NVGcontext* vg, Node* node, Node* lhs, Node* rhs)
 {
     // check if lhs or rhs are NULL.
-    char buf[256];
-    char str[15];
+    char buf[256] = {'\0'};
+    char str[15] = {'\0'};
     size_t max_len = sizeof buf - 1;
  
     if (NULL != lhs) {
@@ -405,9 +437,9 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
 
         switch(node.type) {
             case THRUSTER:
+                node_draw_thruster(vg, &node);
                 break;
 
-                // This might be a cache buster, revisit.
             case PREDICATE: {
                 Node* lhs = nodestore_get_node_by_id(ns, node.input.lhs);
                 Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
@@ -434,19 +466,7 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
 void
 nodestore_load_test_nodes(NodeStore* ns)
 {
-    /* int constant = nodestore_add_constant(ns, 100, 100, 12); */
-    /* /\* Node* constant_n = nodestore_get_node_by_id(ns, constant); *\/ */
-    /* int signal = nodestore_add_signal(ns, 200, 200, POS_X); */
-    /* /\* Node* signal_n = nodestore_get_node_by_id(ns, signal); *\/ */
-    /* int pred = nodestore_add_predicate(ns, 300, 300, LT); */
-    /* Node* pred_n = nodestore_get_node_by_id(ns, pred); */
-    /* int not_gate = nodestore_add_gate(ns, 700, 200, NOT); */
-    /* Node* not_n = nodestore_get_node_by_id(ns, not_gate); */
-
-    /* pred_n->input.lhs = constant; */
-    /* pred_n->input.rhs = signal; */
-
-    /* not_n->parent = pred; */
+    // HOLY MOLY GET A MACRO OR SOMETHING!
     int a = nodestore_add_signal(ns, 0, 0, ROTATION);
     int b = nodestore_add_constant(ns, 0, 0, 180);
     int c = nodestore_add_predicate(ns, 75, 50, NEQ);
@@ -454,27 +474,72 @@ nodestore_load_test_nodes(NodeStore* ns)
     node_c->input.lhs = a;
     node_c->input.rhs = b;
 
-    /* int d = nodestore_add_signal(ns, 0, 0, ROTATION); */
-    /* int e = nodestore_add_constant(ns, 0, 0, 180); */
-    /* int f = nodestore_add_predicate(ns, 75, 50, NEQ); */
-    /* Node* node_f = nodestore_get_node_by_id(ns, f); */
-    /* node_f->input.lhs = d; */
-    /* node_f->input.rhs = e; */
+    int d = nodestore_add_signal(ns, 0, 0, ROTATION);
+    int e = nodestore_add_constant(ns, 0, 0, 0);
+    int f = nodestore_add_predicate(ns, 450, 50, NEQ);
+    Node* node_f = nodestore_get_node_by_id(ns, f);
+    node_f->input.lhs = d;
+    node_f->input.rhs = e;
 
-    /* int g = nodestore_add_gate(ns, 100, 100, AND); */
-    /* Node* node_g = nodestore_get_node_by_id(ns, g); */
-    /* node_g->input.lhs = c; */
-    /* node_g->input.rhs = f; */
+    int g = nodestore_add_signal(ns, 0, 0, POS_Y);
+    int h = nodestore_add_constant(ns, 0, 0, 600);
+    int i = nodestore_add_predicate(ns, 200, 50, GT);
+    Node* node_i = nodestore_get_node_by_id(ns, i);
+    node_i->input.lhs = g;
+    node_i->input.rhs = h;
 
-    /* int h = nodestore_add_thruster(ns, 200, 200, BOOST); */
-    /* Node* node_h = nodestore_get_node_by_id(ns, h); */
-    /* node_h->parent = g; */
+    int j = nodestore_add_signal(ns, 0, 0, POS_Y);
+    int k = nodestore_add_constant(ns, 0, 0, 100);
+    int l = nodestore_add_predicate(ns, 325, 50, LT);
+    Node* node_l = nodestore_get_node_by_id(ns, l);
+    node_l->input.lhs = j;
+    node_l->input.rhs = k;
+
+    int m = nodestore_add_gate(ns, 125, 125, AND);
+    Node* node_m = nodestore_get_node_by_id(ns, m);
+    node_m->input.lhs = c;
+    node_m->input.rhs = i;
+
+    int n = nodestore_add_gate(ns, 125, 125, AND);
+    Node* node_n = nodestore_get_node_by_id(ns, n);
+    node_n->input.lhs = f;
+    node_n->input.rhs = l;
+
+    int o = nodestore_add_gate(ns, 100, 225, OR);
+    Node* node_o = nodestore_get_node_by_id(ns, o);
+    node_o->input.lhs = m;
+    node_o->input.rhs = n;
+
+    int p = nodestore_add_thruster(ns, 75, 325, BP);
+    Node* node_p = nodestore_get_node_by_id(ns, p);
+    node_p->parent = o;
+
+    int q = nodestore_add_thruster(ns, 175, 325, SS);
+    Node* node_q = nodestore_get_node_by_id(ns, q);
+    node_q->parent = o;
+
+    int r = nodestore_add_gate(ns, 375, 325, NOT);
+    Node* node_r = nodestore_get_node_by_id(ns, r);
+    node_r->parent = m;
+
+    int s = nodestore_add_gate(ns, 475, 325, NOT);
+    Node* node_s = nodestore_get_node_by_id(ns, s);
+    node_s->parent = n;
+
+    int t = nodestore_add_gate(ns, 435, 425, AND);
+    Node* node_t = nodestore_get_node_by_id(ns, t);
+    node_t->input.lhs = r;
+    node_t->input.rhs = s;
+
+    int u = nodestore_add_thruster(ns, 425, 525, BOOST);
+    Node* node_u = nodestore_get_node_by_id(ns, u);
+    node_u->parent = t;
 }
 
 
 typedef struct {
     NodeStore node_store;
-
+    Ship player_ship;
 } GameState;
 
 
@@ -491,12 +556,13 @@ game_setup(NVGcontext* vg)
             "SourceSansPro-Regular.ttf");
 
     nodestore_init(&state->node_store, 5);
-
     NodeStore* ns = &state->node_store;
 
-    // todo(stephen): Probably pass x and y to add_gate;
-
     nodestore_load_test_nodes(ns);
+
+    state->player_ship.position.x = 300;
+    state->player_ship.position.y = 300;
+    state->player_ship.rotation = 0.0;
 
     return state;
 }
@@ -509,25 +575,14 @@ game_update_and_render(void* gamestate,
                        float dt)
 {
     GameState* state = (GameState*)gamestate;
-    
-
 
     nodestore_render(vg, &state->node_store);
 
-    Thrusters thrusts = {.bp=true,
-                         .bs=true,
-                         .sp=true,
-                         .ss=true,
-                         .boost=true};
-    draw_ship(vg, 300, 300, thrusts, false);
-    /* nvgBeginPath(vg); */
-    /* nvgRect(vg, 10.0, 10.0, 100.0, 100.0); */
-    /* nvgFillColor(vg, nvgRGB(1.0, 0.0, 0.0)); */
-    /* nvgFill(vg); */
-    /* nvgBeginPath(vg); */
-
-    /* nvgFill(vg); */
-
+    draw_ship(vg,
+              state->player_ship.position.x,
+              state->player_ship.position.y,
+              state->player_ship.thrusters,
+              false);
 }
 
 
