@@ -2,7 +2,6 @@
 #include "game.h"
 
 // Rendering Code
-
 void
 draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
 {
@@ -33,6 +32,7 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
         nvgRestore(vg);
 
         // Draw Text
+        nvgFillColor(vg, nvgRGBf(1, 1, 1));
         nvgText(vg, x, y, txt, NULL);
     }
     nvgRestore(vg);
@@ -66,13 +66,11 @@ node_draw_gate(NVGcontext* vg, Node node)
 }
 
 void
-draw_ship(NVGcontext* vg, float x, float y, Thrusters thrusters, bool grayscale)
+draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
 {
-    // Something is wrong with how this whole thing is scaled. Need to dig into
-    // the retina stuff some more I think.
-    // Using coordinates from the clojure port but that makes things a bit fat.
     nvgSave(vg);
     {
+        
         if (grayscale) {
             nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
         } else {
@@ -81,15 +79,15 @@ draw_ship(NVGcontext* vg, float x, float y, Thrusters thrusters, bool grayscale)
 
         // Ship body
         nvgBeginPath(vg);
-        nvgRect(vg, x-10.0, y-25.0, 20.0, 40.0);
+        nvgRect(vg, -10.0, -25.0, 20.0, 40.0);
         nvgFill(vg);
         
         nvgBeginPath(vg);
-        nvgRect(vg, x-20.0, y-5.0, 15.0, 30.0);
+        nvgRect(vg, -20.0, -5.0, 15.0, 30.0);
         nvgFill(vg);
         
         nvgBeginPath(vg);
-        nvgRect(vg, x+5.0, y-5.0, 15.0, 30.0);
+        nvgRect(vg, 5.0, -5.0, 15.0, 30.0);
         nvgFill(vg);
 
         // Ship thrusters
@@ -101,34 +99,34 @@ draw_ship(NVGcontext* vg, float x, float y, Thrusters thrusters, bool grayscale)
 
         if (thrusters.bp) {
             nvgBeginPath(vg);
-            nvgRect(vg, x-20.0, y-25.0, 10, 10);
+            nvgRect(vg, -20.0, -25.0, 10, 10);
             nvgFill(vg);
         }
 
         if (thrusters.bs) {
             nvgBeginPath(vg);
-            nvgRect(vg, x+10.0, y-25.0, 10, 10);
+            nvgRect(vg, 10.0, -25.0, 10, 10);
             nvgFill(vg);
         }
 
         if (thrusters.sp) {
             nvgBeginPath(vg);
-            nvgRect(vg, x-30.0, y+15.0, 10, 10);
+            nvgRect(vg, -30.0, 15.0, 10, 10);
             nvgFill(vg);
         }
 
         if (thrusters.ss) {
             nvgBeginPath(vg);
-            nvgRect(vg, x+20.0, y+15.0, 10, 10);
+            nvgRect(vg, 20.0, 15.0, 10, 10);
             nvgFill(vg);
         }
 
         if (thrusters.boost) {
             nvgBeginPath(vg);
-            nvgRect(vg, x-17.5, y+25.0, 10, 10);
+            nvgRect(vg, -17.5, 25.0, 10, 10);
             nvgFill(vg);
             nvgBeginPath(vg);
-            nvgRect(vg, x+7.5, y+25.0, 10, 10);
+            nvgRect(vg, 7.5, 25.0, 10, 10);
             nvgFill(vg);
         }
 
@@ -166,7 +164,13 @@ node_draw_thruster(NVGcontext* vg, Node* node)
         break;
     }
 
-    draw_ship(vg, node->position.x, node->position.y, thrusts, true);
+    nvgSave(vg);
+    {
+        nvgTranslate(vg, node->position.x, node->position.y);
+        draw_ship(vg, thrusts, true);
+    }
+    nvgRestore(vg);
+
 }
 
 
@@ -389,7 +393,60 @@ game_setup(NVGcontext* vg)
     state->player_ship.position.y = 300;
     state->player_ship.rotation = 0.0;
 
+    state->player_ship.thrusters.bp = true;
+    state->player_ship.thrusters.bs = false;
+    state->player_ship.thrusters.sp = false;
+    state->player_ship.thrusters.ss = false;
+    state->player_ship.thrusters.boost = true;
+
     return state;
+}
+
+void debug_square(NVGcontext* vg, float x, float y)
+{
+    nvgBeginPath(vg);
+    nvgRect(vg, x, y, 1, 1);
+    nvgFill(vg);
+}
+
+void ship_move(Ship* ship, float dt)
+{
+    V2 force = {0.0, 0.0};
+    float rotation = 0.0;
+
+    if (ship->thrusters.bp) {
+        force = v2_plus(force, (V2){1, 0});
+        rotation -= 1.0;
+    }
+
+    if (ship->thrusters.bs) {
+        force = v2_plus(force, (V2){-1, 0});
+        rotation += 1.0;
+    }
+
+    if (ship->thrusters.sp) {
+        force = v2_plus(force, (V2){1, 0});
+        rotation += 1.0;
+    }
+
+    if (ship->thrusters.ss) {
+        force = v2_plus(force, (V2){-1, 0});
+        rotation -= 1.0;
+    }
+
+    if (ship->thrusters.boost) {
+        force = v2_plus(force, (V2){0, 5});
+    }
+
+    V2 abs_force = v2_rotate(force, deg_to_rad(ship->rotation));
+    float speed = 50;
+
+    /* log_info("force: %f, %f", force.x, force.y); */
+
+    ship->position.x += abs_force.x*speed*dt;
+    ship->position.y += abs_force.y*speed*dt;
+    ship->rotation = (int)(ship->rotation + rotation) % 360;
+
 }
 
 
@@ -401,18 +458,56 @@ game_update_and_render(void* gamestate,
 {
     GameState* state = (GameState*)gamestate;
 
+    // Update
+    
+    ship_move(&state->player_ship, dt);
+
+    // Render
+
     // todo(stephen): I need to translate to the place I really want to render
     // this stuff before drawing.
 
-    // Draw some bounding frames or something.
-    
+    // Space scene!
+    nvgBeginPath(vg);
+    nvgRect(vg, 1000, 25, 1000, 1500);
+    nvgFillColor(vg, nvgRGBf(0.25, 0.25, 0.25));
+    nvgFill(vg);
+
+    // These probably need some ui and stuff around them.
     nodestore_render(vg, &state->node_store);
 
-    draw_ship(vg,
-              state->player_ship.position.x,
-              state->player_ship.position.y,
-              state->player_ship.thrusters,
-              false);
+    nvgSave(vg);
+    {
+        // x,y positions will need their y flipped to be drawn in the proper place.
+        // the translates take care of the rest of the movement. Math in space can
+        // be done in cartesian coordinates, just need this work to draw in the
+        // right place. Drawing will be done in normal nvg coordinates so stuff like
+        // text works. Collision detection will have to be in cartesian and seperate
+        // from rendering.
+        nvgTranslate(vg, 1000, 25);
+        nvgTranslate(vg, 0, 1500);
+
+        nvgSave(vg);
+        {
+            nvgTranslate(vg,
+                         state->player_ship.position.x,
+                         -state->player_ship.position.y);
+            nvgRotate(vg, -deg_to_rad(state->player_ship.rotation));
+            draw_ship(vg,
+                      state->player_ship.thrusters,
+                      false);
+            /* nvgTranslate(vg, node->position.x, node->position.y); */
+            /* draw_ship(vg, 0.0, 0.0, thrusts, true); */
+        }
+        nvgRestore(vg);
+
+        
+        // debug rects!
+        /* nvgFillColor(vg, nvgRGBf(0, 1000, 1000)); */
+        /* debug_square(vg, 1000, -1500); */
+        
+    }
+    nvgRestore(vg);
 }
 
 

@@ -1,10 +1,37 @@
 #ifndef _game_h
 #define _game_h
 
+#include <math.h>
+
 typedef struct {
     float x;
     float y;
 } Point;
+
+typedef struct {
+    float x;
+    float y;
+} V2;
+
+
+V2 v2_plus(V2 v1, V2 v2)
+{
+    return (V2){v1.x + v2.x,
+                v1.y + v2.y};
+}
+
+float deg_to_rad(float deg)
+{
+    return deg * M_PI / 180.0; 
+}
+
+// theta must be in radians
+V2 v2_rotate(V2 v, float theta)
+{
+    float nx = v.x * cos(theta) - v.y * sin(theta);
+    float ny = v.x * sin(theta) + v.y * cos(theta);
+    return (V2){nx, ny};
+}
 
 
 typedef enum { THRUSTER, PREDICATE, SIGNAL, CONSTANT, GATE } NodeType;
