@@ -393,11 +393,11 @@ game_setup(NVGcontext* vg)
     state->player_ship.position.y = 300;
     state->player_ship.rotation = 0.0;
 
-    state->player_ship.thrusters.bp = true;
-    state->player_ship.thrusters.bs = false;
-    state->player_ship.thrusters.sp = false;
-    state->player_ship.thrusters.ss = false;
-    state->player_ship.thrusters.boost = true;
+    /* state->player_ship.thrusters.bp = true; */
+    /* state->player_ship.thrusters.bs = false; */
+    /* state->player_ship.thrusters.sp = false; */
+    /* state->player_ship.thrusters.ss = false; */
+    /* state->player_ship.thrusters.boost = true; */
 
     return state;
 }
@@ -449,6 +449,133 @@ void ship_move(Ship* ship, float dt)
 
 }
 
+int ship_get_signal(const Ship* ship, Signal signal)
+{
+    switch(signal) {
+    case POS_X:
+        return 1;
+        break;
+    case POS_Y:
+        return 2;
+        break;
+    case ROTATION:
+        return 3;
+        break;
+    }
+
+    //error
+    return -1;
+}
+// You guys, polymorphic functions would be pretty damn useful right here!
+
+// todo(stephen): Figure out how the hell to write this without
+// recursion or maps.
+int node_eval_sub_node(const Node* node, const Ship* ship)
+{
+    if (node->type == SIGNAL) {
+        return ship_get_signal(ship, node->signal);
+    } else { // Constant
+        return node->constant;
+    }
+}
+
+// note(stephen): This isn't a full function, I can't use it for signal and constant
+// because those nodes have non-bool values.
+bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
+{
+    switch(node->type) {
+    case SIGNAL: {
+        // only a sub node
+    } break;
+    case CONSTANT: {
+        // only a sub node
+    } break;
+    case PREDICATE: {
+        int lhs = node_eval_sub_node(nodestore_get_node_by_id(ns, node->input.lhs), ship);
+        int rhs = node_eval_sub_node(nodestore_get_node_by_id(ns, node->input.rhs), ship);
+
+        switch(node->predicate) {
+        case LT:
+            return lhs < rhs;
+            break;
+        case GT:
+            return lhs > rhs;
+            break;
+        case LEQT:
+            return lhs <= rhs;
+            break;
+        case GEQT:
+            return lhs >= rhs;
+            break;
+        case EQ:
+            return lhs == rhs;
+            break;
+        case NEQ:
+            return lhs != rhs;
+            break;
+        }
+    } break;
+    case GATE: {
+        bool lhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs), ns, ship);
+        bool rhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs), ns, ship);
+
+        switch(node->gate) {
+        case AND:
+            return lhs && rhs;
+            break;
+        case OR:
+            return lhs || rhs;
+            break;
+        case NOT:
+            return !lhs;
+            break;
+        }
+        
+    } break;
+    case THRUSTER: {
+        return node_eval(nodestore_get_node_by_id(ns, node->parent), ns, ship);
+    } break;
+    }
+
+    // This is actually an error tho...
+    return false;
+
+}
+
+Thrusters
+nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
+{
+    Thrusters out_thrusters = {false, false, false, false, true};
+
+    // iterate over thruster nodes
+    for (int i = 0; i < ns->next_id; i++) {
+        Node* node = nodestore_get_node_by_id(ns, i);
+        bool value = node_eval(node, ns, ship);
+
+        if (node->type == THRUSTER) {
+            switch(node->thruster) {
+            case BP:
+                out_thrusters.bp = value;
+                break;
+            case BS:
+                out_thrusters.bs = value;
+                break;
+            case SP:
+                out_thrusters.sp = value;
+                break;
+            case SS:
+                out_thrusters.ss = value;
+                break;
+            case BOOST:
+                out_thrusters.boost = value;
+                break;
+            }
+        }
+    }
+    
+    return out_thrusters;
+}
+
 
 static void
 game_update_and_render(void* gamestate,
@@ -475,6 +602,12 @@ game_update_and_render(void* gamestate,
 
     // These probably need some ui and stuff around them.
     nodestore_render(vg, &state->node_store);
+
+    // todo(stephen): Maybe pass the world to this depending on what the signals
+    // end up being.
+    Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
+                                                       &state->player_ship);
+    state->player_ship.thrusters = new_thrusters;
 
     nvgSave(vg);
     {

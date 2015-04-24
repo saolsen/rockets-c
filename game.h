@@ -105,7 +105,7 @@ nodestore_resize(NodeStore* ns)
 
 
 Node*
-nodestore_get_node_by_id(NodeStore* ns, int id)
+nodestore_get_node_by_id(const NodeStore* ns, int id)
 {
     if (id >= 0 && id < ns->next_id) {
         Node* node = &(ns->array[id]);
