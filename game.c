@@ -453,13 +453,13 @@ int ship_get_signal(const Ship* ship, Signal signal)
 {
     switch(signal) {
     case POS_X:
-        return 1;
+        return ship->position.x;
         break;
     case POS_Y:
-        return 2;
+        return ship->position.y;
         break;
     case ROTATION:
-        return 3;
+        return ship->rotation;
         break;
     }
 
