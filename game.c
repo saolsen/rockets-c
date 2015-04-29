@@ -1,4 +1,5 @@
-// GUI code is needed. What are the steps to get node building as part of the game?
+// GUI code is needed. What are the steps to get node building as part of the
+// game?
 
 #include "gameguy.h"
 #include "game.h"
@@ -382,8 +383,8 @@ int node_eval_sub_node(const Node* node, const Ship* ship)
     }
 }
 
-// note(stephen): This isn't a full function, I can't use it for signal and constant
-// because those nodes have non-bool values.
+// note(stephen): This isn't a full function, I can't use it for signal and
+// constant because those nodes have non-bool values.
 bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 {
     switch(node->type) {
@@ -394,8 +395,12 @@ bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
         // only a sub node
     } break;
     case PREDICATE: {
-        int lhs = node_eval_sub_node(nodestore_get_node_by_id(ns, node->input.lhs), ship);
-        int rhs = node_eval_sub_node(nodestore_get_node_by_id(ns, node->input.rhs), ship);
+        int lhs = node_eval_sub_node(nodestore_get_node_by_id(ns,
+                                                              node->input.lhs),
+                                     ship);
+        int rhs = node_eval_sub_node(nodestore_get_node_by_id(ns,
+                                                              node->input.rhs),
+                                     ship);
 
         switch(node->predicate) {
         case LT:
@@ -419,8 +424,10 @@ bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
         }
     } break;
     case GATE: {
-        bool lhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs), ns, ship);
-        bool rhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs), ns, ship);
+        bool lhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs),
+                             ns, ship);
+        bool rhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs),
+                             ns, ship);
 
         switch(node->gate) {
         case AND:
@@ -610,7 +617,7 @@ game_update_and_render(void* gamestate,
     state->player_ship.thrusters = new_thrusters;
 
 
-#if 0
+#if 1
     // Render
 
     // todo(stephen): I need to translate to the place I really want to render
@@ -628,12 +635,12 @@ game_update_and_render(void* gamestate,
 
     nvgSave(vg);
     {
-        // x,y positions will need their y flipped to be drawn in the proper place.
-        // the translates take care of the rest of the movement. Math in space can
-        // be done in cartesian coordinates, just need this work to draw in the
-        // right place. Drawing will be done in normal nvg coordinates so stuff like
-        // text works. Collision detection will have to be in cartesian and seperate
-        // from rendering.
+        // x,y positions will need their y flipped to be drawn in the proper
+        // place. The translates take care of the rest of the movement. Math in
+        // space can be done in cartesian coordinates, just need this work to
+        // draw in the right place. Drawing will be done in normal nvg
+        // coordinates so stuff like text works. Collision detection will have
+        // to be in cartesian and seperate from rendering.
         
         /* nvgTranslate(vg, 1000, 25); */
         /* nvgTranslate(vg, 0, 1500); */
@@ -672,7 +679,7 @@ game_update_and_render(void* gamestate,
 
 #endif
 
-    // TODO(stephen): Figure out scaling because it's off and none of this works!
+    // TODO(stephen): Figure out scaling because it's off and none of this works
     
     // dragging code, always start with the shitty version like casey says.
     /* BoundingBox bb = state->test_bb; */
@@ -705,7 +712,8 @@ game_update_and_render(void* gamestate,
              input.mouse_yrel,
              input.is_dragging ? "true" : "false",
              input.mouse_motion ? "true" : "false",
-             bb_contains(state->test_bb, input.mouse_x, input.mouse_y) ? "true" : "false"
+             bb_contains(state->test_bb, input.mouse_x, input.mouse_y)
+             ? "true" : "false"
         );
     debug_text(vg, 10, 150, 24, buff);
 

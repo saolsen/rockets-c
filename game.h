@@ -14,27 +14,27 @@ typedef struct {
 } V2;
 
 
-V2 v2_plus(V2 v1, V2 v2)
+V2 v2_plus(const V2 v1, const V2 v2)
 {
     return (V2){v1.x + v2.x,
                 v1.y + v2.y};
 }
 
 
-V2 v2_minus(V2 v1, V2 v2)
+V2 v2_minus(const V2 v1, const V2 v2)
 {
     return (V2){v1.x - v2.x,
                 v1.y - v2.y};
 }
 
 
-float deg_to_rad(float deg)
+float deg_to_rad(const float deg)
 {
     return deg * M_PI / 180.0; 
 }
 
 // theta must be in radians
-V2 v2_rotate(V2 v, float theta)
+V2 v2_rotate(const V2 v, const float theta)
 {
     float nx = v.x * cos(theta) - v.y * sin(theta);
     float ny = v.x * sin(theta) + v.y * cos(theta);
@@ -69,6 +69,8 @@ typedef struct Node {
     int id;
     NodeType type;
     Point position;
+    // todo(stephen): Put a bounding box or dragging thing on here instead of
+    // just position.
 
     union {
         struct {
@@ -187,7 +189,8 @@ nodestore_add_constant(NodeStore* ns, float pos_x, float pos_y, int val)
 
 
 int
-nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y, Thruster thruster)
+nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
+                       Thruster thruster)
 {
     Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
     node->type = THRUSTER;
