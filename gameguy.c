@@ -31,6 +31,7 @@ gg_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
             (float)SDL_GetPerformanceFrequency());
 }
 
+// todo(stephen): Nikki says the timeout for dragging should be 300ms
 
 // todo(stephen): Print out other non handled events.
 // todo(stephen): Break out input handling into a seperate function so we can
@@ -67,6 +68,10 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
         case SDL_MOUSEMOTION:
             input_state->mouse_x = event->motion.x;
             input_state->mouse_y = event->motion.y;
+
+            input_state->mouse_motion = true;
+            input_state->mouse_xrel = event->motion.xrel;
+            input_state->mouse_yrel = event->motion.yrel;
             break;
 
             // todo(stephen): SDL_SetWindowFullscreen when hitting f.
@@ -134,8 +139,8 @@ int main(int argc, char* argv[])
 
     // todo(stephen): Have window name come from config object.
     SDL_Window *window = SDL_CreateWindow("rockets",
-            SDL_WINDOWPOS_UNDEFINED,
-            SDL_WINDOWPOS_UNDEFINED,
+            SDL_WINDOWPOS_CENTERED,
+            SDL_WINDOWPOS_CENTERED,
             SCREEN_WIDTH,
             SCREEN_HEIGHT,
             SDL_WINDOW_OPENGL |
@@ -197,7 +202,8 @@ int main(int argc, char* argv[])
 
         input.end_dragging = false;;
         input.click = false;
-
+        input.mouse_motion = false;
+        
         while (SDL_PollEvent(&event)) {
             if (gg_handle_event(&event,
                     &other_events_this_tick,
@@ -217,7 +223,6 @@ int main(int argc, char* argv[])
                 GL_STENCIL_BUFFER_BIT);
 
         // drawable resolution is
-        /* 2872 x 1710 */
         // todo(stephen): Support non retina.
         nvgBeginFrame(vg, SCREEN_WIDTH, SCREEN_HEIGHT, 2.0);
 

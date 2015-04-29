@@ -20,6 +20,14 @@ V2 v2_plus(V2 v1, V2 v2)
                 v1.y + v2.y};
 }
 
+
+V2 v2_minus(V2 v1, V2 v2)
+{
+    return (V2){v1.x - v2.x,
+                v1.y - v2.y};
+}
+
+
 float deg_to_rad(float deg)
 {
     return deg * M_PI / 180.0; 
@@ -52,7 +60,7 @@ typedef struct Thrusters {
 
 typedef struct Ship {
     Point position;
-    float rotation;
+    int rotation;
     Thrusters thrusters;
 } Ship;
 
@@ -188,10 +196,15 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y, Thruster thruste
     return node->id;
 }
 
+typedef struct BoundingBox {
+    V2 top_left;
+    V2 bottom_right;
+} BoundingBox;
 
 typedef struct {
     NodeStore node_store;
     Ship player_ship;
+    BoundingBox test_bb;
 } GameState;
 
 #endif

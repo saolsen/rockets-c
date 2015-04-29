@@ -1,3 +1,5 @@
+// GUI code is needed. What are the steps to get node building as part of the game?
+
 #include "gameguy.h"
 #include "game.h"
 
@@ -8,7 +10,7 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
     nvgSave(vg);
     {
         // Setup Text
-        nvgFontSize(vg, 24);
+        nvgFontSize(vg, 14);
 
         // Get Text Bounds
         float bounds[4];
@@ -129,12 +131,6 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
             nvgRect(vg, 7.5, 25.0, 10, 10);
             nvgFill(vg);
         }
-
-        // Center (for debugging)
-        /* nvgBeginPath(vg); */
-        /* nvgCircle(vg, x, y, 1.0); */
-        /* nvgFillColor(vg, nvgRGBf(1.0, 1.0, 1.0)); */
-        /* nvgFill(vg); */
     }
 
     nvgRestore(vg);
@@ -228,6 +224,7 @@ node_get_text(Node* node, char* buffer)
     strcpy(buffer, txt);
 }
 
+
 void
 node_draw_predicate(NVGcontext* vg, Node* node, Node* lhs, Node* rhs)
 {
@@ -297,111 +294,6 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
     // todo(stephen)
 }
 
-
-void
-nodestore_load_test_nodes(NodeStore* ns)
-{
-    // HOLY MOLY GET A MACRO OR SOMETHING!
-    int a = nodestore_add_signal(ns, 0, 0, ROTATION);
-    int b = nodestore_add_constant(ns, 0, 0, 180);
-    int c = nodestore_add_predicate(ns, 75, 50, NEQ);
-    Node* node_c = nodestore_get_node_by_id(ns, c);
-    node_c->input.lhs = a;
-    node_c->input.rhs = b;
-
-    int d = nodestore_add_signal(ns, 0, 0, ROTATION);
-    int e = nodestore_add_constant(ns, 0, 0, 0);
-    int f = nodestore_add_predicate(ns, 450, 50, NEQ);
-    Node* node_f = nodestore_get_node_by_id(ns, f);
-    node_f->input.lhs = d;
-    node_f->input.rhs = e;
-
-    int g = nodestore_add_signal(ns, 0, 0, POS_Y);
-    int h = nodestore_add_constant(ns, 0, 0, 600);
-    int i = nodestore_add_predicate(ns, 200, 50, GT);
-    Node* node_i = nodestore_get_node_by_id(ns, i);
-    node_i->input.lhs = g;
-    node_i->input.rhs = h;
-
-    int j = nodestore_add_signal(ns, 0, 0, POS_Y);
-    int k = nodestore_add_constant(ns, 0, 0, 100);
-    int l = nodestore_add_predicate(ns, 325, 50, LT);
-    Node* node_l = nodestore_get_node_by_id(ns, l);
-    node_l->input.lhs = j;
-    node_l->input.rhs = k;
-
-    int m = nodestore_add_gate(ns, 125, 125, AND);
-    Node* node_m = nodestore_get_node_by_id(ns, m);
-    node_m->input.lhs = c;
-    node_m->input.rhs = i;
-
-    int n = nodestore_add_gate(ns, 125, 125, AND);
-    Node* node_n = nodestore_get_node_by_id(ns, n);
-    node_n->input.lhs = f;
-    node_n->input.rhs = l;
-
-    int o = nodestore_add_gate(ns, 100, 225, OR);
-    Node* node_o = nodestore_get_node_by_id(ns, o);
-    node_o->input.lhs = m;
-    node_o->input.rhs = n;
-
-    int p = nodestore_add_thruster(ns, 75, 325, BP);
-    Node* node_p = nodestore_get_node_by_id(ns, p);
-    node_p->parent = o;
-
-    int q = nodestore_add_thruster(ns, 175, 325, SS);
-    Node* node_q = nodestore_get_node_by_id(ns, q);
-    node_q->parent = o;
-
-    int r = nodestore_add_gate(ns, 375, 325, NOT);
-    Node* node_r = nodestore_get_node_by_id(ns, r);
-    node_r->parent = m;
-
-    int s = nodestore_add_gate(ns, 475, 325, NOT);
-    Node* node_s = nodestore_get_node_by_id(ns, s);
-    node_s->parent = n;
-
-    int t = nodestore_add_gate(ns, 435, 425, AND);
-    Node* node_t = nodestore_get_node_by_id(ns, t);
-    node_t->input.lhs = r;
-    node_t->input.rhs = s;
-
-    int u = nodestore_add_thruster(ns, 425, 525, BOOST);
-    Node* node_u = nodestore_get_node_by_id(ns, u);
-    node_u->parent = t;
-}
-
-
-static void*
-game_setup(NVGcontext* vg)
-{
-    log_info("Setting up game");
-    GameState* state = calloc(1, sizeof(GameState));
-
-    // todo(Stephen): If you have more than one font you need to store a
-    // reference to this.
-    nvgCreateFont(vg,
-            "basic",
-            "SourceSansPro-Regular.ttf");
-
-    nodestore_init(&state->node_store, 5);
-    NodeStore* ns = &state->node_store;
-
-    nodestore_load_test_nodes(ns);
-
-    state->player_ship.position.x = 300;
-    state->player_ship.position.y = 300;
-    state->player_ship.rotation = 0.0;
-
-    /* state->player_ship.thrusters.bp = true; */
-    /* state->player_ship.thrusters.bs = false; */
-    /* state->player_ship.thrusters.sp = false; */
-    /* state->player_ship.thrusters.ss = false; */
-    /* state->player_ship.thrusters.boost = true; */
-
-    return state;
-}
-
 void debug_square(NVGcontext* vg, float x, float y)
 {
     nvgBeginPath(vg);
@@ -409,29 +301,38 @@ void debug_square(NVGcontext* vg, float x, float y)
     nvgFill(vg);
 }
 
+void debug_text(NVGcontext* vg, float x, float y, int size, const char* txt)
+{
+    nvgSave(vg);
+    nvgFontSize(vg, size);
+    nvgFillColor(vg, nvgRGBf(1, 1, 1));
+    nvgText(vg, x, y, txt, NULL);
+    nvgRestore(vg);
+}
+
 void ship_move(Ship* ship, float dt)
 {
     V2 force = {0.0, 0.0};
-    float rotation = 0.0;
+    int rotation = 0;
 
     if (ship->thrusters.bp) {
         force = v2_plus(force, (V2){1, 0});
-        rotation -= 1.0;
+        rotation -= 1;
     }
 
     if (ship->thrusters.bs) {
         force = v2_plus(force, (V2){-1, 0});
-        rotation += 1.0;
+        rotation += 1;
     }
 
     if (ship->thrusters.sp) {
         force = v2_plus(force, (V2){1, 0});
-        rotation += 1.0;
+        rotation += 1;
     }
 
     if (ship->thrusters.ss) {
         force = v2_plus(force, (V2){-1, 0});
-        rotation -= 1.0;
+        rotation -= 1;
     }
 
     if (ship->thrusters.boost) {
@@ -445,7 +346,9 @@ void ship_move(Ship* ship, float dt)
 
     ship->position.x += abs_force.x*speed*dt;
     ship->position.y += abs_force.y*speed*dt;
-    ship->rotation = (int)(ship->rotation + rotation) % 360;
+    int new_rot = ship->rotation + rotation;
+    if (new_rot < 0) new_rot += 360;
+    ship->rotation = new_rot % 360;
 
 }
 
@@ -577,6 +480,117 @@ nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
 }
 
 
+void
+nodestore_load_test_nodes(NodeStore* ns)
+{
+    // HOLY MOLY GET A MACRO OR SOMETHING!
+    int a = nodestore_add_signal(ns, 0, 0, ROTATION);
+    int b = nodestore_add_constant(ns, 0, 0, 180);
+    int c = nodestore_add_predicate(ns, 75, 50, NEQ);
+    Node* node_c = nodestore_get_node_by_id(ns, c);
+    node_c->input.lhs = a;
+    node_c->input.rhs = b;
+
+    int d = nodestore_add_signal(ns, 0, 0, ROTATION);
+    int e = nodestore_add_constant(ns, 0, 0, 0);
+    int f = nodestore_add_predicate(ns, 450, 50, NEQ);
+    Node* node_f = nodestore_get_node_by_id(ns, f);
+    node_f->input.lhs = d;
+    node_f->input.rhs = e;
+
+    int g = nodestore_add_signal(ns, 0, 0, POS_Y);
+    int h = nodestore_add_constant(ns, 0, 0, 600);
+    int i = nodestore_add_predicate(ns, 200, 50, GT);
+    Node* node_i = nodestore_get_node_by_id(ns, i);
+    node_i->input.lhs = g;
+    node_i->input.rhs = h;
+
+    int j = nodestore_add_signal(ns, 0, 0, POS_Y);
+    int k = nodestore_add_constant(ns, 0, 0, 100);
+    int l = nodestore_add_predicate(ns, 325, 50, LT);
+    Node* node_l = nodestore_get_node_by_id(ns, l);
+    node_l->input.lhs = j;
+    node_l->input.rhs = k;
+
+    int m = nodestore_add_gate(ns, 125, 125, AND);
+    Node* node_m = nodestore_get_node_by_id(ns, m);
+    node_m->input.lhs = c;
+    node_m->input.rhs = i;
+
+    int n = nodestore_add_gate(ns, 125, 125, AND);
+    Node* node_n = nodestore_get_node_by_id(ns, n);
+    node_n->input.lhs = f;
+    node_n->input.rhs = l;
+
+    int o = nodestore_add_gate(ns, 100, 225, OR);
+    Node* node_o = nodestore_get_node_by_id(ns, o);
+    node_o->input.lhs = m;
+    node_o->input.rhs = n;
+
+    int p = nodestore_add_thruster(ns, 75, 325, BP);
+    Node* node_p = nodestore_get_node_by_id(ns, p);
+    node_p->parent = o;
+
+    int q = nodestore_add_thruster(ns, 175, 325, SS);
+    Node* node_q = nodestore_get_node_by_id(ns, q);
+    node_q->parent = o;
+
+    int r = nodestore_add_gate(ns, 375, 325, NOT);
+    Node* node_r = nodestore_get_node_by_id(ns, r);
+    node_r->parent = m;
+
+    int s = nodestore_add_gate(ns, 475, 325, NOT);
+    Node* node_s = nodestore_get_node_by_id(ns, s);
+    node_s->parent = n;
+
+    int t = nodestore_add_gate(ns, 435, 425, AND);
+    Node* node_t = nodestore_get_node_by_id(ns, t);
+    node_t->input.lhs = r;
+    node_t->input.rhs = s;
+
+    int u = nodestore_add_thruster(ns, 425, 525, BOOST);
+    Node* node_u = nodestore_get_node_by_id(ns, u);
+    node_u->parent = t;
+}
+
+
+static void*
+game_setup(NVGcontext* vg)
+{
+    log_info("Setting up game");
+    GameState* state = calloc(1, sizeof(GameState));
+
+    // todo(Stephen): If you have more than one font you need to store a
+    // reference to this.
+    nvgCreateFont(vg,
+            "basic",
+            "SourceSansPro-Regular.ttf");
+
+    nodestore_init(&state->node_store, 5);
+    NodeStore* ns = &state->node_store;
+
+    nodestore_load_test_nodes(ns);
+
+    state->player_ship.position.x = 300;
+    state->player_ship.position.y = 99;
+    state->player_ship.rotation = 0;
+
+    /* static BoundingBox bb = {{0.0, 0.0}, {100.0, 100.0}}; */
+    state->test_bb.top_left.x = 0.0;
+    state->test_bb.top_left.y = 0.0;
+    state->test_bb.bottom_right.x = 100.0;
+    state->test_bb.bottom_right.y = 100.0;
+
+    return state;
+}
+
+
+bool bb_contains(BoundingBox bb, float x, float y)
+{
+    return (x > bb.top_left.x && x < bb.bottom_right.x &&
+            y > bb.top_left.y && y < bb.bottom_right.y);
+}
+
 static void
 game_update_and_render(void* gamestate,
                        NVGcontext* vg,
@@ -589,6 +603,14 @@ game_update_and_render(void* gamestate,
     
     ship_move(&state->player_ship, dt);
 
+    // todo(stephen): Maybe pass the world to this depending on what the signals
+    // end up being.
+    Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
+                                                       &state->player_ship);
+    state->player_ship.thrusters = new_thrusters;
+
+
+#if 0
     // Render
 
     // todo(stephen): I need to translate to the place I really want to render
@@ -596,18 +618,13 @@ game_update_and_render(void* gamestate,
 
     // Space scene!
     nvgBeginPath(vg);
-    nvgRect(vg, 1000, 25, 1000, 1500);
+    nvgRect(vg, 660, 10, 600, 700);
+    /* nvgRect(vg, 1000, 25, 1000, 1500); */
     nvgFillColor(vg, nvgRGBf(0.25, 0.25, 0.25));
     nvgFill(vg);
 
     // These probably need some ui and stuff around them.
     nodestore_render(vg, &state->node_store);
-
-    // todo(stephen): Maybe pass the world to this depending on what the signals
-    // end up being.
-    Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
-                                                       &state->player_ship);
-    state->player_ship.thrusters = new_thrusters;
 
     nvgSave(vg);
     {
@@ -617,8 +634,11 @@ game_update_and_render(void* gamestate,
         // right place. Drawing will be done in normal nvg coordinates so stuff like
         // text works. Collision detection will have to be in cartesian and seperate
         // from rendering.
-        nvgTranslate(vg, 1000, 25);
-        nvgTranslate(vg, 0, 1500);
+        
+        /* nvgTranslate(vg, 1000, 25); */
+        /* nvgTranslate(vg, 0, 1500); */
+        nvgTranslate(vg, 660, 10);
+        nvgTranslate(vg, 0, 700);
 
         nvgSave(vg);
         {
@@ -633,7 +653,6 @@ game_update_and_render(void* gamestate,
             /* draw_ship(vg, 0.0, 0.0, thrusts, true); */
         }
         nvgRestore(vg);
-
         
         // debug rects!
         /* nvgFillColor(vg, nvgRGBf(0, 1000, 1000)); */
@@ -641,10 +660,72 @@ game_update_and_render(void* gamestate,
         
     }
     nvgRestore(vg);
-}
 
+    // debug print
+    char buf[64] = {'\0'};
+    snprintf(buf, 64, "position: (%f, %f), rotation: %d",
+             state->player_ship.position.x,
+             state->player_ship.position.y,
+             state->player_ship.rotation);
+
+    debug_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
+
+#endif
+
+    // TODO(stephen): Figure out scaling because it's off and none of this works!
+    
+    // dragging code, always start with the shitty version like casey says.
+    /* BoundingBox bb = state->test_bb; */
+
+    if (input.is_dragging && input.mouse_motion &&
+        bb_contains(state->test_bb,
+                    input.mouse_x - input.mouse_xrel,
+                    input.mouse_y - input.mouse_yrel)) {
+        state->test_bb.top_left.x += input.mouse_xrel;
+        state->test_bb.top_left.y += input.mouse_yrel;
+        state->test_bb.bottom_right.x += input.mouse_xrel;
+        state->test_bb.bottom_right.y += input.mouse_yrel;
+    }
+
+    nvgFillColor(vg, nvgRGBf(1.0, 1.0, 0.0));
+    nvgBeginPath(vg);
+    nvgRect(vg,
+            state->test_bb.top_left.x,
+            state->test_bb.top_left.y,
+            state->test_bb.bottom_right.x - state->test_bb.top_left.x,
+            state->test_bb.bottom_right.y - state->test_bb.top_left.y);
+    nvgFill(vg);
+
+    // todo(stephen): Set this up as a debug function, debug to screen.
+    char buff[128] = {'/0'};
+    snprintf(buff, 128, "x: %d, y: %d, xrel: %d, yrel: %d, dragging: %s, motion: %s, in_bb: %s",
+             input.mouse_x,
+             input.mouse_y,
+             input.mouse_xrel,
+             input.mouse_yrel,
+             input.is_dragging ? "true" : "false",
+             input.mouse_motion ? "true" : "false",
+             bb_contains(state->test_bb, input.mouse_x, input.mouse_y) ? "true" : "false"
+        );
+    debug_text(vg, 10, 150, 24, buff);
+
+    // debug draw where the game thinks the mouse is.
+    nvgFillColor(vg, nvgRGBf(1.0, 0.0, 1.0));
+    nvgBeginPath(vg);
+    nvgRect(vg,
+            input.mouse_x - 2,
+            input.mouse_y - 2,
+            4,
+            4);
+    nvgFill(vg);
+}
 
 const gg_Game gg_game_api = {
         .init = game_setup,
         .update_and_render = game_update_and_render
 };
+
+char* bool_string(bool b)
+{
+    return b ? "true" : "false";
+}

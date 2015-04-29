@@ -21,8 +21,8 @@
 // Include all those here, only include this file from game.c
 // Set up the nanovg context as part of gameguy because it will be different on different platforms.
 
-#define SCREEN_WIDTH  2048
-#define SCREEN_HEIGHT 1536
+#define SCREEN_WIDTH  1280
+#define SCREEN_HEIGHT 720
 
 // Library Functions
 
@@ -62,6 +62,9 @@ gg_read_whole_file(const char* filename)
 typedef struct {
     int mouse_x;
     int mouse_y;
+    int mouse_xrel;
+    int mouse_yrel;
+    bool mouse_motion;
     bool click;
     bool is_dragging;
     bool end_dragging;
