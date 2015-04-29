@@ -678,7 +678,9 @@ game_update_and_render(void* gamestate,
     debug_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
 
 #endif
+#if 0 // This is some debug code to figure out dragging.
 
+    
     // TODO(stephen): Figure out scaling because it's off and none of this works
     
     // dragging code, always start with the shitty version like casey says.
@@ -705,7 +707,8 @@ game_update_and_render(void* gamestate,
 
     // todo(stephen): Set this up as a debug function, debug to screen.
     char buff[128] = {'/0'};
-    snprintf(buff, 128, "x: %d, y: %d, xrel: %d, yrel: %d, dragging: %s, motion: %s, in_bb: %s",
+    snprintf(buff, 128, "x: %d, y: %d, xrel: %d, yrel: %d, "
+             "dragging: %s, motion: %s, in_bb: %s",
              input.mouse_x,
              input.mouse_y,
              input.mouse_xrel,
@@ -726,6 +729,7 @@ game_update_and_render(void* gamestate,
             4,
             4);
     nvgFill(vg);
+#endif
 }
 
 const gg_Game gg_game_api = {
