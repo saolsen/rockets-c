@@ -4,6 +4,126 @@
 #include "gameguy.h"
 #include "game.h"
 
+#define X_PADDING 12.0
+#define Y_PADDING 12.0
+
+void
+node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
+{
+    const char* txt = NULL;
+    
+    switch(node->type) {
+    case SIGNAL: {
+        switch(node->signal) {
+        case POS_X:
+            txt = "pos-x";
+            break;
+        case POS_Y:
+            txt = "pos-y";
+            break;
+        case ROTATION:
+            txt = "rotation";
+            break;
+        }
+    } break;
+
+    case CONSTANT: {
+        char str[15] = {'\0'};
+        snprintf(str, 15, "%d", node->signal);
+        txt = str;
+        break;
+    } break;
+
+    case PREDICATE: {
+        char str[15] = {'\0'};
+        size_t max_len = size -1;
+        
+        if (NULL != lhs) {
+            node_get_text(lhs, str, 15, NULL, NULL);
+            strncat(buffer, str, max_len);
+            strncat(buffer, " ", max_len - strlen(buffer));
+            str[0] = '\0';
+        }
+        
+        switch(node->predicate) {
+        case LT: txt = "<"; break;
+        case GT: txt = ">"; break;
+        case LEQT: txt = "<="; break;
+        case GEQT: txt = ">="; break;
+        case EQ: txt = "=="; break;
+        case NEQ: txt = "<>"; break;
+        }
+
+        strncat(buffer, txt, max_len - strlen(buffer));
+
+        if (NULL != rhs) {
+            node_get_text(rhs, str, 15, NULL, NULL);
+            strncat(buffer, " ", max_len - strlen(buffer));
+            strncat(buffer, str, max_len);
+            str[0] = '\0';
+        }
+
+        return;
+        
+    } break;
+
+    case GATE: {
+        switch(node->gate) {
+        case AND: txt = "AND"; break;
+        case OR: txt = "OR"; break;
+        case NOT: txt = "NOT"; break;
+        } 
+    } break;
+    default:
+        break;
+    }
+    
+    strcpy(buffer, txt);
+}
+
+BoundingBox
+node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
+{
+    // calculate the bounding box of the node. Set the bottom right point.
+    if (node->type == THRUSTER) {
+        // todo(stephen): Figure out the size of the thruster nodes.
+        /* return */
+        /* return (Point){.x = node->position.x + 10, */
+        /*                .y = node->position.y + 10}; */
+        return (BoundingBox){{node->position.x - 20,
+                              node->position.y - 25},
+                             {node->position.x + 20,
+                              node->position.y + 25}};
+    }
+
+    BoundingBox bb;
+    nvgSave(vg);
+    {
+        Node* lhs = NULL;
+        Node* rhs = NULL;
+
+        if (node->type == PREDICATE) {
+            lhs = nodestore_get_node_by_id(ns, node->input.lhs);
+            rhs = nodestore_get_node_by_id(ns, node->input.rhs);
+        }
+        
+        nvgFontSize(vg, 14);
+        char buf[256] = {'\0'};
+        node_get_text(node, buf, 256, lhs, rhs);
+        
+        float bounds[4];
+        nvgTextBounds(vg, node->position.x, node->position.y, buf, NULL, bounds);
+        bb.top_left.x = bounds[0] - X_PADDING;
+        bb.top_left.y = bounds[1] - Y_PADDING;
+        bb.bottom_right.x = bounds[2] + X_PADDING;
+        bb.bottom_right.y = bounds[3] + Y_PADDING;
+    }
+    nvgRestore(vg);
+
+    return bb;
+
+}
+
 // Rendering Code
 void
 draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
@@ -17,18 +137,15 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
         float bounds[4];
         nvgTextBounds(vg, x, y, txt, NULL, bounds);
 
-        float x_padding = 12.0;
-        float y_padding = 12.0;
-
         // Draw Background
         nvgSave(vg);
         {
             nvgBeginPath(vg);
             nvgRect(vg,
-                    bounds[0] - x_padding,
-                    bounds[1] - y_padding,
-                    bounds[2] - bounds[0] + 2 * x_padding,
-                    bounds[3] - bounds[1] + 2 * y_padding);
+                    bounds[0] - X_PADDING,
+                    bounds[1] - Y_PADDING,
+                    bounds[2] - bounds[0] + 2 * X_PADDING,
+                    bounds[3] - bounds[1] + 2 * Y_PADDING);
             nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
             nvgFill(vg);
         }
@@ -41,32 +158,6 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
     nvgRestore(vg);
 }
 
-
-// todo(stephen): Have a type of thing to draw for selecting a new node.
-//                used during creation.
-void
-node_draw_gate(NVGcontext* vg, Node node)
-{
-    // todo(stephen): Show the connection points.
-
-
-    // todo(stephen): Assert that the node type is gate.
-    const char* txt = NULL;
-
-    switch(node.gate) {
-        case AND: {
-            txt = "AND";
-        } break;
-        case OR: {
-            txt = "OR";
-        } break;
-        case NOT: {
-            txt = "NOT";
-        } break;
-    }
-
-    draw_text_box(vg, txt, node.position.x, node.position.y);
-}
 
 void
 draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
@@ -139,128 +230,6 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
 
 
 void
-node_draw_thruster(NVGcontext* vg, Node* node)
-{
-    // TODO(stephen): draw bounding box
-    Thrusters thrusts = {};
-    switch(node->thruster) {
-    case BP:
-        thrusts.bp = true;
-        break;
-    case BS:
-        thrusts.bs = true;
-        break;
-    case SP:
-        thrusts.sp = true;
-        break;
-    case SS:
-        thrusts.ss = true;
-        break;
-    case BOOST:
-        thrusts.boost = true;
-        break;
-    }
-
-    nvgSave(vg);
-    {
-        nvgTranslate(vg, node->position.x, node->position.y);
-        draw_ship(vg, thrusts, true);
-    }
-    nvgRestore(vg);
-
-}
-
-
-void
-node_get_text(Node* node, char* buffer)
-{
-    const char* txt = NULL;
-    
-    switch(node->type) {
-    case SIGNAL: {
-        switch(node->signal) {
-        case POS_X:
-            txt = "pos-x";
-            break;
-        case POS_Y:
-            txt = "pos-y";
-            break;
-        case ROTATION:
-            txt = "rotation";
-            break;
-        }
-    } break;
-    case CONSTANT: {
-        char str[15];
-        sprintf(str, "%d", node->signal);
-        txt = str;
-        break;
-    } break;
-    case PREDICATE: {
-        switch(node->predicate) {
-        case LT:
-            txt = "<";
-            break;
-        case GT:
-            txt = ">";
-            break;
-        case LEQT:
-            txt = "<=";
-            break;
-        case GEQT:
-            txt = ">=";
-            break;
-        case EQ:
-            txt = "==";
-            break;
-        case NEQ:
-            txt = "<>";
-            break;
-        }
-    } break;
-    default:
-        break;
-    }
-    
-    strcpy(buffer, txt);
-}
-
-
-void
-node_draw_predicate(NVGcontext* vg, Node* node, Node* lhs, Node* rhs)
-{
-    char buf[256] = {'\0'};
-    char str[15] = {'\0'};
-    size_t max_len = sizeof buf - 1;
- 
-    if (NULL != lhs) {
-        node_get_text(lhs, str);
-        /* log_info("lhs_text: %s", str); */
-        strncat(buf, str, max_len);
-        strncat(buf, " ", max_len - strlen(buf));
-        str[0] = '\0';
-    }
- 
-    node_get_text(node, str);
-    /* log_info("pred_text: %s", str); */
-    strncat(buf, str, max_len - strlen(buf));
-    str[0] = '\0';
- 
-    if (NULL != rhs) {
-        node_get_text(rhs, str);
-        /* log_info("rhs_text: %s", str); */
-        strncat(buf, " ", max_len- strlen(buf));
-        strncat(buf, str, max_len - strlen(buf));
-        str[0] = '\0';
-    }
- 
-    /* log_info("buffer: %s", buf); */
- 
-    draw_text_box(vg, buf, node->position.x, node->position.y);
-}
-
-
-void
 nodestore_render(NVGcontext* vg, NodeStore* ns)
 {
     // Draw Nodes
@@ -268,32 +237,59 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
         Node node = ns->array[i];
 
         switch(node.type) {
-            case THRUSTER:
-                node_draw_thruster(vg, &node);
+        case THRUSTER: {
+                // TODO(stephen): draw bounding box
+            Thrusters thrusts = {};
+            switch(node.thruster) {
+            case BP:
+                thrusts.bp = true;
                 break;
-
-            case PREDICATE: {
-                Node* lhs = nodestore_get_node_by_id(ns, node.input.lhs);
-                Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
-                node_draw_predicate(vg, &node, lhs, rhs);
-            } break;
-
-            case SIGNAL:
+            case BS:
+                thrusts.bs = true;
                 break;
-
-            case CONSTANT:
+            case SP:
+                thrusts.sp = true;
                 break;
-
-            case GATE:
-                node_draw_gate(vg, node);
+            case SS:
+                thrusts.ss = true;
                 break;
+            case BOOST:
+                thrusts.boost = true;
+                break;
+            }
+
+            nvgSave(vg);
+            {
+                nvgTranslate(vg, node.position.x, node.position.y);
+                draw_ship(vg, thrusts, true);
+            }
+            nvgRestore(vg);
+        } break;
+
+        case PREDICATE: {
+            char buf[256] = {'\0'};
+            Node* lhs = nodestore_get_node_by_id(ns, node.input.lhs);
+            Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
+            node_get_text(&node, buf, 256, lhs, rhs);
+            draw_text_box(vg, buf, node.position.x, node.position.y);
+        } break;
+
+        case SIGNAL:
+            break;
+
+        case CONSTANT:
+            break;
+
+        case GATE: {
+            char buf[256] = {'\0'};
+            node_get_text(&node, buf, 256, NULL, NULL);
+            draw_text_box(vg, buf, node.position.x, node.position.y);
+        } break;
 
         }
     }
-
-    // Draw Connections
-    // todo(stephen)
 }
+
 
 void debug_square(NVGcontext* vg, float x, float y)
 {
@@ -301,6 +297,7 @@ void debug_square(NVGcontext* vg, float x, float y)
     nvgRect(vg, x, y, 1, 1);
     nvgFill(vg);
 }
+
 
 void debug_text(NVGcontext* vg, float x, float y, int size, const char* txt)
 {
@@ -310,6 +307,7 @@ void debug_text(NVGcontext* vg, float x, float y, int size, const char* txt)
     nvgText(vg, x, y, txt, NULL);
     nvgRestore(vg);
 }
+
 
 void ship_move(Ship* ship, float dt)
 {
@@ -353,6 +351,7 @@ void ship_move(Ship* ship, float dt)
 
 }
 
+
 int ship_get_signal(const Ship* ship, Signal signal)
 {
     switch(signal) {
@@ -370,10 +369,8 @@ int ship_get_signal(const Ship* ship, Signal signal)
     //error
     return -1;
 }
-// You guys, polymorphic functions would be pretty damn useful right here!
 
-// todo(stephen): Figure out how the hell to write this without
-// recursion or maps.
+
 int node_eval_sub_node(const Node* node, const Ship* ship)
 {
     if (node->type == SIGNAL) {
@@ -383,8 +380,7 @@ int node_eval_sub_node(const Node* node, const Ship* ship)
     }
 }
 
-// note(stephen): This isn't a full function, I can't use it for signal and
-// constant because those nodes have non-bool values.
+
 bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 {
     switch(node->type) {
@@ -592,7 +588,8 @@ game_setup(NVGcontext* vg)
 }
 
 
-bool bb_contains(BoundingBox bb, float x, float y)
+bool
+bb_contains(BoundingBox bb, float x, float y)
 {
     return (x > bb.top_left.x && x < bb.bottom_right.x &&
             y > bb.top_left.y && y < bb.bottom_right.y);
@@ -606,8 +603,7 @@ game_update_and_render(void* gamestate,
 {
     GameState* state = (GameState*)gamestate;
 
-    // Update
-    
+    // Update    
     ship_move(&state->player_ship, dt);
 
     // todo(stephen): Maybe pass the world to this depending on what the signals
@@ -616,6 +612,7 @@ game_update_and_render(void* gamestate,
                                                        &state->player_ship);
     state->player_ship.thrusters = new_thrusters;
 
+    // set bounding boxes here instead
 
 #if 1
     // Render
@@ -631,6 +628,7 @@ game_update_and_render(void* gamestate,
     nvgFill(vg);
 
     // These probably need some ui and stuff around them.
+
     nodestore_render(vg, &state->node_store);
 
     nvgSave(vg);
@@ -730,7 +728,32 @@ game_update_and_render(void* gamestate,
             4);
     nvgFill(vg);
 #endif
+
+    nvgSave(vg);
+    {
+        // setting them should go above but doing here so I can debug draw em.
+        for (int i = 0; i < state->node_store.next_id; i++) {
+            Node* node = nodestore_get_node_by_id(&state->node_store, i);
+            if (node->type != CONSTANT && node->type != SIGNAL) {
+                BoundingBox new_bb =
+                    node_calc_bounding_box(vg, node, &state->node_store);
+
+                node->bb = new_bb;
+            
+                // debug draw them
+                nvgBeginPath(vg);
+                nvgRect(vg,
+                        node->bb.top_left.x,
+                        node->bb.top_left.y,
+                        node->bb.bottom_right.x - node->bb.top_left.x,
+                        node->bb.bottom_right.y - node->bb.top_left.y);
+                nvgStrokeColor(vg, nvgRGBA(255,192,0,255));
+                nvgStroke(vg);
+            }
+        }
+    } nvgRestore(vg);
 }
+
 
 const gg_Game gg_game_api = {
         .init = game_setup,

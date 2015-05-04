@@ -3,6 +3,7 @@
 
 #include <math.h>
 
+
 typedef struct {
     float x;
     float y;
@@ -13,6 +14,10 @@ typedef struct {
     float y;
 } V2;
 
+typedef struct BoundingBox {
+    V2 top_left;
+    V2 bottom_right;
+} BoundingBox;
 
 V2 v2_plus(const V2 v1, const V2 v2)
 {
@@ -40,6 +45,15 @@ V2 v2_rotate(const V2 v, const float theta)
     float ny = v.x * sin(theta) + v.y * cos(theta);
     return (V2){nx, ny};
 }
+
+// todo(stephen): Here's a bunch more stuff that I need to do with these nodes
+// for them to work with an editor.
+// 1) I need to know the size of the nodes.
+// 2) I need to know if the mouse is over one of the nodes.
+// 3) I need to handle clicking and dragging.
+// 4) I need dopdown menus.
+// 5) I need scroll wheel or up down arrow stuff.
+// 6) I need it to just work so I can move on to puzzles.
 
 
 typedef enum { THRUSTER, PREDICATE, SIGNAL, CONSTANT, GATE } NodeType;
@@ -69,6 +83,7 @@ typedef struct Node {
     int id;
     NodeType type;
     Point position;
+    BoundingBox bb;
     // todo(stephen): Put a bounding box or dragging thing on here instead of
     // just position.
 
@@ -137,6 +152,7 @@ nodestore_init_new_node(NodeStore* ns, float pos_x, float pos_y)
     node->id = (int)id;
     node->position.x = pos_x;
     node->position.y = pos_y;
+    
     node->input.lhs = -1;
     node->input.rhs = -1;
 
@@ -199,10 +215,7 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
     return node->id;
 }
 
-typedef struct BoundingBox {
-    V2 top_left;
-    V2 bottom_right;
-} BoundingBox;
+
 
 typedef struct {
     NodeStore node_store;
