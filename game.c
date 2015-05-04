@@ -86,10 +86,8 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
 {
     // calculate the bounding box of the node. Set the bottom right point.
     if (node->type == THRUSTER) {
-        // todo(stephen): Figure out the size of the thruster nodes.
-        /* return */
-        /* return (Point){.x = node->position.x + 10, */
-        /*                .y = node->position.y + 10}; */
+        // todo(stephen): If we draw a background box use that size instead
+        // of the ship size.
         return (BoundingBox){{node->position.x - 20,
                               node->position.y - 25},
                              {node->position.x + 20,
@@ -612,7 +610,35 @@ game_update_and_render(void* gamestate,
                                                        &state->player_ship);
     state->player_ship.thrusters = new_thrusters;
 
-    // set bounding boxes here instead
+    // handle draging
+    if (input.is_dragging && input.mouse_motion) {    
+        for (int i = 0; i < state->node_store.next_id; i++) {
+            Node* node = nodestore_get_node_by_id(&state->node_store, i);
+            if (node->type != CONSTANT && node->type != SIGNAL) {
+                BoundingBox new_bb =
+                    node_calc_bounding_box(vg, node, &state->node_store);
+
+                /* node->bb = new_bb; */
+
+                if (bb_contains(new_bb,
+                                input.mouse_x - input.mouse_xrel,
+                                input.mouse_y - input.mouse_yrel)) {
+                    node->position.x += input.mouse_xrel;
+                    node->position.y += input.mouse_yrel;
+                }
+
+                // debug draw them
+                /* nvgBeginPath(vg); */
+                /* nvgRect(vg, */
+                /*         node->bb.top_left.x, */
+                /*         node->bb.top_left.y, */
+                /*         node->bb.bottom_right.x - node->bb.top_left.x, */
+                /*         node->bb.bottom_right.y - node->bb.top_left.y); */
+                /* nvgStrokeColor(vg, nvgRGBA(255,192,0,255)); */
+                /* nvgStroke(vg); */
+            }
+        }
+    }
 
 #if 1
     // Render
@@ -628,7 +654,6 @@ game_update_and_render(void* gamestate,
     nvgFill(vg);
 
     // These probably need some ui and stuff around them.
-
     nodestore_render(vg, &state->node_store);
 
     nvgSave(vg);
@@ -676,14 +701,14 @@ game_update_and_render(void* gamestate,
     debug_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
 
 #endif
-#if 0 // This is some debug code to figure out dragging.
+// This is some debug code to figure out dragging.
 
     
     // TODO(stephen): Figure out scaling because it's off and none of this works
     
     // dragging code, always start with the shitty version like casey says.
     /* BoundingBox bb = state->test_bb; */
-
+#if 0
     if (input.is_dragging && input.mouse_motion &&
         bb_contains(state->test_bb,
                     input.mouse_x - input.mouse_xrel,
@@ -702,7 +727,7 @@ game_update_and_render(void* gamestate,
             state->test_bb.bottom_right.x - state->test_bb.top_left.x,
             state->test_bb.bottom_right.y - state->test_bb.top_left.y);
     nvgFill(vg);
-
+#endif
     // todo(stephen): Set this up as a debug function, debug to screen.
     char buff[128] = {'/0'};
     snprintf(buff, 128, "x: %d, y: %d, xrel: %d, yrel: %d, "
@@ -727,31 +752,6 @@ game_update_and_render(void* gamestate,
             4,
             4);
     nvgFill(vg);
-#endif
-
-    nvgSave(vg);
-    {
-        // setting them should go above but doing here so I can debug draw em.
-        for (int i = 0; i < state->node_store.next_id; i++) {
-            Node* node = nodestore_get_node_by_id(&state->node_store, i);
-            if (node->type != CONSTANT && node->type != SIGNAL) {
-                BoundingBox new_bb =
-                    node_calc_bounding_box(vg, node, &state->node_store);
-
-                node->bb = new_bb;
-            
-                // debug draw them
-                nvgBeginPath(vg);
-                nvgRect(vg,
-                        node->bb.top_left.x,
-                        node->bb.top_left.y,
-                        node->bb.bottom_right.x - node->bb.top_left.x,
-                        node->bb.bottom_right.y - node->bb.top_left.y);
-                nvgStrokeColor(vg, nvgRGBA(255,192,0,255));
-                nvgStroke(vg);
-            }
-        }
-    } nvgRestore(vg);
 }
 
 
