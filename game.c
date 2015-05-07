@@ -1,6 +1,3 @@
-// GUI code is needed. What are the steps to get node building as part of the
-// game?
-
 #include "gameguy.h"
 #include "game.h"
 
@@ -46,12 +43,12 @@ node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
         }
         
         switch(node->predicate) {
-        case LT: txt = "<"; break;
-        case GT: txt = ">"; break;
+        case LT:   txt = "<";  break;
+        case GT:   txt = ">";  break;
         case LEQT: txt = "<="; break;
         case GEQT: txt = ">="; break;
-        case EQ: txt = "=="; break;
-        case NEQ: txt = "<>"; break;
+        case EQ:   txt = "=="; break;
+        case NEQ:  txt = "<>"; break;
         }
 
         strncat(buffer, txt, max_len - strlen(buffer));
@@ -226,6 +223,22 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
     nvgRestore(vg);
 }
 
+void
+draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
+{
+    if (parent) {
+        nvgSave(vg);
+        {
+            nvgStrokeColor(vg, nvgRGBf(200.0, 200.0, 200.0));
+            nvgBeginPath(vg);
+            nvgMoveTo(vg, node->position.x, node->position.y);
+            nvgLineTo(vg, parent->position.x, parent->position.y);
+            nvgStroke(vg);
+        }
+        nvgRestore(vg);
+    }
+}
+
 
 void
 nodestore_render(NVGcontext* vg, NodeStore* ns)
@@ -236,7 +249,7 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
 
         switch(node.type) {
         case THRUSTER: {
-                // TODO(stephen): draw bounding box
+            // TODO(stephen): draw bounding box
             Thrusters thrusts = {};
             switch(node.thruster) {
             case BP:
@@ -262,6 +275,8 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
                 draw_ship(vg, thrusts, true);
             }
             nvgRestore(vg);
+            
+            draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.parent));
         } break;
 
         case PREDICATE: {
@@ -282,6 +297,8 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
             char buf[256] = {'\0'};
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(vg, buf, node.position.x, node.position.y);
+            draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.rhs));
+            draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.lhs));
         } break;
 
         }
@@ -518,7 +535,7 @@ nodestore_load_test_nodes(NodeStore* ns)
     node_m->input.lhs = c;
     node_m->input.rhs = i;
 
-    int n = nodestore_add_gate(ns, 125, 125, AND);
+    int n = nodestore_add_gate(ns, 325, 125, AND);
     Node* node_n = nodestore_get_node_by_id(ns, n);
     node_n->input.lhs = f;
     node_n->input.rhs = l;
@@ -602,16 +619,18 @@ game_update_and_render(void* gamestate,
     GameState* state = (GameState*)gamestate;
 
     // Update    
-    ship_move(&state->player_ship, dt);
-
     // todo(stephen): Maybe pass the world to this depending on what the signals
     // end up being.
     Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
                                                        &state->player_ship);
     state->player_ship.thrusters = new_thrusters;
+    ship_move(&state->player_ship, dt);
 
     // handle draging
-    if (input.is_dragging && input.mouse_motion) {    
+    // todo(stephen): Drag target can change when moving over one earlier in
+    // the array. Need to tag currently being dragged node and just drag that
+    // until dragging ends.
+    if (input.is_dragging && input.mouse_motion) {
         for (int i = 0; i < state->node_store.next_id; i++) {
             Node* node = nodestore_get_node_by_id(&state->node_store, i);
             if (node->type != CONSTANT && node->type != SIGNAL) {
@@ -625,17 +644,20 @@ game_update_and_render(void* gamestate,
                                 input.mouse_y - input.mouse_yrel)) {
                     node->position.x += input.mouse_xrel;
                     node->position.y += input.mouse_yrel;
+                    break;
                 }
 
-                // debug draw them
+                /* debug draw them */
+                /* nvgSave(vg); */
                 /* nvgBeginPath(vg); */
                 /* nvgRect(vg, */
-                /*         node->bb.top_left.x, */
-                /*         node->bb.top_left.y, */
-                /*         node->bb.bottom_right.x - node->bb.top_left.x, */
-                /*         node->bb.bottom_right.y - node->bb.top_left.y); */
+                /*         node->bb.top_left.x - 10, */
+                /*         node->bb.top_left.y - 10, */
+                /*         node->bb.bottom_right.x - node->bb.top_left.x + 10, */
+                /*         node->bb.bottom_right.y - node->bb.top_left.y + 10); */
                 /* nvgStrokeColor(vg, nvgRGBA(255,192,0,255)); */
                 /* nvgStroke(vg); */
+                /* nvgRestore(vg); */
             }
         }
     }
@@ -727,7 +749,8 @@ game_update_and_render(void* gamestate,
             state->test_bb.bottom_right.x - state->test_bb.top_left.x,
             state->test_bb.bottom_right.y - state->test_bb.top_left.y);
     nvgFill(vg);
-#endif
+
+
     // todo(stephen): Set this up as a debug function, debug to screen.
     char buff[128] = {'/0'};
     snprintf(buff, 128, "x: %d, y: %d, xrel: %d, yrel: %d, "
@@ -752,6 +775,7 @@ game_update_and_render(void* gamestate,
             4,
             4);
     nvgFill(vg);
+#endif
 }
 
 
@@ -759,6 +783,7 @@ const gg_Game gg_game_api = {
         .init = game_setup,
         .update_and_render = game_update_and_render
 };
+
 
 char* bool_string(bool b)
 {
