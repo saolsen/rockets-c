@@ -398,6 +398,7 @@ int node_eval_sub_node(const Node* node, const Ship* ship)
 
 bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 {
+    // SOME DEBUG PRINTING!
     switch(node->type) {
     case SIGNAL: {
         // only a sub node
@@ -437,8 +438,12 @@ bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
     case GATE: {
         bool lhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs),
                              ns, ship);
-        bool rhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs),
-                             ns, ship);
+        bool rhs = false;
+
+        if (node->gate != NOT) {
+            rhs = node_eval(nodestore_get_node_by_id(ns, node->input.rhs),
+                            ns, ship);
+        }
 
         switch(node->gate) {
         case AND:
@@ -464,14 +469,25 @@ bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 }
 
 Thrusters
-nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
+nodestore_eval_thrusters(NVGcontext* vg, const NodeStore* ns, const Ship* ship)
 {
-    Thrusters out_thrusters = {false, false, false, false, true};
+    Thrusters out_thrusters = {false, false, false, false, false};
 
     // iterate over thruster nodes
     for (int i = 0; i < ns->next_id; i++) {
         Node* node = nodestore_get_node_by_id(ns, i);
         bool value = node_eval(node, ns, ship);
+
+        nvgSave(vg);
+        {
+            if (value) {
+                nvgFillColor(vg, nvgRGBf(0,1,0));
+            } else {
+                nvgFillColor(vg, nvgRGBf(1,0,0));
+            }
+            debug_square(vg, node->position.x-25, node->position.y);
+        }
+        nvgRestore(vg);
 
         if (node->type == THRUSTER) {
             switch(node->thruster) {
@@ -621,7 +637,8 @@ game_update_and_render(void* gamestate,
     // Update    
     // todo(stephen): Maybe pass the world to this depending on what the signals
     // end up being.
-    Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
+    Thrusters new_thrusters = nodestore_eval_thrusters(vg,
+                                                       &state->node_store,
                                                        &state->player_ship);
     state->player_ship.thrusters = new_thrusters;
     ship_move(&state->player_ship, dt);
