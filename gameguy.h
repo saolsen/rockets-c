@@ -31,31 +31,6 @@
 // todo(stephen): Have errors log in red.
 #define log_error(M, ...) fprintf(stderr, "[ERROR] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
-// Opengl Helpers
-// todo(stephen): This returns a buffer that has been malloc's so it needs to be
-//                freed outside of this scope. How do I deal with that, is it
-//                just about documentation? Do I have the user pass in a buffer?
-char*
-gg_read_whole_file(const char* filename)
-{
-    FILE *fp = fopen(filename, "r");
-    char* buffer = 0;
-    long length;
-
-    if (fp) {
-        fseek(fp, 0, SEEK_END);
-        length = ftell(fp);
-        fseek(fp, 0, SEEK_SET);
-        buffer = malloc(length + 1);
-        if (buffer) {
-            length = fread(buffer, 1, length, fp);
-            buffer[length] = 0;
-        }
-        fclose(fp);
-    }
-
-    return buffer;
-}
 
 // Interface with Game.
 
