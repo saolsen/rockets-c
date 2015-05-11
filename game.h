@@ -3,7 +3,6 @@
 
 #include <math.h>
 
-
 typedef struct {
     float x;
     float y;
@@ -221,6 +220,7 @@ typedef struct {
     NodeStore node_store;
     Ship player_ship;
     BoundingBox test_bb;
+    int drag_target;
 } GameState;
 
 #endif

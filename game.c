@@ -1,14 +1,18 @@
 #include "gameguy.h"
 #include "game.h"
 
-#define X_PADDING 12.0
-#define Y_PADDING 12.0
+/* #define X_PADDING 12.0 */
+/* #define Y_PADDING 12.0 */
+
+static const int X_PADDING = 12.0;
+static const int Y_PADDING = 12.0;
+
+static NVGcontext* gg_Debug_vg = NULL;
 
 void
 node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
 {
-    const char* txt = NULL;
-    
+    const char* txt = NULL;    
     switch(node->type) {
     case SIGNAL: {
         switch(node->signal) {
@@ -116,8 +120,8 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
     nvgRestore(vg);
 
     return bb;
-
 }
+
 
 // Rendering Code
 void
@@ -222,6 +226,7 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
 
     nvgRestore(vg);
 }
+
 
 void
 draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
@@ -398,6 +403,10 @@ int node_eval_sub_node(const Node* node, const Ship* ship)
 
 bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 {
+    if (NULL == node) {
+        return false;
+    }
+    
     // SOME DEBUG PRINTING!
     switch(node->type) {
     case SIGNAL: {
@@ -469,7 +478,7 @@ bool node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 }
 
 Thrusters
-nodestore_eval_thrusters(NVGcontext* vg, const NodeStore* ns, const Ship* ship)
+nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
 {
     Thrusters out_thrusters = {false, false, false, false, false};
 
@@ -478,33 +487,34 @@ nodestore_eval_thrusters(NVGcontext* vg, const NodeStore* ns, const Ship* ship)
         Node* node = nodestore_get_node_by_id(ns, i);
         bool value = node_eval(node, ns, ship);
 
-        nvgSave(vg);
+        // todo(stephen): IF DEBUG
+        nvgSave(gg_Debug_vg);
         {
             if (value) {
-                nvgFillColor(vg, nvgRGBf(0,1,0));
+                nvgFillColor(gg_Debug_vg, nvgRGBf(0,1,0));
             } else {
-                nvgFillColor(vg, nvgRGBf(1,0,0));
+                nvgFillColor(gg_Debug_vg, nvgRGBf(1,0,0));
             }
-            debug_square(vg, node->position.x-25, node->position.y);
+            debug_square(gg_Debug_vg, node->position.x-25, node->position.y);
         }
-        nvgRestore(vg);
+        nvgRestore(gg_Debug_vg);
 
         if (node->type == THRUSTER) {
             switch(node->thruster) {
             case BP:
-                out_thrusters.bp = value;
+                out_thrusters.bp = out_thrusters.bp || value;
                 break;
             case BS:
-                out_thrusters.bs = value;
+                out_thrusters.bs = out_thrusters.bs || value;
                 break;
             case SP:
-                out_thrusters.sp = value;
+                out_thrusters.sp = out_thrusters.sp || value;
                 break;
             case SS:
-                out_thrusters.ss = value;
+                out_thrusters.ss = out_thrusters.ss || value;
                 break;
             case BOOST:
-                out_thrusters.boost = value;
+                out_thrusters.boost = out_thrusters.boost || value;
                 break;
             }
         }
@@ -594,6 +604,8 @@ game_setup(NVGcontext* vg)
     log_info("Setting up game");
     GameState* state = calloc(1, sizeof(GameState));
 
+    state->drag_target = -1;
+
     // todo(Stephen): If you have more than one font you need to store a
     // reference to this.
     nvgCreateFont(vg,
@@ -615,6 +627,17 @@ game_setup(NVGcontext* vg)
     state->test_bb.bottom_right.x = 100.0;
     state->test_bb.bottom_right.y = 100.0;
 
+    /* nodestore_add_gate(ns, 100, 125, AND); */
+    /* nodestore_add_thruster(ns, 425, 575, BOOST); */
+    /* nodestore_add_gate(ns, 100, 225, NOT); */
+    /* nodestore_add_gate(ns, 100, 325, NOT); */
+    /* nodestore_add_gate(ns, 100, 425, NOT); */
+    /* nodestore_add_gate(ns, 100, 525, NOT); */
+    /* nodestore_add_gate(ns, 100, 625, NOT); */
+    /* nodestore_add_gate(ns, 100, 725, NOT); */
+    /* nodestore_add_gate(ns, 100, 825, NOT); */
+    /* nodestore_add_gate(ns, 100, 925, NOT); */
+
     return state;
 }
 
@@ -632,13 +655,15 @@ game_update_and_render(void* gamestate,
                        gg_Input input,
                        float dt)
 {
+    if (!gg_Debug_vg) {
+        gg_Debug_vg = vg;
+    }
     GameState* state = (GameState*)gamestate;
 
     // Update    
     // todo(stephen): Maybe pass the world to this depending on what the signals
     // end up being.
-    Thrusters new_thrusters = nodestore_eval_thrusters(vg,
-                                                       &state->node_store,
+    Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
                                                        &state->player_ship);
     state->player_ship.thrusters = new_thrusters;
     ship_move(&state->player_ship, dt);
@@ -647,39 +672,36 @@ game_update_and_render(void* gamestate,
     // todo(stephen): Drag target can change when moving over one earlier in
     // the array. Need to tag currently being dragged node and just drag that
     // until dragging ends.
-    if (input.is_dragging && input.mouse_motion) {
-        for (int i = 0; i < state->node_store.next_id; i++) {
-            Node* node = nodestore_get_node_by_id(&state->node_store, i);
-            if (node->type != CONSTANT && node->type != SIGNAL) {
-                BoundingBox new_bb =
-                    node_calc_bounding_box(vg, node, &state->node_store);
-
-                /* node->bb = new_bb; */
-
-                if (bb_contains(new_bb,
-                                input.mouse_x - input.mouse_xrel,
-                                input.mouse_y - input.mouse_yrel)) {
-                    node->position.x += input.mouse_xrel;
-                    node->position.y += input.mouse_yrel;
-                    break;
-                }
-
-                /* debug draw them */
-                /* nvgSave(vg); */
-                /* nvgBeginPath(vg); */
-                /* nvgRect(vg, */
-                /*         node->bb.top_left.x - 10, */
-                /*         node->bb.top_left.y - 10, */
-                /*         node->bb.bottom_right.x - node->bb.top_left.x + 10, */
-                /*         node->bb.bottom_right.y - node->bb.top_left.y + 10); */
-                /* nvgStrokeColor(vg, nvgRGBA(255,192,0,255)); */
-                /* nvgStroke(vg); */
-                /* nvgRestore(vg); */
-            }
-        }
+    if (input.end_dragging) {
+        state->drag_target = -1;
     }
+    
+    if (input.is_dragging && input.mouse_motion) {
+        Node* node;
 
-#if 1
+        // Pick node to drag.
+        if (state->drag_target == -1) {
+            for (int i = 0; i < state->node_store.next_id; i++) {
+                node = nodestore_get_node_by_id(&state->node_store, i);
+                if (node->type != CONSTANT && node->type != SIGNAL) {
+                    BoundingBox new_bb =
+                        node_calc_bounding_box(vg, node, &state->node_store);
+
+                    if (bb_contains(new_bb,
+                                    input.mouse_x - input.mouse_xrel,
+                                    input.mouse_y - input.mouse_yrel)) {
+                        state->drag_target = i;
+                        break;
+                    }
+                }
+            }
+        } else {
+            node = nodestore_get_node_by_id(&state->node_store, state->drag_target);
+        }
+
+        node->position.x += input.mouse_xrel;
+        node->position.y += input.mouse_yrel;
+    }
     // Render
 
     // todo(stephen): I need to translate to the place I really want to render
@@ -739,60 +761,7 @@ game_update_and_render(void* gamestate,
 
     debug_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
 
-#endif
-// This is some debug code to figure out dragging.
 
-    
-    // TODO(stephen): Figure out scaling because it's off and none of this works
-    
-    // dragging code, always start with the shitty version like casey says.
-    /* BoundingBox bb = state->test_bb; */
-#if 0
-    if (input.is_dragging && input.mouse_motion &&
-        bb_contains(state->test_bb,
-                    input.mouse_x - input.mouse_xrel,
-                    input.mouse_y - input.mouse_yrel)) {
-        state->test_bb.top_left.x += input.mouse_xrel;
-        state->test_bb.top_left.y += input.mouse_yrel;
-        state->test_bb.bottom_right.x += input.mouse_xrel;
-        state->test_bb.bottom_right.y += input.mouse_yrel;
-    }
-
-    nvgFillColor(vg, nvgRGBf(1.0, 1.0, 0.0));
-    nvgBeginPath(vg);
-    nvgRect(vg,
-            state->test_bb.top_left.x,
-            state->test_bb.top_left.y,
-            state->test_bb.bottom_right.x - state->test_bb.top_left.x,
-            state->test_bb.bottom_right.y - state->test_bb.top_left.y);
-    nvgFill(vg);
-
-
-    // todo(stephen): Set this up as a debug function, debug to screen.
-    char buff[128] = {'/0'};
-    snprintf(buff, 128, "x: %d, y: %d, xrel: %d, yrel: %d, "
-             "dragging: %s, motion: %s, in_bb: %s",
-             input.mouse_x,
-             input.mouse_y,
-             input.mouse_xrel,
-             input.mouse_yrel,
-             input.is_dragging ? "true" : "false",
-             input.mouse_motion ? "true" : "false",
-             bb_contains(state->test_bb, input.mouse_x, input.mouse_y)
-             ? "true" : "false"
-        );
-    debug_text(vg, 10, 150, 24, buff);
-
-    // debug draw where the game thinks the mouse is.
-    nvgFillColor(vg, nvgRGBf(1.0, 0.0, 1.0));
-    nvgBeginPath(vg);
-    nvgRect(vg,
-            input.mouse_x - 2,
-            input.mouse_y - 2,
-            4,
-            4);
-    nvgFill(vg);
-#endif
 }
 
 

@@ -17,9 +17,6 @@
 // Libraries being used
 // nanovg
 // stb stuff, not sure which yet
-// TODO(stephen): Cmake stuff.
-// Include all those here, only include this file from game.c
-// Set up the nanovg context as part of gameguy because it will be different on different platforms.
 
 #define SCREEN_WIDTH  1280
 #define SCREEN_HEIGHT 720
@@ -31,9 +28,10 @@
 // todo(stephen): Have errors log in red.
 #define log_error(M, ...) fprintf(stderr, "[ERROR] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
+// todo(stephen): IF DEBUG
+/* extern void* gg_Debug_Memory; */
 
 // Interface with Game.
-
 typedef struct {
     int mouse_x;
     int mouse_y;

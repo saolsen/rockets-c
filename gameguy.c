@@ -16,7 +16,6 @@
 // todo(stephen): Include in game config object.
 // todo(stephen): Screen resizing does not work.
 
-
 typedef struct gg_CurrentGame {
     void *handle;
     ino_t id;
@@ -94,6 +93,7 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
     return should_quit;
 }
 
+
 int main(int argc, char* argv[])
 {
     // todo(stephen): Error if library not specified.
@@ -167,6 +167,9 @@ int main(int argc, char* argv[])
     if (vg == NULL) {
         log_error("Could not init nanovg.");
     }
+
+    //todo(stephen): IF DEBUG
+    /* gg_Debug_vg = vg; */
 
     // Init Game
     void *gamestate;
