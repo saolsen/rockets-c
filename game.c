@@ -1,9 +1,6 @@
 #include "gameguy.h"
 #include "game.h"
 
-/* #define X_PADDING 12.0 */
-/* #define Y_PADDING 12.0 */
-
 static const int X_PADDING = 12.0;
 static const int Y_PADDING = 12.0;
 
@@ -250,6 +247,7 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
 {
     // Draw Nodes
     for (int i = 0; i < ns->next_id; i++) {
+        char buf[256] = {'\0'};
         Node node = ns->array[i];
 
         switch(node.type) {
@@ -285,7 +283,7 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
         } break;
 
         case PREDICATE: {
-            char buf[256] = {'\0'};
+
             Node* lhs = nodestore_get_node_by_id(ns, node.input.lhs);
             Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
             node_get_text(&node, buf, 256, lhs, rhs);
@@ -299,7 +297,6 @@ nodestore_render(NVGcontext* vg, NodeStore* ns)
             break;
 
         case GATE: {
-            char buf[256] = {'\0'};
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(vg, buf, node.position.x, node.position.y);
             draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.rhs));
@@ -621,11 +618,6 @@ game_setup(NVGcontext* vg)
     state->player_ship.position.y = 99;
     state->player_ship.rotation = 0;
 
-    /* static BoundingBox bb = {{0.0, 0.0}, {100.0, 100.0}}; */
-    state->test_bb.top_left.x = 0.0;
-    state->test_bb.top_left.y = 0.0;
-    state->test_bb.bottom_right.x = 100.0;
-    state->test_bb.bottom_right.y = 100.0;
 
     /* nodestore_add_gate(ns, 100, 125, AND); */
     /* nodestore_add_thruster(ns, 425, 575, BOOST); */
@@ -641,14 +633,6 @@ game_setup(NVGcontext* vg)
     return state;
 }
 
-
-bool
-bb_contains(BoundingBox bb, float x, float y)
-{
-    return (x > bb.top_left.x && x < bb.bottom_right.x &&
-            y > bb.top_left.y && y < bb.bottom_right.y);
-}
-
 static void
 game_update_and_render(void* gamestate,
                        NVGcontext* vg,
@@ -659,6 +643,18 @@ game_update_and_render(void* gamestate,
         gg_Debug_vg = vg;
     }
     GameState* state = (GameState*)gamestate;
+
+    // Prepare GUI state todo(stephen): move this to a function.
+    state->gui.vg = vg;
+    state->gui.mouse_x = input.mouse_x;
+    state->gui.mouse_y = input.mouse_y;
+    state->gui.click = input.click;
+
+    if (gui_button(state->gui, 100, 100, 100, 100)) {
+        log_info("clicked");
+    }
+
+#if 0
 
     // Update    
     // todo(stephen): Maybe pass the world to this depending on what the signals
@@ -702,10 +698,15 @@ game_update_and_render(void* gamestate,
         node->position.x += input.mouse_xrel;
         node->position.y += input.mouse_yrel;
     }
-    // Render
 
-    // todo(stephen): I need to translate to the place I really want to render
-    // this stuff before drawing.
+    // buttons for creating new nodes.
+    // then I also need ways to edit existing nodes.
+    // And I need to connect and un connect nodes....
+
+    
+
+    
+    // Render
 
     // Space scene!
     nvgBeginPath(vg);
@@ -760,7 +761,7 @@ game_update_and_render(void* gamestate,
              state->player_ship.rotation);
 
     debug_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
-
+#endif
 
 }
 

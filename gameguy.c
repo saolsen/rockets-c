@@ -68,6 +68,8 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
             input_state->mouse_x = event->motion.x;
             input_state->mouse_y = event->motion.y;
 
+            //todo(stephen): This relative mouse position is mad wrong.
+            // I should probably just keep track of this myself.
             input_state->mouse_motion = true;
             input_state->mouse_xrel = event->motion.xrel;
             input_state->mouse_yrel = event->motion.yrel;

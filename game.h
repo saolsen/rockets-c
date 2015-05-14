@@ -13,11 +13,6 @@ typedef struct {
     float y;
 } V2;
 
-typedef struct BoundingBox {
-    V2 top_left;
-    V2 bottom_right;
-} BoundingBox;
-
 V2 v2_plus(const V2 v1, const V2 v2)
 {
     return (V2){v1.x + v2.x,
@@ -31,7 +26,6 @@ V2 v2_minus(const V2 v1, const V2 v2)
                 v1.y - v2.y};
 }
 
-
 float deg_to_rad(const float deg)
 {
     return deg * M_PI / 180.0; 
@@ -44,6 +38,31 @@ V2 v2_rotate(const V2 v, const float theta)
     float ny = v.x * sin(theta) + v.y * cos(theta);
     return (V2){nx, ny};
 }
+
+typedef struct BoundingBox {
+    V2 top_left;
+    V2 bottom_right;
+} BoundingBox;
+
+bool
+bounds_contains(float top_leftx, float top_lefty,
+                float bottom_rightx, float bottom_righty,
+                float x, float y)
+{
+    return (x > top_leftx && x < bottom_rightx &&
+            y > top_lefty && y < bottom_righty);
+}
+
+
+bool
+bb_contains(BoundingBox bb, float x, float y)
+{
+    return bounds_contains(bb.top_left.x,
+                           bb.top_left.y,
+                           bb.bottom_right.x,
+                           bb.bottom_right.y, x, y);
+}
+
 
 // todo(stephen): Here's a bunch more stuff that I need to do with these nodes
 // for them to work with an editor.
@@ -214,12 +233,66 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
     return node->id;
 }
 
+// Can I build a super simple ass gui thing? I HOPE SO!
+// This also means I can take some stuff out of the nodes.
+
+// buttons, dragable stuff, connecting two things (related to dragging)
+// dropdowns, toggles, etc.....
+
+typedef enum { BUTTON } GUINodeType;
+
+typedef struct {
+    
+} GUINode;
+
+typedef struct {
+    NVGcontext* vg;
+    float mouse_x;
+    float mouse_y;
+    bool click;
+} GUIState;
+
+typedef enum { NAH, HOVER, CLICK } ButtonState;
+
+// draws a button there, if there was a click of it this frame returns true
+bool gui_button(GUIState gui, float x, float y, float width, float height) {
+    ButtonState bs = NAH;
+    
+    if (bounds_contains(x, y, x+width, y+height, gui.mouse_x, gui.mouse_y)) {
+        if (gui.click) {
+            bs = CLICK;
+        } else {
+            bs = HOVER;
+        }
+    }
+    
+    // draw button
+    nvgSave(gui.vg);
+    nvgFontSize(gui.vg, 14);
+
+    if (HOVER == bs) {
+        nvgFillColor(gui.vg, nvgRGBf(1.0, 0.0, 0.0));
+    } else if (CLICK == bs) {
+        nvgFillColor(gui.vg, nvgRGBf(0.0, 1.0, 0.0));
+    } else {
+        nvgFillColor(gui.vg, nvgRGBf(0.0, 0.0, 1.0));
+    }
+    
+    nvgBeginPath(gui.vg);
+    nvgRect(gui.vg, x, y, width, height);
+    nvgFill(gui.vg);
+
+    nvgRestore(gui.vg);
+    
+    return (CLICK == bs);
+}
 
 
 typedef struct {
     NodeStore node_store;
     Ship player_ship;
-    BoundingBox test_bb;
+    GUIState gui;
+
     int drag_target;
 } GameState;
 
