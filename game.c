@@ -650,11 +650,11 @@ game_update_and_render(void* gamestate,
     state->gui.mouse_y = input.mouse_y;
     state->gui.click = input.click;
 
-    if (gui_button(state->gui, 100, 100, 100, 100)) {
-        log_info("clicked");
+    if (gui_button(state->gui, 10, 10, 50, 25)) {
+        nodestore_add_gate(&state->node_store, 10, 45, AND);
+        
+        log_info("adding node");
     }
-
-#if 0
 
     // Update    
     // todo(stephen): Maybe pass the world to this depending on what the signals
@@ -668,6 +668,8 @@ game_update_and_render(void* gamestate,
     // todo(stephen): Drag target can change when moving over one earlier in
     // the array. Need to tag currently being dragged node and just drag that
     // until dragging ends.
+
+#if 1
     if (input.end_dragging) {
         state->drag_target = -1;
     }
@@ -698,6 +700,8 @@ game_update_and_render(void* gamestate,
         node->position.x += input.mouse_xrel;
         node->position.y += input.mouse_yrel;
     }
+
+#endif
 
     // buttons for creating new nodes.
     // then I also need ways to edit existing nodes.
@@ -761,7 +765,7 @@ game_update_and_render(void* gamestate,
              state->player_ship.rotation);
 
     debug_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
-#endif
+
 
 }
 

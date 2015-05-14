@@ -270,13 +270,17 @@ bool gui_button(GUIState gui, float x, float y, float width, float height) {
     nvgSave(gui.vg);
     nvgFontSize(gui.vg, 14);
 
-    if (HOVER == bs) {
+    switch(bs) {
+    case HOVER:
         nvgFillColor(gui.vg, nvgRGBf(1.0, 0.0, 0.0));
-    } else if (CLICK == bs) {
+        break;
+    case CLICK:
         nvgFillColor(gui.vg, nvgRGBf(0.0, 1.0, 0.0));
-    } else {
+        break;
+    case NAH:
         nvgFillColor(gui.vg, nvgRGBf(0.0, 0.0, 1.0));
-    }
+        break;
+    };
     
     nvgBeginPath(gui.vg);
     nvgRect(gui.vg, x, y, width, height);
@@ -286,7 +290,6 @@ bool gui_button(GUIState gui, float x, float y, float width, float height) {
     
     return (CLICK == bs);
 }
-
 
 typedef struct {
     NodeStore node_store;
