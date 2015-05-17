@@ -353,9 +353,7 @@ game_update_and_render(void* gamestate,
     // Setup frame.
     GameState* state = (GameState*)gamestate;
     state->gui.vg = vg;
-    state->gui.mouse_x = input.mouse_x;
-    state->gui.mouse_y = input.mouse_y;
-    state->gui.click = input.click;
+    state->gui.input = input;
 
     // Update Gui
     if (gui_button(state->gui, 10, 10, 50, 25)) {
@@ -364,7 +362,7 @@ game_update_and_render(void* gamestate,
         log_info("adding node");
     }
 
-    NodeEvent event = gui_nodes(state->gui, &state->node_store);
+    NodeEvent event = gui_nodes(&state->gui, &state->node_store);
     switch(event.type) {
     case NE_NAH:
         break;
@@ -376,7 +374,7 @@ game_update_and_render(void* gamestate,
     state->player_ship.thrusters = new_thrusters;
     ship_move(&state->player_ship, dt);
 
-#if 1
+#if 0
     // handle draging
     if (input.end_dragging) {
         state->drag_target = -1;

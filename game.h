@@ -465,9 +465,9 @@ typedef struct {
 
 typedef struct {
     NVGcontext* vg;
-    float mouse_x;
-    float mouse_y;
-    bool click;
+    gg_Input input;
+
+    int drag_target;
 } GUIState;
 
 typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
@@ -478,8 +478,8 @@ bool
 gui_button(GUIState gui, float x, float y, float width, float height) {
     ButtonState bs = BS_NAH;
     
-    if (bounds_contains(x, y, x+width, y+height, gui.mouse_x, gui.mouse_y)) {
-        if (gui.click) {
+    if (bounds_contains(x, y, x+width, y+height, gui.input.mouse_x, gui.input.mouse_y)) {
+        if (gui.input.click) {
             bs = BS_CLICK;
         } else {
             bs = BS_HOVER;
@@ -526,16 +526,45 @@ typedef struct {
 
 
 NodeEvent
-gui_nodes(GUIState gui, NodeStore* ns)
+gui_nodes(GUIState* gui, NodeStore* ns)
 {
     NODE_INFO* info = malloc(ns->next_id * sizeof(NODE_INFO));
 
     for (int i=0; i<ns->next_id; i++) {
         info[i].id = ns->array[i].id;
         info[i].type = ns->array[i].type;
-        info[i].bb = node_calc_bounding_box(gui.vg, &ns->array[i], ns);
-        info[i].draw_position = ns->array[i].position;
+        info[i].bb = node_calc_bounding_box(gui->vg, &ns->array[i], ns);
 
+        info[i].draw_position = ns->array[i].position;
+        
+        // Handle draggingo
+        if (gui->input.end_dragging) {
+            gui->drag_target = -1;
+        }
+
+        if (gui->input.is_dragging && gui->input.mouse_motion) {
+            if (i == gui->drag_target) {
+                info[i].draw_position.x += gui->input.mouse_xrel;
+                info[i].draw_position.y += gui->input.mouse_yrel;
+
+                // TODO(stephen): Return a drag event instead of mutating!
+                ns->array[i].position.x += gui->input.mouse_xrel;
+                ns->array[i].position.y += gui->input.mouse_yrel;
+            } else if (gui->drag_target == -1 &&
+                       ns->array[i].type != CONSTANT &&
+                       ns->array[i].type != SIGNAL &&
+                       bb_contains(info[i].bb,
+                                   gui->input.mouse_x - gui->input.mouse_xrel,
+                                   gui->input.mouse_y - gui->input.mouse_yrel)) {
+                info[i].draw_position.x += gui->input.mouse_xrel;
+                info[i].draw_position.y += gui->input.mouse_yrel;
+                gui->drag_target = i;
+
+                // TODO(stephen): Return a drag event instead of mutating!
+                ns->array[i].position.x += gui->input.mouse_xrel;
+                ns->array[i].position.y += gui->input.mouse_yrel;
+            }
+        }
 
         // draw the nodes
         char buf[256] = {'\0'};
@@ -563,12 +592,12 @@ gui_nodes(GUIState gui, NodeStore* ns)
                 break;
             }
 
-            nvgSave(gui.vg);
+            nvgSave(gui->vg);
             {
-                nvgTranslate(gui.vg, node.position.x, node.position.y);
-                draw_ship(gui.vg, thrusts, true);
+                nvgTranslate(gui->vg, info[i].draw_position.x, info[i].draw_position.y);
+                draw_ship(gui->vg, thrusts, true);
             }
-            nvgRestore(gui.vg);
+            nvgRestore(gui->vg);
             
             /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.parent)); */
         } break;
@@ -578,7 +607,7 @@ gui_nodes(GUIState gui, NodeStore* ns)
             Node* lhs = nodestore_get_node_by_id(ns, node.input.lhs);
             Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
             node_get_text(&node, buf, 256, lhs, rhs);
-            draw_text_box(gui.vg, buf, node.position.x, node.position.y);
+            draw_text_box(gui->vg, buf, info[i].draw_position.x, info[i].draw_position.y);
         } break;
 
         case SIGNAL:
@@ -589,7 +618,7 @@ gui_nodes(GUIState gui, NodeStore* ns)
 
         case GATE: {
             node_get_text(&node, buf, 256, NULL, NULL);
-            draw_text_box(gui.vg, buf, node.position.x, node.position.y);
+            draw_text_box(gui->vg, buf, info[i].draw_position.x, info[i].draw_position.y);
             /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.rhs)); */
             /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.lhs)); */
         } break;
