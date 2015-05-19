@@ -328,10 +328,10 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
     if (node->type == THRUSTER) {
         // todo(stephen): If we draw a background box use that size instead
         // of the ship size.
-        BoundingBox bb = {{node->position.x - 20,
-                              node->position.y - 25},
-                             {node->position.x + 20,
-                              node->position.y + 25}};
+        BoundingBox bb = {{node->position.x,
+                           node->position.y},
+                          {node->position.x + 60,
+                           node->position.y + 70}};
 
         // Debug draw
         nvgSave(vg);
@@ -434,7 +434,7 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
     {
         
         if (grayscale) {
-            nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
+            nvgFillColor(vg, nvgRGBf(1, 1, 1));
         } else {
             nvgFillColor(vg, nvgRGBf(1.0, 0.0, 0.0));
         }
@@ -647,7 +647,17 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
             nvgSave(gui->vg);
             {
-                nvgTranslate(gui->vg, info[i].draw_position.x, info[i].draw_position.y);
+                nvgBeginPath(gui->vg);
+                nvgRect(gui->vg,
+                        info[i].draw_position.x,
+                        info[i].draw_position.y,
+                        60, 70);
+                nvgFillColor(gui->vg, nvgRGBf(0.5, 0.5, 0.5));
+                nvgFill(gui->vg);
+
+                
+                nvgTranslate(gui->vg, info[i].draw_position.x+30,
+                             info[i].draw_position.y+35);
                 draw_ship(gui->vg, thrusts, true);
             }
             nvgRestore(gui->vg);
