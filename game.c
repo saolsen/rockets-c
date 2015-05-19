@@ -22,16 +22,7 @@ draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
 
 
 void
-debug_square(NVGcontext* vg, float x, float y)
-{
-    nvgBeginPath(vg);
-    nvgRect(vg, x, y, 1, 1);
-    nvgFill(vg);
-}
-
-
-void
-debug_text(NVGcontext* vg, float x, float y, int size, const char* txt)
+debug_text(NVGcontext* vg, float x, float y, int size, const char* txt)        
 {
     nvgSave(vg);
     nvgFontSize(vg, size);
@@ -438,7 +429,6 @@ game_update_and_render(void* gamestate,
                       false);
         }
         nvgRestore(vg);
-        
     }
     nvgRestore(vg);
 

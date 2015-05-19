@@ -39,6 +39,7 @@ deg_to_rad(const float deg)
     return deg * M_PI / 180.0; 
 }
 
+
 // theta must be in radians
 V2
 v2_rotate(const V2 v, const float theta)
@@ -74,6 +75,13 @@ bb_contains(BoundingBox bb, float x, float y)
                            bb.bottom_right.y, x, y);
 }
 
+void
+debug_square(NVGcontext* vg, float x, float y)
+{
+    nvgBeginPath(vg);
+    nvgRect(vg, x, y, 1, 1);
+    nvgFill(vg);
+}
 
 // todo(stephen): Here's a bunch more stuff that I need to do with these nodes
 // for them to work with an editor.
@@ -320,10 +328,24 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
     if (node->type == THRUSTER) {
         // todo(stephen): If we draw a background box use that size instead
         // of the ship size.
-        return (BoundingBox){{node->position.x - 20,
+        BoundingBox bb = {{node->position.x - 20,
                               node->position.y - 25},
                              {node->position.x + 20,
                               node->position.y + 25}};
+
+        // Debug draw
+        nvgSave(vg);
+        nvgStrokeColor(vg, nvgRGBf(0.0, 1.0, 0.0));
+        nvgBeginPath(vg);
+        nvgRect(vg,
+                bb.top_left.x,
+                bb.top_left.y,
+                bb.bottom_right.x-bb.top_left.x,
+                bb.bottom_right.y-bb.top_left.y);
+        nvgStroke(vg);
+        nvgRestore(vg);
+    
+        return bb;
     }
 
     BoundingBox bb;
@@ -342,17 +364,35 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
         node_get_text(node, buf, 256, lhs, rhs);
         
         float bounds[4];
-        nvgTextBounds(vg, node->position.x, node->position.y, buf, NULL, bounds);
+        nvgTextBounds(vg, node->position.x+X_PADDING,
+                      node->position.y+Y_PADDING, buf, NULL, bounds);
         bb.top_left.x = bounds[0] - X_PADDING;
-        bb.top_left.y = bounds[1] - Y_PADDING;
+        bb.top_left.y = bounds[1];
         bb.bottom_right.x = bounds[2] + X_PADDING;
-        bb.bottom_right.y = bounds[3] + Y_PADDING;
+        bb.bottom_right.y = bounds[3] + 2*Y_PADDING;
     }
+    nvgRestore(vg);
+
+    // Debug draw
+    nvgSave(vg);
+    nvgStrokeColor(vg, nvgRGBf(0.0, 1.0, 0.0));
+    nvgBeginPath(vg);
+    nvgRect(vg,
+            bb.top_left.x,
+            bb.top_left.y,
+            bb.bottom_right.x-bb.top_left.x,
+            bb.bottom_right.y-bb.top_left.y);
+    nvgStroke(vg);
     nvgRestore(vg);
 
     return bb;
 }
 
+// todo(stephen): The bounds checking is shared with node_calc_bounding_box
+// pull that part out.
+
+// This looks right now but I'm not sure why exactly. Need to revisit later.
+// todo(stephen): Make bounding boxes line up with this.
 void
 draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
 {
@@ -363,7 +403,7 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
 
         // Get Text Bounds
         float bounds[4];
-        nvgTextBounds(vg, x, y, txt, NULL, bounds);
+        nvgTextBounds(vg, x+X_PADDING, y+Y_PADDING, txt, NULL, bounds);
 
         // Draw Background
         nvgSave(vg);
@@ -371,9 +411,9 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
             nvgBeginPath(vg);
             nvgRect(vg,
                     bounds[0] - X_PADDING,
-                    bounds[1] - Y_PADDING,
-                    bounds[2] - bounds[0] + 2 * X_PADDING,
-                    bounds[3] - bounds[1] + 2 * Y_PADDING);
+                    bounds[1],
+                    bounds[2] - bounds[0] +  2 * X_PADDING,
+                    bounds[3] - bounds[1] +  2 * Y_PADDING);
             nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
             nvgFill(vg);
         }
@@ -381,7 +421,7 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
 
         // Draw Text
         nvgFillColor(vg, nvgRGBf(1, 1, 1));
-        nvgText(vg, x, y, txt, NULL);
+        nvgText(vg, x+X_PADDING, y+2*Y_PADDING, txt, NULL);
     }
     nvgRestore(vg);
 }
@@ -524,12 +564,19 @@ typedef struct {
     NodeEventType type;
 } NodeEvent;
 
+// Other types of events that I'm going to need.
+// * Dragging things into other things.
+// * Sub buttons on nodes.
+//
+// I'm going to need to continue to rething this api. Just need enough to play
+// the game.
 
 NodeEvent
 gui_nodes(GUIState* gui, NodeStore* ns)
 {
     NODE_INFO* info = malloc(ns->next_id * sizeof(NODE_INFO));
 
+    // Calculate stuff for collisions and whatever.
     for (int i=0; i<ns->next_id; i++) {
         info[i].id = ns->array[i].id;
         info[i].type = ns->array[i].type;
@@ -537,7 +584,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
         info[i].draw_position = ns->array[i].position;
         
-        // Handle draggingo
+        // Handle dragging
         if (gui->input.end_dragging) {
             gui->drag_target = -1;
         }
@@ -566,7 +613,13 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             }
         }
 
-        // draw the nodes
+        // Handle collisions
+        // Handle dragging things into other things.
+    }
+
+    
+    // draw the nodes
+    for (int i=0; i<ns->next_id; i++) {
         char buf[256] = {'\0'};
         Node node = ns->array[i];
 
@@ -623,6 +676,12 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.lhs)); */
         } break;
         }
+
+
+        // To start, we probably need to get these drawing at the bounding box.
+        nvgFillColor(gui->vg, nvgRGB(255,153,0));
+        debug_square(gui->vg, info[i].draw_position.x, info[i].draw_position.y);
+        
     }
     
     // draw the nodes
