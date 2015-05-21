@@ -2,6 +2,7 @@
 #define _game_h
 
 #include <math.h>
+#include "stretchy_buffer.h"
 
 static const int X_PADDING = 12.0;
 static const int Y_PADDING = 12.0;
@@ -332,18 +333,6 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
                            node->position.y},
                           {node->position.x + 60,
                            node->position.y + 70}};
-
-        // Debug draw
-        nvgSave(vg);
-        nvgStrokeColor(vg, nvgRGBf(0.0, 1.0, 0.0));
-        nvgBeginPath(vg);
-        nvgRect(vg,
-                bb.top_left.x,
-                bb.top_left.y,
-                bb.bottom_right.x-bb.top_left.x,
-                bb.bottom_right.y-bb.top_left.y);
-        nvgStroke(vg);
-        nvgRestore(vg);
     
         return bb;
     }
@@ -372,19 +361,6 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
         bb.bottom_right.y = bounds[3] + 2*Y_PADDING;
     }
     nvgRestore(vg);
-
-    // Debug draw
-    nvgSave(vg);
-    nvgStrokeColor(vg, nvgRGBf(0.0, 1.0, 0.0));
-    nvgBeginPath(vg);
-    nvgRect(vg,
-            bb.top_left.x,
-            bb.top_left.y,
-            bb.bottom_right.x-bb.top_left.x,
-            bb.bottom_right.y-bb.top_left.y);
-    nvgStroke(vg);
-    nvgRestore(vg);
-
     return bb;
 }
 
@@ -496,6 +472,32 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
     nvgRestore(vg);
 }
 
+// up the size of a bb by 1
+BoundingBox
+bb_blow_up(BoundingBox bb)
+{
+    bb.top_left.x -= 1;
+    bb.top_left.y -= 1;
+    bb.bottom_right.x += 2;
+    bb.bottom_right.y += 2;
+    return bb;
+}
+
+void
+debug_draw_bb(NVGcontext* vg, NVGcolor color, BoundingBox bb)
+{
+    nvgSave(vg);
+    nvgStrokeColor(vg, color);
+    nvgBeginPath(vg);
+    nvgRect(vg,
+            bb.top_left.x,
+            bb.top_left.y,
+            bb.bottom_right.x-bb.top_left.x,
+            bb.bottom_right.y-bb.top_left.y);
+    nvgStroke(vg);
+    nvgRestore(vg);
+}
+
 
 typedef enum { BUTTON } GUINodeType;
 
@@ -552,11 +554,10 @@ gui_button(GUIState gui, float x, float y, float width, float height) {
 }
 
 typedef struct {
-    int id;
-    NodeType type;
+    Node* node;
     BoundingBox bb;
     Point draw_position;
-} NODE_INFO;
+} NodeBounds;
 
 typedef enum { NE_NAH } NodeEventType;
 
@@ -574,16 +575,16 @@ typedef struct {
 NodeEvent
 gui_nodes(GUIState* gui, NodeStore* ns)
 {
-    NODE_INFO* info = malloc(ns->next_id * sizeof(NODE_INFO));
+    NodeBounds* bodies = NULL;
 
     // Calculate stuff for collisions and whatever.
     for (int i=0; i<ns->next_id; i++) {
-        info[i].id = ns->array[i].id;
-        info[i].type = ns->array[i].type;
-        info[i].bb = node_calc_bounding_box(gui->vg, &ns->array[i], ns);
+        NodeBounds body = {};
+        body.node = &ns->array[i];
+        body.bb = node_calc_bounding_box(gui->vg, &ns->array[i], ns);
+        body.draw_position = ns->array[i].position;
 
-        info[i].draw_position = ns->array[i].position;
-        
+        // @TODO: Handle dragging better, should be done in the next step.
         // Handle dragging
         if (gui->input.end_dragging) {
             gui->drag_target = -1;
@@ -591,8 +592,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
         if (gui->input.is_dragging && gui->input.mouse_motion) {
             if (i == gui->drag_target) {
-                info[i].draw_position.x += gui->input.mouse_xrel;
-                info[i].draw_position.y += gui->input.mouse_yrel;
+                body.draw_position.x += gui->input.mouse_xrel;
+                body.draw_position.y += gui->input.mouse_yrel;
 
                 // TODO(stephen): Return a drag event instead of mutating!
                 ns->array[i].position.x += gui->input.mouse_xrel;
@@ -600,11 +601,11 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             } else if (gui->drag_target == -1 &&
                        ns->array[i].type != CONSTANT &&
                        ns->array[i].type != SIGNAL &&
-                       bb_contains(info[i].bb,
+                       bb_contains(body.bb,
                                    gui->input.mouse_x - gui->input.mouse_xrel,
                                    gui->input.mouse_y - gui->input.mouse_yrel)) {
-                info[i].draw_position.x += gui->input.mouse_xrel;
-                info[i].draw_position.y += gui->input.mouse_yrel;
+                body.draw_position.x += gui->input.mouse_xrel;
+                body.draw_position.y += gui->input.mouse_yrel;
                 gui->drag_target = i;
 
                 // TODO(stephen): Return a drag event instead of mutating!
@@ -613,15 +614,16 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             }
         }
 
+        sb_push(bodies, body);
         // Handle collisions
         // Handle dragging things into other things.
     }
 
-    
     // draw the nodes
-    for (int i=0; i<ns->next_id; i++) {
+    for (int i=0; i<sb_count(bodies); i++) {
         char buf[256] = {'\0'};
-        Node node = ns->array[i];
+        NodeBounds body = bodies[i];
+        Node node = *body.node;
 
         switch(node.type) {
         case THRUSTER: {
@@ -649,15 +651,16 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             {
                 nvgBeginPath(gui->vg);
                 nvgRect(gui->vg,
-                        info[i].draw_position.x,
-                        info[i].draw_position.y,
+                        body.draw_position.x,
+                        body.draw_position.y,
                         60, 70);
                 nvgFillColor(gui->vg, nvgRGBf(0.5, 0.5, 0.5));
                 nvgFill(gui->vg);
 
                 
-                nvgTranslate(gui->vg, info[i].draw_position.x+30,
-                             info[i].draw_position.y+35);
+                nvgTranslate(gui->vg,
+                             body.draw_position.x+30,
+                             body.draw_position.y+35);
                 draw_ship(gui->vg, thrusts, true);
             }
             nvgRestore(gui->vg);
@@ -670,7 +673,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             Node* lhs = nodestore_get_node_by_id(ns, node.input.lhs);
             Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
             node_get_text(&node, buf, 256, lhs, rhs);
-            draw_text_box(gui->vg, buf, info[i].draw_position.x, info[i].draw_position.y);
+            draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
         } break;
 
         case SIGNAL:
@@ -681,16 +684,15 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
         case GATE: {
             node_get_text(&node, buf, 256, NULL, NULL);
-            draw_text_box(gui->vg, buf, info[i].draw_position.x, info[i].draw_position.y);
+            draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
             /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.rhs)); */
             /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.lhs)); */
         } break;
         }
 
-
         // To start, we probably need to get these drawing at the bounding box.
         nvgFillColor(gui->vg, nvgRGB(255,153,0));
-        debug_square(gui->vg, info[i].draw_position.x, info[i].draw_position.y);
+        debug_square(gui->vg, body.draw_position.x, body.draw_position.y);
         
     }
     
@@ -703,11 +705,30 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     // Edit a node
        // toggle signal
        // change value (keyboard entry or slider or arrows?)
-    
-    free(info);
+
+    // Debug drawing
+
+    // debug draw node bounding boxes.
+    for (int i = 0; i < sb_count(bodies); i++) {
+        NodeBounds body = bodies[i];
+        if (body.node->type != SIGNAL && body.node->type != CONSTANT) {
+            NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
+            debug_draw_bb(gui->vg, color, body.bb);
+        }
+    }
+
+    /* // debug draw input bounding boxes. */
+    /* for (int i = 0; i < sb_count(inputs); i++) { */
+    /*     NodeInput an_input = inputs[i]; */
+    /*     NVGcolor color = nvgRGBf(0.0, 1.0, 1.0); */
+    /*     debug_draw_bb(gui->vg, color, bb_blow_up(an_input.bb)); */
+    /* } */
+
+    // free memory
+    sb_free(bodies);
+
     return (NodeEvent){.type = NE_NAH};
 }
-
 
 typedef struct {
     NodeStore node_store;

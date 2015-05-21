@@ -209,19 +209,19 @@ nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
         if (node->type == THRUSTER) {
             switch(node->thruster) {
             case BP:
-                out_thrusters.bp = out_thrusters.bp || value;
+                out_thrusters.bp |= value;
                 break;
             case BS:
-                out_thrusters.bs = out_thrusters.bs || value;
+                out_thrusters.bs |= value;
                 break;
             case SP:
-                out_thrusters.sp = out_thrusters.sp || value;
+                out_thrusters.sp |= value;
                 break;
             case SS:
-                out_thrusters.ss = out_thrusters.ss || value;
+                out_thrusters.ss |= value;
                 break;
             case BOOST:
-                out_thrusters.boost = out_thrusters.boost || value;
+                out_thrusters.boost |= value;
                 break;
             }
         }
