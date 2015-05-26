@@ -595,7 +595,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 body.draw_position.x += gui->input.mouse_xrel;
                 body.draw_position.y += gui->input.mouse_yrel;
 
-                // TODO(stephen): Return a drag event instead of mutating!
+                // @TODO: Return a drag event instead of mutating!
                 ns->array[i].position.x += gui->input.mouse_xrel;
                 ns->array[i].position.y += gui->input.mouse_yrel;
             } else if (gui->drag_target == -1 &&
@@ -608,7 +608,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 body.draw_position.y += gui->input.mouse_yrel;
                 gui->drag_target = i;
 
-                // TODO(stephen): Return a drag event instead of mutating!
+                // @TODO: Return a drag event instead of mutating!
                 ns->array[i].position.x += gui->input.mouse_xrel;
                 ns->array[i].position.y += gui->input.mouse_yrel;
             }
@@ -627,7 +627,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
         switch(node.type) {
         case THRUSTER: {
-            // TODO(stephen): draw bounding box
+            // @TODO: draw bounding box
             Thrusters thrusts = {};
             switch(node.thruster) {
             case BP:

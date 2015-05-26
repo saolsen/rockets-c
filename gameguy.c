@@ -3,9 +3,9 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-// todo(stephen): Do reloading in a platform independent way.
+// @TODO: Do reloading in a platform independent way.
 #include <dlfcn.h>
-// todo(stephen): Do random numbers in a platform independent way.
+// @TODO: Do random numbers in a platform independent way.
 #include <time.h>
 
 #include "gameguy.h"
@@ -13,8 +13,8 @@
 #define NANOVG_GL3_IMPLEMENTATION
 #include "nanovg_gl.h"
 
-// todo(stephen): Include in game config object.
-// todo(stephen): Screen resizing does not work.
+// @TODO: Include in game config object.
+// @TODO: Screen resizing does not work.
 
 typedef struct gg_CurrentGame {
     void *handle;
@@ -30,12 +30,12 @@ gg_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
             (float)SDL_GetPerformanceFrequency());
 }
 
-// todo(stephen): Nikki says the timeout for dragging should be 300ms
+// @TODO: Nikki says the timeout for dragging should be 300ms
 
-// todo(stephen): Print out other non handled events.
-// todo(stephen): Break out input handling into a seperate function so we can
+// @TODO: Print out other non handled events.
+// @TODO: Break out input handling into a seperate function so we can
 //                use SDL's watch event stuff.
-// todo(stephen): Have a way to record input over time, possibly using a
+// @TODO: Have a way to record input over time, possibly using a
 //                persistent data structure if that turns out to be helpful.
 bool
 gg_handle_event(SDL_Event *event, int *other_events_this_tick,
@@ -48,10 +48,10 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
             should_quit = true;
             break;
 
-            // note(stephen): Going to use mouse events for now.
-            // todo(stephen): use touch events when ready to port to ipad.
-            // todo(stephen): figure out how to just do a click.
-            // note(stephen): might want zooming
+            // @NOTE: Going to use mouse events for now.
+            // @TODO: use touch events when ready to port to ipad.
+            // @TODO: figure out how to just do a click.
+            // @NOTE: might want zooming
         case SDL_MOUSEBUTTONDOWN:
             /* log_info("mouse down"); */
             input_state->click = true;
@@ -68,14 +68,14 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
             input_state->mouse_x = event->motion.x;
             input_state->mouse_y = event->motion.y;
 
-            //todo(stephen): This relative mouse position is mad wrong.
+            // @TODO: This relative mouse position is mad wrong.
             // I should probably just keep track of this myself.
             input_state->mouse_motion = true;
             input_state->mouse_xrel = event->motion.xrel;
             input_state->mouse_yrel = event->motion.yrel;
             break;
 
-            // todo(stephen): SDL_SetWindowFullscreen when hitting f.
+            // @TODO: SDL_SetWindowFullscreen when hitting f.
         case SDL_KEYDOWN: {
             log_info("keypress");
             /* log_info("keypress"); */
@@ -87,7 +87,7 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
         } break;
 
         default:
-            // todo(stephen): print out that other events happened for debugging
+            // @TODO: print out that other events happened for debugging
             *other_events_this_tick+= 1;
             break;
     }
@@ -98,11 +98,11 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
 
 int main(int argc, char* argv[])
 {
-    // todo(stephen): Error if library not specified.
+    // @TODO: Error if library not specified.
     char* game_library = "libgame.dylib";
     log_info("Loading Game: %s", game_library);
 
-    // todo(stephen): function for reloading.
+    // @TODO: function for reloading.
     gg_CurrentGame current_game;
 
     if (current_game.handle) {
@@ -117,14 +117,14 @@ int main(int argc, char* argv[])
     gg_Game *game = dlsym(current_game.handle, "gg_game_api");
     current_game.game = *game;
 
-    // todo(stephen): Figure out a better way to do random numbers.
+    // @TODO: Figure out a better way to do random numbers.
     srand(time(NULL));
 
-    // todo(stephen): Make this part of the config object.
+    // @TODO: Make this part of the config object.
     float game_update_hz = 60.0;
     float target_seconds_per_frame = 1.0f / game_update_hz;
 
-    // todo(stephen): have a better error handling scheme that has all of these
+    // @TODO: have a better error handling scheme that has all of these
     //                goto the end and write an error message instead of a bunch
     //                of different checks.
     if (0 != SDL_Init(SDL_INIT_VIDEO)) {
@@ -139,7 +139,7 @@ int main(int argc, char* argv[])
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
-    // todo(stephen): Have window name come from config object.
+    // @TODO: Have window name come from config object.
     SDL_Window *window = SDL_CreateWindow("rockets",
             SDL_WINDOWPOS_CENTERED,
             SDL_WINDOWPOS_CENTERED,
@@ -170,7 +170,7 @@ int main(int argc, char* argv[])
         log_error("Could not init nanovg.");
     }
 
-    //todo(stephen): IF DEBUG
+    //@TODO: IF DEBUG
     /* gg_Debug_vg = vg; */
 
     // Init Game
@@ -188,7 +188,7 @@ int main(int argc, char* argv[])
 
     while (running) {
         // Reload Library
-        // todo(stephen): only reload if file has changed.
+        // @TODO: only reload if file has changed.
         if (NULL != current_game.handle) {
             dlclose(current_game.handle);
         }
@@ -201,7 +201,7 @@ int main(int argc, char* argv[])
         gg_Game *game = dlsym(current_game.handle, "gg_game_api");
         current_game.game = *game;
 
-        //todo(stephen): better event handling
+        //@TODO: better event handling
         SDL_Event event;
         int other_events_this_tick = 0;
 
@@ -228,7 +228,7 @@ int main(int argc, char* argv[])
                 GL_STENCIL_BUFFER_BIT);
 
         // drawable resolution is
-        // todo(stephen): Support non retina.
+        // @TODO: Support non retina.
         nvgBeginFrame(vg, SCREEN_WIDTH, SCREEN_HEIGHT, 2.0);
 
         /* run game tick */
@@ -236,12 +236,12 @@ int main(int argc, char* argv[])
                                             target_seconds_per_frame);
 
         /* end frame */
-        // todo(stephen): Can draw any admin console stuff here too like error
+        // @TODO: Can draw any admin console stuff here too like error
         // messages on lib reloads or fps or whatever.
         nvgEndFrame(vg);
 
         /* update the screen */
-        // todo(stephen): I think this waits for vsync but maybe see if I should
+        // @TODO: I think this waits for vsync but maybe see if I should
         // also delay myself until vsync.
         SDL_GL_SwapWindow(window);
 

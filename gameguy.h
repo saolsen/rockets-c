@@ -9,7 +9,7 @@
 #include <math.h>
 #include <sys/stat.h>
 
-// todo(stephen): Make this cross platform.
+// @TODO: Make this cross platform.
 #include <OpenGL/gl3.h>
 
 #include "nanovg.h"
@@ -23,12 +23,12 @@
 
 // Library Functions
 
-// todo(stephen): add printing, debugging, and profiling macros here.
+// @TODO: add printing, debugging, and profiling macros here.
 #define log_info(M, ...) fprintf(stderr, "[INFO] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
-// todo(stephen): Have errors log in red.
+// @TODO: Have errors log in red.
 #define log_error(M, ...) fprintf(stderr, "[ERROR] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
-// todo(stephen): IF DEBUG
+// @TODO: IF DEBUG
 /* extern void* gg_Debug_Memory; */
 
 // Interface with Game.

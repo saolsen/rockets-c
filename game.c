@@ -194,7 +194,7 @@ nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
         Node* node = nodestore_get_node_by_id(ns, i);
         bool value = node_eval(node, ns, ship);
 
-        // todo(stephen): IF DEBUG
+        // @TODO: IF DEBUG
         nvgSave(gg_Debug_vg);
         {
             if (value) {
@@ -313,7 +313,7 @@ game_setup(NVGcontext* vg)
 
     state->drag_target = -1;
 
-    // todo(Stephen): If you have more than one font you need to store a
+    // @TODO: If you have more than one font you need to store a
     // reference to this.
     nvgCreateFont(vg,
             "basic",
