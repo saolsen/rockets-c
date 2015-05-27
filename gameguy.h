@@ -39,6 +39,7 @@ typedef struct {
     int mouse_yrel;
     bool mouse_motion;
     bool click;
+    bool start_dragging;
     bool is_dragging;
     bool end_dragging;
 } gg_Input;

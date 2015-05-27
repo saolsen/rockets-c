@@ -55,6 +55,7 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
         case SDL_MOUSEBUTTONDOWN:
             /* log_info("mouse down"); */
             input_state->click = true;
+            input_state->start_dragging = true;
             input_state->is_dragging = true;
             break;
 
@@ -205,7 +206,8 @@ int main(int argc, char* argv[])
         SDL_Event event;
         int other_events_this_tick = 0;
 
-        input.end_dragging = false;;
+        input.start_dragging = false;
+        input.end_dragging = false;
         input.click = false;
         input.mouse_motion = false;
         

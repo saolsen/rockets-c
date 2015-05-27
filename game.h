@@ -10,11 +10,6 @@ static const int Y_PADDING = 12.0;
 typedef struct {
     float x;
     float y;
-} Point;
-
-typedef struct {
-    float x;
-    float y;
 } V2;
 
 
@@ -31,6 +26,13 @@ v2_minus(const V2 v1, const V2 v2)
 {
     return (V2){v1.x - v2.x,
                 v1.y - v2.y};
+}
+
+V2
+v2_scale(const V2 v, const float f)
+{
+    return (V2){v.x * f,
+                v.y * f};
 }
 
 
@@ -107,7 +109,7 @@ typedef struct Thrusters {
 } Thrusters;
 
 typedef struct Ship {
-    Point position;
+    V2 position;
     int rotation;
     Thrusters thrusters;
 } Ship;
@@ -115,7 +117,7 @@ typedef struct Ship {
 typedef struct Node {
     int id;
     NodeType type;
-    Point position;
+    V2 position;
     BoundingBox bb;
     // todo(stephen): Put a bounding box or dragging thing on here instead of
     // just position.
@@ -501,6 +503,17 @@ debug_draw_bb(NVGcontext* vg, NVGcolor color, BoundingBox bb)
 
 typedef enum { BUTTON } GUINodeType;
 
+typedef enum {GUI_NOT_DRAGGING,
+              GUI_DRAGGING_NODE,
+              GUI_DRAGGING_INPUT,
+              GUI_DRAGGING_OUTPUT} DraggingState;
+
+typedef struct {
+    int from_id;
+    int from_input_num;
+    V2 position;
+} DragTarget;
+
 typedef struct {
     
 } GUINode;
@@ -508,8 +521,8 @@ typedef struct {
 typedef struct {
     NVGcontext* vg;
     gg_Input input;
-
-    int drag_target;
+    DraggingState dragging_state;
+    DragTarget drag_target;
 } GUIState;
 
 typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
@@ -556,7 +569,8 @@ gui_button(GUIState gui, float x, float y, float width, float height) {
 typedef struct {
     Node* node;
     BoundingBox bb;
-    Point draw_position;
+    V2 draw_position;
+    int InputIndex;
 } NodeBounds;
 
 typedef enum { NE_NAH } NodeEventType;
@@ -569,57 +583,132 @@ typedef struct {
 // * Dragging things into other things.
 // * Sub buttons on nodes.
 //
-// I'm going to need to continue to rething this api. Just need enough to play
-// the game.
+
+// Need to collect the things I need.
+// Bounding boxes for nodes.
+// Bounding boxes for inputs.
+// Bounding boxes for output.
+// Bounding boxes for thruster toggles.
+// Bounding boxes for destroy buttons.
+// Bounding boxes for buttons.
+
+// Current status (dragging, clicking, nothing)
+// If dragging, handle dragging what into what.
+// If clicking, what are you clicking.
+
+// Keep track over scenes. (Dragging state.)
+
+// Update (position of dragging, events for creation, deletion and editing edges)
 
 NodeEvent
 gui_nodes(GUIState* gui, NodeStore* ns)
 {
     NodeBounds* bodies = NULL;
+    /* NodeBounds* inputs = NULL; */
+    NodeBounds* outputs = NULL;
 
-    // Calculate stuff for collisions and whatever.
+    // Collect collision data.
     for (int i=0; i<ns->next_id; i++) {
-        NodeBounds body = {};
-        body.node = &ns->array[i];
-        body.bb = node_calc_bounding_box(gui->vg, &ns->array[i], ns);
-        body.draw_position = ns->array[i].position;
+        if (ns->array[i].type != SIGNAL && ns->array[i].type != CONSTANT) {
+            // Node body bounds
+            NodeBounds body;
+            body.node = &ns->array[i];
+            body.bb = node_calc_bounding_box(gui->vg, &ns->array[i], ns);
+            body.draw_position = ns->array[i].position;
+            sb_push(bodies, body);
 
-        // @TODO: Handle dragging better, should be done in the next step.
-        // Handle dragging
-        if (gui->input.end_dragging) {
-            gui->drag_target = -1;
+            // Output bounds
+            NodeBounds output = {};
+            output.node = &ns->array[i];
+            float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
+                + body.bb.top_left.x;
+            float centery = body.bb.bottom_right.y;
+            // @HARDCODE
+            output.bb = (BoundingBox){{centerx - 2, centery - 4},
+                                      {centerx + 2, centery + 4}};
+            output.draw_position = (V2){.x = output.bb.top_left.x,
+                                        .y = output.bb.top_left.y};
+            sb_push(outputs, output);
+
+            // Inputs bounds
         }
-
-        if (gui->input.is_dragging && gui->input.mouse_motion) {
-            if (i == gui->drag_target) {
-                body.draw_position.x += gui->input.mouse_xrel;
-                body.draw_position.y += gui->input.mouse_yrel;
-
-                // @TODO: Return a drag event instead of mutating!
-                ns->array[i].position.x += gui->input.mouse_xrel;
-                ns->array[i].position.y += gui->input.mouse_yrel;
-            } else if (gui->drag_target == -1 &&
-                       ns->array[i].type != CONSTANT &&
-                       ns->array[i].type != SIGNAL &&
-                       bb_contains(body.bb,
-                                   gui->input.mouse_x - gui->input.mouse_xrel,
-                                   gui->input.mouse_y - gui->input.mouse_yrel)) {
-                body.draw_position.x += gui->input.mouse_xrel;
-                body.draw_position.y += gui->input.mouse_yrel;
-                gui->drag_target = i;
-
-                // @TODO: Return a drag event instead of mutating!
-                ns->array[i].position.x += gui->input.mouse_xrel;
-                ns->array[i].position.y += gui->input.mouse_yrel;
-            }
-        }
-
-        sb_push(bodies, body);
-        // Handle collisions
-        // Handle dragging things into other things.
     }
 
-    // draw the nodes
+    // Handle current gui state.
+    
+    // CLICK
+    // START DRAGGING
+    // - CONNECTOR
+    // - NODE
+    // CONTINUE DRAGGING
+    // END DRAGGING
+    if (gui->dragging_state == GUI_NOT_DRAGGING) {
+        if (gui->input.start_dragging) {
+            // Check if we started dragging a node.
+            for (int i=0; i<sb_count(bodies); i++) {
+                if (bb_contains(bodies[i].bb,
+                                gui->input.mouse_x - gui->input.mouse_xrel,
+                                gui->input.mouse_y - gui->input.mouse_yrel)) {
+                    
+                    Node* drag_node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
+                    //@TODO: return move event don't mutate
+                    drag_node->position.x += gui->input.mouse_xrel;
+                    drag_node->position.y += gui->input.mouse_yrel;
+
+                    bodies[i].draw_position.x += gui->input.mouse_xrel;
+                    bodies[i].draw_position.y += gui->input.mouse_yrel;
+
+                    gui->dragging_state = GUI_DRAGGING_NODE;
+                    gui->drag_target.from_id = bodies[i].node->id;
+                    break;
+                    }
+            }
+
+            // Check if we started dragging an input.
+
+            // Check if we started dragging an output.
+        }
+        
+    } else if (gui->dragging_state == GUI_DRAGGING_NODE) {
+        if (gui->input.end_dragging) {
+            gui->dragging_state = GUI_NOT_DRAGGING;
+        } else {
+
+            if (gui->input.mouse_motion) {
+                // Continue dragging the node.
+                // @TODO: return move event don't mutate
+                Node* drag_node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
+                drag_node->position.x += gui->input.mouse_xrel;
+                drag_node->position.y += gui->input.mouse_yrel;
+
+                // Update draw position, could probably combine this with above and
+                // only loop once.
+                for (int i=0; i<sb_count(bodies); i++) {
+                    if (bodies[i].node->id == drag_node->id) {
+                        bodies[i].draw_position.x += gui->input.mouse_xrel;
+                        bodies[i].draw_position.y += gui->input.mouse_yrel;
+                        break;
+                    }
+                }
+            }
+
+        }
+        
+    } else if (gui->dragging_state == GUI_DRAGGING_INPUT ||
+        gui->dragging_state == GUI_DRAGGING_OUTPUT) {
+        // show the input being dragged
+        // update the drag position for this frame
+        // If over an output or a node
+           // if end_dragging, fire connection event.
+           // else show hilight of node to be connected to.
+        // show the arrow of the input being dragged
+
+        // for output
+        // very similar to above except you search nodes and inputs, toggle
+        // between seperate inputs based on which is closer, this could be complex.
+    }
+
+    // Draw gui elements.
     for (int i=0; i<sb_count(bodies); i++) {
         char buf[256] = {'\0'};
         NodeBounds body = bodies[i];
@@ -627,7 +716,6 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
         switch(node.type) {
         case THRUSTER: {
-            // @TODO: draw bounding box
             Thrusters thrusts = {};
             switch(node.thruster) {
             case BP:
@@ -707,22 +795,16 @@ gui_nodes(GUIState* gui, NodeStore* ns)
        // change value (keyboard entry or slider or arrows?)
 
     // Debug drawing
-
     // debug draw node bounding boxes.
     for (int i = 0; i < sb_count(bodies); i++) {
-        NodeBounds body = bodies[i];
-        if (body.node->type != SIGNAL && body.node->type != CONSTANT) {
-            NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
-            debug_draw_bb(gui->vg, color, body.bb);
-        }
+        NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
+        debug_draw_bb(gui->vg, color, bodies[i].bb);
     }
-
-    /* // debug draw input bounding boxes. */
-    /* for (int i = 0; i < sb_count(inputs); i++) { */
-    /*     NodeInput an_input = inputs[i]; */
-    /*     NVGcolor color = nvgRGBf(0.0, 1.0, 1.0); */
-    /*     debug_draw_bb(gui->vg, color, bb_blow_up(an_input.bb)); */
-    /* } */
+    // debug draw output bounding boxes.
+    for (int i = 0; i < sb_count(outputs); i++) {
+        NVGcolor color = nvgRGBf(1.0, 1.0, 0.0);
+        debug_draw_bb(gui->vg, color, outputs[i].bb);
+    }
 
     // free memory
     sb_free(bodies);
