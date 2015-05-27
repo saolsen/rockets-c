@@ -365,40 +365,6 @@ game_update_and_render(void* gamestate,
     state->player_ship.thrusters = new_thrusters;
     ship_move(&state->player_ship, dt);
 
-#if 0
-    // handle draging
-    if (input.end_dragging) {
-        state->drag_target = -1;
-    }
-    
-    if (input.is_dragging && input.mouse_motion) {
-        Node* node;
-
-        // Pick node to drag.
-        if (state->drag_target == -1) {
-            for (int i = 0; i < state->node_store.next_id; i++) {
-                node = nodestore_get_node_by_id(&state->node_store, i);
-                if (node->type != CONSTANT && node->type != SIGNAL) {
-                    BoundingBox new_bb =
-                        node_calc_bounding_box(vg, node, &state->node_store);
-
-                    if (bb_contains(new_bb,
-                                    input.mouse_x - input.mouse_xrel,
-                                    input.mouse_y - input.mouse_yrel)) {
-                        state->drag_target = i;
-                        break;
-                    }
-                }
-            }
-        } else {
-            node = nodestore_get_node_by_id(&state->node_store, state->drag_target);
-        }
-
-        node->position.x += input.mouse_xrel;
-        node->position.y += input.mouse_yrel;
-    }
-#endif
-
     // Render
 
     // Space background!

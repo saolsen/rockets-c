@@ -721,8 +721,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             
         } else {
             if (gui->input.mouse_motion) {
-                gui->drag_target.position.x += gui->input.mouse_xrel;
-                gui->drag_target.position.y += gui->input.mouse_yrel;
+                gui->drag_target.position.x = gui->input.mouse_x;
+                gui->drag_target.position.y = gui->input.mouse_y;
             }
         }
         
