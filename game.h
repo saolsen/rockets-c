@@ -624,8 +624,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 + body.bb.top_left.x;
             float centery = body.bb.bottom_right.y;
             // @HARDCODE
-            output.bb = (BoundingBox){{centerx - 2, centery - 4},
-                                      {centerx + 2, centery + 4}};
+            output.bb = (BoundingBox){{centerx - 7.5, centery - 5},
+                                      {centerx + 7.5, centery + 5}};
             output.draw_position = (V2){.x = output.bb.top_left.x,
                                         .y = output.bb.top_left.y};
             sb_push(outputs, output);
@@ -644,36 +644,56 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     // END DRAGGING
     if (gui->dragging_state == GUI_NOT_DRAGGING) {
         if (gui->input.start_dragging) {
-            // Check if we started dragging a node.
-            for (int i=0; i<sb_count(bodies); i++) {
-                if (bb_contains(bodies[i].bb,
-                                gui->input.mouse_x - gui->input.mouse_xrel,
-                                gui->input.mouse_y - gui->input.mouse_yrel)) {
-                    
-                    Node* drag_node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
-                    //@TODO: return move event don't mutate
-                    drag_node->position.x += gui->input.mouse_xrel;
-                    drag_node->position.y += gui->input.mouse_yrel;
-
-                    bodies[i].draw_position.x += gui->input.mouse_xrel;
-                    bodies[i].draw_position.y += gui->input.mouse_yrel;
-
-                    gui->dragging_state = GUI_DRAGGING_NODE;
-                    gui->drag_target.from_id = bodies[i].node->id;
-                    break;
-                    }
-            }
-
-            // Check if we started dragging an input.
+            bool found = false;
 
             // Check if we started dragging an output.
+            for (int i=0; i<sb_count(outputs); i++) {
+                if (bb_contains(outputs[i].bb,
+                                gui->input.mouse_x - gui->input.mouse_xrel,
+                                gui->input.mouse_y - gui->input.mouse_yrel)) {
+
+                    gui->dragging_state = GUI_DRAGGING_OUTPUT;
+                    gui->drag_target.from_id = outputs[i].node->id;
+                    gui->drag_target.position = outputs[i].bb.top_left;
+
+                    gui->drag_target.position.x += gui->input.mouse_xrel;
+                    gui->drag_target.position.y += gui->input.mouse_yrel;
+
+                    found = true;
+                    break;
+                }
+            }
+            // Check if we started dragging an input.
+            
+            // Check if we started dragging a node.
+            if (!found) {
+                for (int i=0; i<sb_count(bodies); i++) {
+                    if (bb_contains(bodies[i].bb,
+                                    //@TODO: Maybe change this to just mouse x and y.
+                                    gui->input.mouse_x - gui->input.mouse_xrel,
+                                    gui->input.mouse_y - gui->input.mouse_yrel)) {
+                    
+                        Node* drag_node = bodies[i].node;
+                        //@TODO: return move event don't mutate
+                        drag_node->position.x += gui->input.mouse_xrel;
+                        drag_node->position.y += gui->input.mouse_yrel;
+
+                        bodies[i].draw_position.x += gui->input.mouse_xrel;
+                        bodies[i].draw_position.y += gui->input.mouse_yrel;
+
+                        gui->dragging_state = GUI_DRAGGING_NODE;
+                        gui->drag_target.from_id = drag_node->id;
+                        found = true;
+                        break;
+                    }
+                }
+            }
         }
-        
     } else if (gui->dragging_state == GUI_DRAGGING_NODE) {
         if (gui->input.end_dragging) {
             gui->dragging_state = GUI_NOT_DRAGGING;
-        } else {
 
+        } else {
             if (gui->input.mouse_motion) {
                 // Continue dragging the node.
                 // @TODO: return move event don't mutate
@@ -691,11 +711,21 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     }
                 }
             }
-
         }
         
     } else if (gui->dragging_state == GUI_DRAGGING_INPUT ||
         gui->dragging_state == GUI_DRAGGING_OUTPUT) {
+        if (gui->input.end_dragging) {
+            // @TODO: Handle connecting the nodes here.
+            gui->dragging_state = GUI_NOT_DRAGGING;
+            
+        } else {
+            if (gui->input.mouse_motion) {
+                gui->drag_target.position.x += gui->input.mouse_xrel;
+                gui->drag_target.position.y += gui->input.mouse_yrel;
+            }
+        }
+        
         // show the input being dragged
         // update the drag position for this frame
         // If over an output or a node
@@ -800,14 +830,32 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
         debug_draw_bb(gui->vg, color, bodies[i].bb);
     }
+
     // debug draw output bounding boxes.
     for (int i = 0; i < sb_count(outputs); i++) {
         NVGcolor color = nvgRGBf(1.0, 1.0, 0.0);
         debug_draw_bb(gui->vg, color, outputs[i].bb);
     }
 
+    // debug draw drag target.
+    if (gui->dragging_state == GUI_DRAGGING_INPUT ||
+        gui->dragging_state == GUI_DRAGGING_OUTPUT) {
+        NVGcolor color = nvgRGBf(0.0, 1.0, 1.0);
+        nvgSave(gui->vg);
+        nvgFillColor(gui->vg, color);
+        nvgBeginPath(gui->vg);
+        nvgCircle(gui->vg,
+                  gui->drag_target.position.x,
+                  gui->drag_target.position.y,
+                  5.0);
+        nvgFill(gui->vg);
+        nvgRestore(gui->vg);
+    }
+                
+
     // free memory
     sb_free(bodies);
+    sb_free(outputs);
 
     return (NodeEvent){.type = NE_NAH};
 }
