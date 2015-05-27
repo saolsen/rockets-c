@@ -570,7 +570,7 @@ typedef struct {
     Node* node;
     BoundingBox bb;
     V2 draw_position;
-    int InputIndex;
+    int input_index;
 } NodeBounds;
 
 typedef enum { NE_NAH } NodeEventType;
@@ -604,7 +604,7 @@ NodeEvent
 gui_nodes(GUIState* gui, NodeStore* ns)
 {
     NodeBounds* bodies = NULL;
-    /* NodeBounds* inputs = NULL; */
+    NodeBounds* inputs = NULL;
     NodeBounds* outputs = NULL;
 
     // Collect collision data.
@@ -618,19 +618,52 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             sb_push(bodies, body);
 
             // Output bounds
-            NodeBounds output = {};
-            output.node = &ns->array[i];
-            float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
-                + body.bb.top_left.x;
-            float centery = body.bb.bottom_right.y;
-            // @HARDCODE
-            output.bb = (BoundingBox){{centerx - 7.5, centery - 5},
-                                      {centerx + 7.5, centery + 5}};
-            output.draw_position = (V2){.x = output.bb.top_left.x,
-                                        .y = output.bb.top_left.y};
-            sb_push(outputs, output);
+            if (ns->array[i].type != THRUSTER) {
+                NodeBounds output = {};
+                output.node = &ns->array[i];
+                float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
+                    + body.bb.top_left.x;
+                float centery = body.bb.bottom_right.y;
+                // @HARDCODE
+                output.bb = (BoundingBox){{centerx - 7.5, centery - 5},
+                                          {centerx + 7.5, centery + 5}};
+                output.draw_position = output.bb.top_left;
+                sb_push(outputs, output);
+            }
 
             // Inputs bounds
+            if (ns->array[i].type != PREDICATE) {
+                NodeBounds input = {};
+                float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
+                    + body.bb.top_left.x;
+                float centery = body.bb.top_left.y;
+                
+                if (ns->array[i].type == GATE &&
+                    ns->array[i].gate != NOT) {
+                    // 2 inputs for AND and OR gates.
+                    input.node = &ns->array[i];
+
+                    input.bb = (BoundingBox){{body.bb.top_left.x + 2.5, centery - 5},
+                                             {body.bb.top_left.x + 17.5, centery + 5}};
+                    input.draw_position = input.bb.top_left;
+                    input.input_index = 1;
+                    sb_push(inputs, input);
+
+                    input.bb = (BoundingBox){{body.bb.bottom_right.x - 17.5, centery - 5},
+                                             {body.bb.bottom_right.x - 2.5, centery + 5}};
+                    input.draw_position = input.bb.top_left;
+                    input.input_index = 2;
+                    sb_push(inputs, input);
+                } else {
+                    // 1 of them for NOT gates and Thrusters.
+                    input.node = &ns->array[i];
+                    input.bb = (BoundingBox){{centerx - 7.5, centery - 5},
+                                             {centerx + 7.5, centery + 5}};
+                    input.draw_position = input.bb.top_left;
+                    input.input_index = 1;
+                    sb_push(inputs, input);
+                }
+            }            
         }
     }
 
@@ -663,8 +696,30 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     break;
                 }
             }
-            // Check if we started dragging an input.
             
+            // @COPYPASTE
+            // Check if we started dragging an input.
+            if (!found) {
+                for (int i=0; i<sb_count(inputs); i++) {
+                    if (bb_contains(inputs[i].bb,
+                                    gui->input.mouse_x - gui->input.mouse_xrel,
+                                    gui->input.mouse_y - gui->input.mouse_yrel)) {
+
+                        gui->dragging_state = GUI_DRAGGING_INPUT;
+                        gui->drag_target.from_id = inputs[i].node->id;
+                        gui->drag_target.from_input_num = inputs[i].input_index;
+                        gui->drag_target.position = inputs[i].bb.top_left;
+
+                        gui->drag_target.position.x += gui->input.mouse_xrel;
+                        gui->drag_target.position.y += gui->input.mouse_yrel;
+
+                        found = true;
+                        break;
+                    }
+                }
+            }
+            
+            // @COPYPASTE
             // Check if we started dragging a node.
             if (!found) {
                 for (int i=0; i<sb_count(bodies); i++) {
@@ -689,6 +744,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 }
             }
         }
+
     } else if (gui->dragging_state == GUI_DRAGGING_NODE) {
         if (gui->input.end_dragging) {
             gui->dragging_state = GUI_NOT_DRAGGING;
@@ -829,6 +885,12 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     for (int i = 0; i < sb_count(bodies); i++) {
         NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
         debug_draw_bb(gui->vg, color, bodies[i].bb);
+    }
+
+    // debug draw input bounding boxes.
+    for (int i = 0; i < sb_count(inputs); i++) {
+        NVGcolor color = nvgRGBf(1.0, 0.0, 1.0);
+        debug_draw_bb(gui->vg, color, inputs[i].bb);
     }
 
     // debug draw output bounding boxes.
