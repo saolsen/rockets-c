@@ -351,6 +351,46 @@ node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
     strcpy(buffer, txt);
 }
 
+Signal
+signal_next(Signal current_signal)
+{
+    switch(current_signal) {
+    case POS_X:
+        return POS_Y;
+        break;
+    case POS_Y:
+        return ROTATION;
+        break;
+    case ROTATION:
+        return POS_X;
+        break;
+    }
+}
+
+Predicate
+predicate_next(Predicate current_pred)
+{
+    switch(current_pred) {
+    case(LT):
+        return GT;
+        break;
+    case(GT):
+        return LEQT;
+        break;
+    case(LEQT):
+        return GEQT;
+        break;
+    case(GEQT):
+        return EQ;
+        break;
+    case(EQ):
+        return NEQ;
+        break;
+    case(NEQ):
+        return LT;
+        break;
+    }
+}
 
 BoundingBox
 node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
@@ -558,7 +598,7 @@ typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
 
 // draws a button there, if there was a click of it this frame returns true
 bool
-gui_button(GUIState gui, float x, float y, float width, float height) {
+gui_button_with_text(GUIState gui, float x, float y, float width, float height, char* txt) {
     ButtonState bs = BS_NAH;
     
     if (bounds_contains(x, y, x+width, y+height, gui.input.mouse_x, gui.input.mouse_y)) {
@@ -592,6 +632,11 @@ gui_button(GUIState gui, float x, float y, float width, float height) {
     nvgRestore(gui.vg);
     
     return (BS_CLICK == bs);
+}
+
+bool
+gui_button(GUIState gui, float x, float y, float width, float height) {
+    return gui_button_with_text(gui, x, y, width, height, NULL);
 }
 
 typedef struct {
@@ -814,7 +859,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         if (gui->input.end_dragging) {
             // @TODO: Handle connecting the nodes here.
 
-            // try this
+            // Connect input
+            // @TODO: Check outputs too.
             if (gui->dragging_state == GUI_DRAGGING_INPUT) {
                 for (int i = 0; i < sb_count(bodies); i++) {
                     // check if over a node.
@@ -830,13 +876,10 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                         } else {
                             input->input.rhs = bodies[i].node->id;
                         }
-                    }
-                                        
+                        break;
+                    }          
                 }
             }
-
-
-            //
 
             gui->dragging_state = GUI_NOT_DRAGGING;
             
@@ -910,6 +953,49 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
             node_get_text(&node, buf, 256, lhs, rhs);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
+
+            // @TODO: all of these should return events instead of mutate!
+            // Buttons!
+            if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+15, 5, 5)) {
+                // toggle lhs up
+                if (lhs->type == SIGNAL) {
+                    lhs->signal = signal_next(lhs->signal);
+                } else {
+                    lhs->constant++;
+                }
+            }
+            if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+25, 5, 5)) {
+                // toggle lhs down
+                if (lhs->type == SIGNAL) {
+                    lhs->signal = signal_next(lhs->signal);
+                } else {
+                    lhs->constant--;
+                }
+            }
+
+            V2 center = bb_center(body.bb);
+            if (gui_button(*gui, center.x-2.5, body.bb.top_left.y+25, 5, 5)) {
+                // toggle pred
+                bodies[i].node->predicate = predicate_next(node.predicate);
+            }
+
+            if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+15, 5, 5)) {
+                // toggle rhs up
+                if (rhs->type == SIGNAL) {
+                    rhs->signal = signal_next(rhs->signal);
+                } else {
+                    rhs->constant++;
+                }
+            }
+            if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+25, 5, 5)) {
+                // toggle rhs down
+                if (rhs->type == SIGNAL) {
+                    rhs->signal = signal_next(rhs->signal);
+                } else {
+                    rhs->constant--;
+                }
+            }
+            
         } break;
 
         case SIGNAL:
@@ -966,7 +1052,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     for (int i = 0; i < sb_count(bodies); i++) {
         if (gui_button(*gui,
                    bodies[i].bb.top_left.x, bodies[i].bb.top_left.y,
-                       15, 15)) {
+                       10, 10)) {
             // @TODO: Return destroy event instead of destorying.
             // @TODO: Come back to this, destroying is hard!
         }

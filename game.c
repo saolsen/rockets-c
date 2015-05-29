@@ -348,7 +348,24 @@ game_update_and_render(void* gamestate,
 
     // Update Gui
     if (gui_button(state->gui, 10, 10, 50, 25)) {
+        int a = nodestore_add_constant(&state->node_store, 0, 0, 0);
+        int b = nodestore_add_signal(&state->node_store, 0, 0, POS_X);
+        int c = nodestore_add_predicate(&state->node_store, 10, 45, EQ);
+        Node* node_c = nodestore_get_node_by_id(&state->node_store, c);
+        node_c->input.lhs = a;
+        node_c->input.rhs = b;
+        
+        log_info("adding node");
+    }
+
+    if (gui_button(state->gui, 70, 10, 50, 25)) {
         nodestore_add_gate(&state->node_store, 10, 45, AND);
+        
+        log_info("adding node");
+    }
+
+    if (gui_button(state->gui, 130, 10, 50, 25)) {
+        nodestore_add_thruster(&state->node_store, 10, 45, BOOST);
         
         log_info("adding node");
     }
