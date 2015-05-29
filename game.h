@@ -78,6 +78,17 @@ bb_contains(BoundingBox bb, float x, float y)
                            bb.bottom_right.y, x, y);
 }
 
+V2
+bb_center(BoundingBox bb)
+{
+    float centerx = ((bb.bottom_right.x - bb.top_left.x) / 2)
+        + bb.top_left.x;
+    float centery = ((bb.bottom_right.y - bb.top_left.y) / 2)
+        + bb.top_left.y;
+
+    return (V2){centerx, centery};
+}
+
 void
 debug_square(NVGcontext* vg, float x, float y)
 {
@@ -571,6 +582,7 @@ typedef struct {
     BoundingBox bb;
     V2 draw_position;
     int input_index;
+    Node* input_to;
 } NodeBounds;
 
 typedef enum { NE_NAH } NodeEventType;
@@ -647,12 +659,18 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                                              {body.bb.top_left.x + 17.5, centery + 5}};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 1;
+                    if (input.node->input.lhs != -1) {
+                        input.input_to = nodestore_get_node_by_id(ns, input.node->input.lhs);
+                    }
                     sb_push(inputs, input);
 
                     input.bb = (BoundingBox){{body.bb.bottom_right.x - 17.5, centery - 5},
                                              {body.bb.bottom_right.x - 2.5, centery + 5}};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 2;
+                    if (input.node->input.lhs != -1) {
+                        input.input_to = nodestore_get_node_by_id(ns, input.node->input.rhs);
+                    }
                     sb_push(inputs, input);
                 } else {
                     // 1 of them for NOT gates and Thrusters.
@@ -661,6 +679,9 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                                              {centerx + 7.5, centery + 5}};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 1;
+                    if (input.node->parent != -1) {
+                        input.input_to = nodestore_get_node_by_id(ns, input.node->parent);
+                    }
                     sb_push(inputs, input);
                 }
             }            
@@ -838,8 +859,6 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 draw_ship(gui->vg, thrusts, true);
             }
             nvgRestore(gui->vg);
-            
-            /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.parent)); */
         } break;
 
         case PREDICATE: {
@@ -859,15 +878,33 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         case GATE: {
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
-            /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.rhs)); */
-            /* draw_parent_line(vg, &node, nodestore_get_node_by_id(ns, node.input.lhs)); */
         } break;
         }
 
         // To start, we probably need to get these drawing at the bounding box.
         nvgFillColor(gui->vg, nvgRGB(255,153,0));
-        debug_square(gui->vg, body.draw_position.x, body.draw_position.y);
-        
+        debug_square(gui->vg, body.draw_position.x, body.draw_position.y);        
+    }
+
+    // Draw connection lines. Arows from output to input?
+    for (int i = 0; i < sb_count(inputs); i++) {
+        if (inputs[i].input_to != NULL) {
+            // draw line to input_to's output.
+            nvgSave(gui->vg);
+            nvgBeginPath(gui->vg);
+
+            V2 input_center = bb_center(inputs[i].bb);
+            nvgMoveTo(gui->vg, input_center.x, inputs[i].bb.top_left.y);
+            // @TODO: Bezier
+
+            BoundingBox parent = node_calc_bounding_box(gui->vg, inputs[i].input_to, ns);
+            V2 parent_center = bb_center(parent);
+            nvgLineTo(gui->vg, parent_center.x, parent.bottom_right.y + 5);
+            nvgStrokeColor(gui->vg, nvgRGBf(1.0, 1.0, 1.0));
+            nvgStroke(gui->vg);
+            
+            nvgRestore(gui->vg);
+        }
     }
     
     // draw the nodes
@@ -912,11 +949,11 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                   5.0);
         nvgFill(gui->vg);
         nvgRestore(gui->vg);
-    }
-                
+    }                
 
     // free memory
     sb_free(bodies);
+    sb_free(inputs);
     sb_free(outputs);
 
     return (NodeEvent){.type = NE_NAH};

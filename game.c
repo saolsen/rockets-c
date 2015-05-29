@@ -181,7 +181,7 @@ node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 
     // This is actually an error tho...
     return false;
-
+    
 }
 
 Thrusters
