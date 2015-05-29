@@ -392,6 +392,44 @@ predicate_next(Predicate current_pred)
     }
 }
 
+Gate
+gate_next(Gate gate)
+{
+    switch(gate) {
+    case(AND):
+        return OR;
+        break;
+    case(OR):
+        return NOT;
+        break;
+    case(NOT):
+        return AND;
+        break;
+    }
+}
+
+Thruster
+thruster_next(Thruster thruster)
+{
+    switch(thruster) {
+    case(BP):
+        return BS;
+        break;
+    case(BS):
+        return SP;
+        break;
+    case(SP):
+        return SS;
+        break;
+    case(SS):
+        return BOOST;
+        break;
+    case(BOOST):
+        return BP;
+        break;
+    }
+}
+
 BoundingBox
 node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
 {
@@ -946,6 +984,10 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 draw_ship(gui->vg, thrusts, true);
             }
             nvgRestore(gui->vg);
+
+            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 5, 5)) {
+                bodies[i].node->thruster = thruster_next(node.thruster);
+            }
         } break;
 
         case PREDICATE: {
@@ -991,24 +1033,6 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     rhs->constant--;
                 }
             }
-
-            /* if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+15, 5, 5)) { */
-            /*     // toggle rhs up */
-            /*     if (rhs->type == SIGNAL) { */
-            /*         rhs->signal = signal_next(rhs->signal); */
-            /*     } else { */
-            /*         rhs->constant++; */
-            /*     } */
-            /* } */
-            /* if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+25, 5, 5)) { */
-            /*     // toggle rhs down */
-            /*     if (rhs->type == SIGNAL) { */
-            /*         rhs->signal = signal_next(rhs->signal); */
-            /*     } else { */
-            /*         rhs->constant--; */
-            /*     } */
-            /* } */
-            
         } break;
 
         case SIGNAL:
@@ -1020,6 +1044,10 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         case GATE: {
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
+
+            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 5, 5)) {
+                bodies[i].node->gate = gate_next(node.gate);
+            }
         } break;
         }
 
