@@ -956,19 +956,17 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
             // @TODO: all of these should return events instead of mutate!
             // Buttons!
-            if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+15, 5, 5)) {
-                // toggle lhs up
-                if (lhs->type == SIGNAL) {
+            if (lhs->type == SIGNAL) {
+                if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+20, 5, 5)) {
                     lhs->signal = signal_next(lhs->signal);
-                } else {
+                }
+            } else {
+                if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+15, 5, 5)) {
+                    // toggle lhs up
                     lhs->constant++;
                 }
-            }
-            if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+25, 5, 5)) {
-                // toggle lhs down
-                if (lhs->type == SIGNAL) {
-                    lhs->signal = signal_next(lhs->signal);
-                } else {
+                if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+25, 5, 5)) {
+                    // toggle lhs down
                     lhs->constant--;
                 }
             }
@@ -978,23 +976,38 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 // toggle pred
                 bodies[i].node->predicate = predicate_next(node.predicate);
             }
-
-            if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+15, 5, 5)) {
-                // toggle rhs up
-                if (rhs->type == SIGNAL) {
+            
+            if (rhs->type == SIGNAL) {
+                if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+20, 5, 5)) {
                     rhs->signal = signal_next(rhs->signal);
-                } else {
+                }
+            } else {
+                if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+15, 5, 5)) {
+                    // toggle lhs up
                     rhs->constant++;
                 }
-            }
-            if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+25, 5, 5)) {
-                // toggle rhs down
-                if (rhs->type == SIGNAL) {
-                    rhs->signal = signal_next(rhs->signal);
-                } else {
+                if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+25, 5, 5)) {
+                    // toggle lhs down
                     rhs->constant--;
                 }
             }
+
+            /* if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+15, 5, 5)) { */
+            /*     // toggle rhs up */
+            /*     if (rhs->type == SIGNAL) { */
+            /*         rhs->signal = signal_next(rhs->signal); */
+            /*     } else { */
+            /*         rhs->constant++; */
+            /*     } */
+            /* } */
+            /* if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+25, 5, 5)) { */
+            /*     // toggle rhs down */
+            /*     if (rhs->type == SIGNAL) { */
+            /*         rhs->signal = signal_next(rhs->signal); */
+            /*     } else { */
+            /*         rhs->constant--; */
+            /*     } */
+            /* } */
             
         } break;
 
