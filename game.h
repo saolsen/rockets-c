@@ -89,6 +89,14 @@ bb_center(BoundingBox bb)
     return (V2){centerx, centery};
 }
 
+// Calculate width and height of bb
+V2
+bb_size(BoundingBox bb)
+{
+    return (V2){bb.bottom_right.x - bb.top_left.x,
+                bb.bottom_right.y - bb.top_left.y};
+}
+
 void
 debug_square(NVGcontext* vg, float x, float y)
 {
@@ -258,6 +266,15 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
     node->thruster = thruster;
     
     return node->id;
+}
+
+// Ok, this is a problem.
+// Destroying will nullify all pointers. If I compress the array then I need to update
+// all pointers.
+void
+nodestore_destory_node(NodeStore* ns, int id)
+{
+
 }
 
 
@@ -668,8 +685,10 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                                              {body.bb.bottom_right.x - 2.5, centery + 5}};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 2;
-                    if (input.node->input.lhs != -1) {
+                    if (input.node->input.rhs != -1) {
                         input.input_to = nodestore_get_node_by_id(ns, input.node->input.rhs);
+                    } else {
+                        input.input_to = NULL;
                     }
                     sb_push(inputs, input);
                 } else {
@@ -794,6 +813,31 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         gui->dragging_state == GUI_DRAGGING_OUTPUT) {
         if (gui->input.end_dragging) {
             // @TODO: Handle connecting the nodes here.
+
+            // try this
+            if (gui->dragging_state == GUI_DRAGGING_INPUT) {
+                for (int i = 0; i < sb_count(bodies); i++) {
+                    // check if over a node.
+                    if (bb_contains(bodies[i].bb,
+                                    gui->input.mouse_x,
+                                    gui->input.mouse_y) &&
+                        (bodies[i].node->type == PREDICATE ||
+                         bodies[i].node->type == GATE)) {
+                        // Connect input to this.
+                        Node* input = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
+                        if (gui->drag_target.from_input_num == 1) {
+                            input->input.lhs = bodies[i].node->id;
+                        } else {
+                            input->input.rhs = bodies[i].node->id;
+                        }
+                    }
+                                        
+                }
+            }
+
+
+            //
+
             gui->dragging_state = GUI_NOT_DRAGGING;
             
         } else {
@@ -862,7 +906,6 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         } break;
 
         case PREDICATE: {
-
             Node* lhs = nodestore_get_node_by_id(ns, node.input.lhs);
             Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
             node_get_text(&node, buf, 256, lhs, rhs);
@@ -904,6 +947,28 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             nvgStroke(gui->vg);
             
             nvgRestore(gui->vg);
+
+            if (gui_button(*gui,
+                           ((parent_center.x - input_center.x) / 2) + input_center.x,
+                           ((parent_center.y - input_center.y) / 2) + input_center.y,
+                           15, 15)) {
+                // Delete the connection!
+                if (inputs[i].input_index == 1) {
+                    inputs[i].node->input.lhs = -1;
+                } else {
+                    inputs[i].node->input.rhs = -1;
+                }
+            }
+        }
+    }
+
+    // Draw destroy buttons for nodes.
+    for (int i = 0; i < sb_count(bodies); i++) {
+        if (gui_button(*gui,
+                   bodies[i].bb.top_left.x, bodies[i].bb.top_left.y,
+                       15, 15)) {
+            // @TODO: Return destroy event instead of destorying.
+            // @TODO: Come back to this, destroying is hard!
         }
     }
     
