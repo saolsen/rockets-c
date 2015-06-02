@@ -320,9 +320,9 @@ game_setup(NVGcontext* vg)
             "SourceSansPro-Regular.ttf");
 
     nodestore_init(&state->node_store, 5);
-    NodeStore* ns = &state->node_store;
 
-    nodestore_load_test_nodes(ns);
+    /* NodeStore* ns = &state->node_store; */
+    /* nodestore_load_test_nodes(ns); */
 
     state->player_ship.position.x = 300;
     state->player_ship.position.y = 99;

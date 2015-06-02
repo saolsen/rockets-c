@@ -60,9 +60,8 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
             break;
 
         case SDL_MOUSEBUTTONUP:
-            /* log_info("mouse up"); */
-            input_state->is_dragging = false;
             input_state->end_dragging = true;
+            input_state->is_dragging = false;
             break;
 
         case SDL_MOUSEMOTION:
@@ -178,11 +177,7 @@ int main(int argc, char* argv[])
     void *gamestate;
     gamestate = current_game.game.init(vg);
 
-    gg_Input input = {.mouse_x = 0,
-            .mouse_y = 0,
-            .click = false,
-            .is_dragging = false,
-            .end_dragging = false};
+    gg_Input input = {};
 
     bool running = true;
     uint64_t last_counter = SDL_GetPerformanceCounter();

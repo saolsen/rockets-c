@@ -1,3 +1,11 @@
+// Need to have better editors for numbers where you can drag in an arc around them to modify!
+// Need to show editing on the scene as you are edititng!
+// Need to have a play and reset button!
+// THEN I need to work on the scene and make levels and stuff.
+
+// If needed I should go back and refactor the node code too....
+// Maybe I should do that before any of this...
+
 #ifndef _game_h
 #define _game_h
 
@@ -812,8 +820,10 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     gui->drag_target.from_id = outputs[i].node->id;
                     gui->drag_target.position = outputs[i].bb.top_left;
 
-                    gui->drag_target.position.x += gui->input.mouse_xrel;
-                    gui->drag_target.position.y += gui->input.mouse_yrel;
+                    if (gui->input.mouse_motion) {
+                        gui->drag_target.position.x += gui->input.mouse_xrel;
+                        gui->drag_target.position.y += gui->input.mouse_yrel;
+                    }
 
                     found = true;
                     break;
@@ -833,8 +843,10 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                         gui->drag_target.from_input_num = inputs[i].input_index;
                         gui->drag_target.position = inputs[i].bb.top_left;
 
-                        gui->drag_target.position.x += gui->input.mouse_xrel;
-                        gui->drag_target.position.y += gui->input.mouse_yrel;
+                        if (gui->input.mouse_motion) {
+                            gui->drag_target.position.x += gui->input.mouse_xrel;
+                            gui->drag_target.position.y += gui->input.mouse_yrel;
+                        }
 
                         found = true;
                         break;
@@ -853,12 +865,13 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     
                         Node* drag_node = bodies[i].node;
                         //@TODO: return move event don't mutate
-                        drag_node->position.x += gui->input.mouse_xrel;
-                        drag_node->position.y += gui->input.mouse_yrel;
-
-                        bodies[i].draw_position.x += gui->input.mouse_xrel;
-                        bodies[i].draw_position.y += gui->input.mouse_yrel;
-
+                        if (gui->input.mouse_motion) {
+                            drag_node->position.x += gui->input.mouse_xrel;
+                            drag_node->position.y += gui->input.mouse_yrel;
+                        
+                            bodies[i].draw_position.x += gui->input.mouse_xrel;
+                            bodies[i].draw_position.y += gui->input.mouse_yrel;
+                        }
                         gui->dragging_state = GUI_DRAGGING_NODE;
                         gui->drag_target.from_id = drag_node->id;
                         found = true;
