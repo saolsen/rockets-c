@@ -22,44 +22,33 @@ draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
 
 
 void
-debug_text(NVGcontext* vg, float x, float y, int size, const char* txt)        
-{
-    nvgSave(vg);
-    nvgFontSize(vg, size);
-    nvgFillColor(vg, nvgRGBf(1, 1, 1));
-    nvgText(vg, x, y, txt, NULL);
-    nvgRestore(vg);
-}
-
-
-void
 ship_move(Ship* ship, float dt)
 {
-    V2 force = {0.0, 0.0};
+    V2 force = v2(0.0, 0.0);
     int rotation = 0;
 
     if (ship->thrusters.bp) {
-        force = v2_plus(force, (V2){1, 0});
+        force = v2_plus(force, v2(1, 0));
         rotation -= 1;
     }
 
     if (ship->thrusters.bs) {
-        force = v2_plus(force, (V2){-1, 0});
+        force = v2_plus(force, v2(-1, 0));
         rotation += 1;
     }
 
     if (ship->thrusters.sp) {
-        force = v2_plus(force, (V2){1, 0});
-        rotation += 1;
+        force = v2_plus(force, v2(1, 0));
+        rotation += 1; 
     }
 
     if (ship->thrusters.ss) {
-        force = v2_plus(force, (V2){-1, 0});
+        force = v2_plus(force, v2(-1, 0));
         rotation -= 1;
     }
 
     if (ship->thrusters.boost) {
-        force = v2_plus(force, (V2){0, 5});
+        force = v2_plus(force, v2(0, 5));
     }
 
     V2 abs_force = v2_rotate(force, deg_to_rad(ship->rotation));
@@ -352,8 +341,8 @@ game_update_and_render(void* gamestate,
         int b = nodestore_add_signal(&state->node_store, 0, 0, POS_X);
         int c = nodestore_add_predicate(&state->node_store, 10, 45, EQ);
         Node* node_c = nodestore_get_node_by_id(&state->node_store, c);
-        node_c->input.lhs = a;
-        node_c->input.rhs = b;
+        node_c->input.rhs = a;
+        node_c->input.lhs = b;
         
         log_info("adding node");
     }
@@ -370,6 +359,7 @@ game_update_and_render(void* gamestate,
         log_info("adding node");
     }
 
+    // @TODO: It is very unfortunate that rendering happens in here....
     NodeEvent event = gui_nodes(&state->gui, &state->node_store);
     switch(event.type) {
     case NE_NAH:
@@ -415,6 +405,7 @@ game_update_and_render(void* gamestate,
     }
     nvgRestore(vg);
 
+    // @TODO: pull this out, this is hella useful.
     // debug print
     char buf[64] = {'\0'};
     snprintf(buf, 64, "position: (%f, %f), rotation: %d",

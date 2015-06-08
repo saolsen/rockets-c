@@ -1,4 +1,5 @@
-// Need to have better editors for numbers where you can drag in an arc around them to modify!
+// Need to have better editors for numbers where you can drag in an arc around
+// them to modify!
 // Need to show editing on the scene as you are edititng!
 // Need to have a play and reset button!
 // THEN I need to work on the scene and make levels and stuff.
@@ -12,35 +13,46 @@
 #include <math.h>
 #include "stretchy_buffer.h"
 
+// this is strait up taken from stb.h which I couldn't figure out how to include.
+#define clamp(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
+
 static const int X_PADDING = 12.0;
 static const int Y_PADDING = 12.0;
 
-typedef struct {
-    float x;
-    float y;
+
+typedef union {
+    struct {float x; float y;};
+    float arr[2];
 } V2;
 
 
 V2
-v2_plus(const V2 v1, const V2 v2)
+v2(float x, float y)
 {
-    return (V2){v1.x + v2.x,
-                v1.y + v2.y};
+    return (V2){.x = x, .y = y};
 }
 
 
 V2
-v2_minus(const V2 v1, const V2 v2)
+v2_plus(const V2 i, const V2 j)
 {
-    return (V2){v1.x - v2.x,
-                v1.y - v2.y};
+    return v2(i.x + j.x,
+              i.y + j.y);
+}
+
+
+V2
+v2_minus(const V2 i, const V2 j)
+{
+    return v2(i.x - j.x,
+              i.y - j.y);
 }
 
 V2
 v2_scale(const V2 v, const float f)
 {
-    return (V2){v.x * f,
-                v.y * f};
+    return v2(v.x * f,
+              v.y * f);
 }
 
 
@@ -57,7 +69,7 @@ v2_rotate(const V2 v, const float theta)
 {
     float nx = v.x * cos(theta) - v.y * sin(theta);
     float ny = v.x * sin(theta) + v.y * cos(theta);
-    return (V2){nx, ny};
+    return v2(nx, ny);
 }
 
 
@@ -94,15 +106,15 @@ bb_center(BoundingBox bb)
     float centery = ((bb.bottom_right.y - bb.top_left.y) / 2)
         + bb.top_left.y;
 
-    return (V2){centerx, centery};
+    return v2(centerx, centery);
 }
 
 // Calculate width and height of bb
 V2
 bb_size(BoundingBox bb)
 {
-    return (V2){bb.bottom_right.x - bb.top_left.x,
-                bb.bottom_right.y - bb.top_left.y};
+    return v2(bb.bottom_right.x - bb.top_left.x,
+              bb.bottom_right.y - bb.top_left.y);
 }
 
 void
@@ -113,14 +125,16 @@ debug_square(NVGcontext* vg, float x, float y)
     nvgFill(vg);
 }
 
-// todo(stephen): Here's a bunch more stuff that I need to do with these nodes
-// for them to work with an editor.
-// 1) I need to know the size of the nodes.
-// 2) I need to know if the mouse is over one of the nodes.
-// 3) I need to handle clicking and dragging.
-// 4) I need dopdown menus.
-// 5) I need scroll wheel or up down arrow stuff.
-// 6) I need it to just work so I can move on to puzzles.
+void
+debug_text(NVGcontext* vg, float x, float y, int size, const char* txt)
+{
+    nvgSave(vg);
+    nvgFontSize(vg, size);
+    nvgFillColor(vg, nvgRGBf(1, 1, 1));
+    nvgText(vg, x, y, txt, NULL);
+    nvgRestore(vg);
+}
+
 typedef enum { THRUSTER, PREDICATE, SIGNAL, CONSTANT, GATE } NodeType;
 typedef enum { BP, BS, SP, SS, BOOST }                       Thruster;
 typedef enum { LT, GT, LEQT, GEQT, EQ, NEQ }                 Predicate;
@@ -146,8 +160,6 @@ typedef struct Node {
     NodeType type;
     V2 position;
     BoundingBox bb;
-    // todo(stephen): Put a bounding box or dragging thing on here instead of
-    // just position.
 
     union {
         struct {
@@ -443,12 +455,10 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
 {
     // calculate the bounding box of the node. Set the bottom right point.
     if (node->type == THRUSTER) {
-        // todo(stephen): If we draw a background box use that size instead
-        // of the ship size.
-        BoundingBox bb = {{node->position.x,
-                           node->position.y},
-                          {node->position.x + 60,
-                           node->position.y + 70}};
+        BoundingBox bb = {v2(node->position.x,
+                             node->position.y),
+                          v2(node->position.x + 60,
+                             node->position.y + 70)};
     
         return bb;
     }
@@ -482,9 +492,6 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
 
 // todo(stephen): The bounds checking is shared with node_calc_bounding_box
 // pull that part out.
-
-// This looks right now but I'm not sure why exactly. Need to revisit later.
-// todo(stephen): Make bounding boxes line up with this.
 void
 draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
 {
@@ -620,12 +627,15 @@ typedef enum { BUTTON } GUINodeType;
 typedef enum {GUI_NOT_DRAGGING,
               GUI_DRAGGING_NODE,
               GUI_DRAGGING_INPUT,
-              GUI_DRAGGING_OUTPUT} DraggingState;
+              GUI_DRAGGING_OUTPUT,
+              GUI_DRAGGING_CONSTANT} DraggingState;
 
 typedef struct {
     int from_id;
     int from_input_num;
+    V2 from_position; // can calculate from from_id but meh...
     V2 position;
+    int value;
 } DragTarget;
 
 typedef struct {
@@ -699,33 +709,17 @@ typedef struct {
     NodeEventType type;
 } NodeEvent;
 
-// Other types of events that I'm going to need.
-// * Dragging things into other things.
-// * Sub buttons on nodes.
-//
-
-// Need to collect the things I need.
-// Bounding boxes for nodes.
-// Bounding boxes for inputs.
-// Bounding boxes for output.
-// Bounding boxes for thruster toggles.
-// Bounding boxes for destroy buttons.
-// Bounding boxes for buttons.
-
-// Current status (dragging, clicking, nothing)
-// If dragging, handle dragging what into what.
-// If clicking, what are you clicking.
-
-// Keep track over scenes. (Dragging state.)
-
-// Update (position of dragging, events for creation, deletion and editing edges)
 
 NodeEvent
 gui_nodes(GUIState* gui, NodeStore* ns)
 {
+    //@TODO: Replace these with variable length arrays, you do not need to allocate.
+    // They also could just be parallel arrays in the gamestate and then I don't have to
+    // calculate them every single frame....
     NodeBounds* bodies = NULL;
     NodeBounds* inputs = NULL;
     NodeBounds* outputs = NULL;
+    NodeBounds* constants = NULL;
 
     // Collect collision data.
     for (int i=0; i<ns->next_id; i++) {
@@ -737,6 +731,30 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             body.draw_position = ns->array[i].position;
             sb_push(bodies, body);
 
+            // Constant bounds
+            Node* lhs = nodestore_get_node_by_id(ns, ns->array[i].input.lhs);
+            Node* rhs = nodestore_get_node_by_id(ns, ns->array[i].input.rhs);
+
+            if (NULL != lhs && lhs->type == CONSTANT) {
+                NodeBounds constant = {};
+                constant.node = lhs;
+                constant.draw_position = v2(body.draw_position.x+7,
+                                            body.draw_position.y+25);
+                constant.bb = (BoundingBox){constant.draw_position,
+                                            v2_plus(constant.draw_position, v2(10, 10))};
+                sb_push(constants, constant);
+            }
+
+            if (NULL != rhs && rhs->type == CONSTANT) {
+                NodeBounds constant = {};
+                constant.node = rhs;
+                constant.draw_position = (V2){.x = body.bb.bottom_right.x-12,
+                                              .y = body.bb.top_left.y+25};
+                constant.bb = (BoundingBox){constant.draw_position,
+                                            v2_plus(constant.draw_position, v2(10, 10))};
+                sb_push(constants, constant);
+            }
+
             // Output bounds
             if (ns->array[i].type != THRUSTER) {
                 NodeBounds output = {};
@@ -745,8 +763,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     + body.bb.top_left.x;
                 float centery = body.bb.bottom_right.y;
                 // @HARDCODE
-                output.bb = (BoundingBox){{centerx - 7.5, centery - 5},
-                                          {centerx + 7.5, centery + 5}};
+                output.bb = (BoundingBox){v2(centerx - 7.5, centery - 5),
+                                          v2(centerx + 7.5, centery + 5)};
                 output.draw_position = output.bb.top_left;
                 sb_push(outputs, output);
             }
@@ -763,8 +781,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     // 2 inputs for AND and OR gates.
                     input.node = &ns->array[i];
 
-                    input.bb = (BoundingBox){{body.bb.top_left.x + 2.5, centery - 5},
-                                             {body.bb.top_left.x + 17.5, centery + 5}};
+                    input.bb = (BoundingBox){v2(body.bb.top_left.x + 2.5, centery - 5),
+                                             v2(body.bb.top_left.x + 17.5, centery + 5)};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 1;
                     if (input.node->input.lhs != -1) {
@@ -772,8 +790,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     }
                     sb_push(inputs, input);
 
-                    input.bb = (BoundingBox){{body.bb.bottom_right.x - 17.5, centery - 5},
-                                             {body.bb.bottom_right.x - 2.5, centery + 5}};
+                    input.bb = (BoundingBox){v2(body.bb.bottom_right.x - 17.5, centery - 5),
+                                             v2(body.bb.bottom_right.x - 2.5, centery + 5)};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 2;
                     if (input.node->input.rhs != -1) {
@@ -785,8 +803,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 } else {
                     // 1 of them for NOT gates and Thrusters.
                     input.node = &ns->array[i];
-                    input.bb = (BoundingBox){{centerx - 7.5, centery - 5},
-                                             {centerx + 7.5, centery + 5}};
+                    input.bb = (BoundingBox){v2(centerx - 7.5, centery - 5),
+                                             v2(centerx + 7.5, centery + 5)};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 1;
                     if (input.node->parent != -1) {
@@ -853,6 +871,30 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     }
                 }
             }
+
+            // @COPYPASTE
+            // Check if we started dragging a constant.
+            if (!found) {
+                for (int i=0; i<sb_count(constants); i++) {
+                    if (bb_contains(constants[i].bb,
+                                    gui->input.mouse_x - gui->input.mouse_xrel,
+                                    gui->input.mouse_y - gui->input.mouse_yrel)) {
+
+                        gui->dragging_state = GUI_DRAGGING_CONSTANT;
+                        gui->drag_target.from_id = constants[i].node->id;
+                        gui->drag_target.position = constants[i].bb.top_left;
+                        gui->drag_target.from_position = bb_center(constants[i].bb);
+
+                        if (gui->input.mouse_motion) {
+                            gui->drag_target.position.x += gui->input.mouse_xrel;
+                            gui->drag_target.position.y += gui->input.mouse_yrel;
+                        }
+
+                        found = true;
+                        break;
+                    }
+                }
+            }
             
             // @COPYPASTE
             // Check if we started dragging a node.
@@ -906,7 +948,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         }
         
     } else if (gui->dragging_state == GUI_DRAGGING_INPUT ||
-        gui->dragging_state == GUI_DRAGGING_OUTPUT) {
+               gui->dragging_state == GUI_DRAGGING_OUTPUT) {
         if (gui->input.end_dragging) {
             // @TODO: Handle connecting the nodes here.
 
@@ -940,17 +982,61 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 gui->drag_target.position.y = gui->input.mouse_y;
             }
         }
-        
-        // show the input being dragged
-        // update the drag position for this frame
-        // If over an output or a node
-           // if end_dragging, fire connection event.
-           // else show hilight of node to be connected to.
-        // show the arrow of the input being dragged
 
-        // for output
-        // very similar to above except you search nodes and inputs, toggle
-        // between seperate inputs based on which is closer, this could be complex.
+        
+    } else if (gui->dragging_state == GUI_DRAGGING_CONSTANT) {
+        Node* node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
+        if (gui->input.end_dragging) {
+            // set the constant value.
+            node->constant = gui->drag_target.value;                
+            gui->dragging_state = GUI_NOT_DRAGGING;
+            
+        } else {
+            if (gui->input.mouse_motion) {
+                gui->drag_target.position.x = gui->input.mouse_x;
+                gui->drag_target.position.y = gui->input.mouse_y;
+            }
+            // Show what the number is. @TODO: Show some gui stuff which should
+            // maybe be moved to another place.
+            /* int the_value = gui->drag_target.value; */
+            // drag target probably needs an associated value.
+
+            // take difference, take angle to difference, probably flip a sine, translate 45dg, map to value.
+            // root is the position of the bounding box for this guy...
+
+            V2 diff = v2_minus(gui->drag_target.position, gui->drag_target.from_position);
+
+            // need to clamp angle between -pi/2 and pi/2
+            float angle = atan2(-diff.y, diff.x) + 3.14159/4.0;   // angle is between 0 and pi/2
+            float scale_value = (clamp(angle, 0, 3.14159/2.0) / 3.14159/2.0) / 0.25;
+
+            // To get the right value I need to know what the signal we are comparing it to is....
+            // @TODO: need to know what signal I am comparing this to.
+            float value = scale_value * 700;
+            gui->drag_target.value = value;
+
+            // Debug draw dragging line.
+            nvgSave(gui->vg);
+            nvgBeginPath(gui->vg);
+            nvgMoveTo(gui->vg, gui->drag_target.from_position.x, gui->drag_target.from_position.y);
+            nvgLineTo(gui->vg, gui->drag_target.position.x, gui->drag_target.position.y);
+            nvgStrokeColor(gui->vg, nvgRGBf(0.3, 0.3, 1.0));
+            nvgStroke(gui->vg);
+            nvgRestore(gui->vg);
+
+            // Debug draw angle
+            char buf[64] = {'\0'};
+            snprintf(buf, 64, "angle: %f, scale_value: %f, value: %f", angle, scale_value, value);
+
+            debug_text(gui->vg, gui->drag_target.from_position.x, gui->drag_target.from_position.y - 35, 14, buf);
+            
+            // need the center of the bounding box we drag from.
+            // need to vector from that center to the drag target.
+            // need the angle from -45deg to 45deg, need to map that range to the range of the constant.
+            // need to determine what the value would currently be for the thing being dragged.
+            // display that value somewere, also maybe on the space scene tho this ties to that badly right now.
+            // probably need a bit of rethinking how this data flows.
+        }
     }
 
     // Draw gui elements.
@@ -1016,14 +1102,14 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     lhs->signal = signal_next(lhs->signal);
                 }
             } else {
-                if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+15, 5, 5)) {
-                    // toggle lhs up
-                    lhs->constant++;
-                }
-                if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+25, 5, 5)) {
-                    // toggle lhs down
-                    lhs->constant--;
-                }
+                /* if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+15, 5, 5)) { */
+                /*     // toggle lhs up */
+                /*     lhs->constant++; */
+                /* } */
+                /* if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+25, 5, 5)) { */
+                /*     // toggle lhs down */
+                /*     lhs->constant--; */
+                /* } */
             }
 
             V2 center = bb_center(body.bb);
@@ -1037,14 +1123,33 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     rhs->signal = signal_next(rhs->signal);
                 }
             } else {
-                if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+15, 5, 5)) {
-                    // toggle lhs up
-                    rhs->constant++;
-                }
-                if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+25, 5, 5)) {
-                    // toggle lhs down
-                    rhs->constant--;
-                }
+                // @TODO: Create a widget so you can easily edit this by clicking and dragging.
+                // What state to I need, it has to be a drag target. Then I need to just know
+                // the current mouse position. That tells me what the value is and how to draw
+                // it.
+                // I map the range it can be into a cone shape, then the value it is depends
+                // on the angle the cursor is at, farther away makes it easier to pick angles.
+                // Should snap at max and min values too.
+                // Later also show what this value is on the main board.
+
+                // Show cone.
+                // Show line to pointer.
+                // Show current value.
+                // (show that value on map).
+                // On let go set value.
+
+                /* I can probably draw a clipped circle maybe? */
+
+                // set up a drag target for this.
+                
+                /* if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+15, 5, 5)) { */
+                /*     // toggle rhs up */
+                /*     rhs->constant++; */
+                /* } */
+                /* if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+25, 5, 5)) { */
+                /*     // toggle rhs down */
+                /*     rhs->constant--; */
+                /* } */
             }
         } break;
 
@@ -1129,6 +1234,12 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         debug_draw_bb(gui->vg, color, bodies[i].bb);
     }
 
+    // debug draw constant bounding boxes.
+    for (int i = 0; i < sb_count(constants); i++) {
+        NVGcolor color = nvgRGBf(0.0, 1.0, 1.0);
+        debug_draw_bb(gui->vg, color, constants[i].bb);
+    }
+
     // debug draw input bounding boxes.
     for (int i = 0; i < sb_count(inputs); i++) {
         NVGcolor color = nvgRGBf(1.0, 0.0, 1.0);
@@ -1143,7 +1254,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
     // debug draw drag target.
     if (gui->dragging_state == GUI_DRAGGING_INPUT ||
-        gui->dragging_state == GUI_DRAGGING_OUTPUT) {
+        gui->dragging_state == GUI_DRAGGING_OUTPUT ||
+        gui->dragging_state == GUI_DRAGGING_CONSTANT) {
         NVGcolor color = nvgRGBf(0.0, 1.0, 1.0);
         nvgSave(gui->vg);
         nvgFillColor(gui->vg, color);
@@ -1158,6 +1270,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
     // free memory
     sb_free(bodies);
+    sb_free(constants);
     sb_free(inputs);
     sb_free(outputs);
 
