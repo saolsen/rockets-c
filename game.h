@@ -1012,7 +1012,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
             // To get the right value I need to know what the signal we are comparing it to is....
             // @TODO: need to know what signal I am comparing this to.
-            float value = scale_value * 700;
+            float value = (int)(scale_value * 700);
             gui->drag_target.value = value;
 
             // Debug draw dragging line.
