@@ -1175,8 +1175,8 @@ typedef struct {
     NodeStore node_store;
     Ship player_ship;
     GUIState gui;
-
-    int drag_target;
+    bool running;
+    
 } GameState;
 
 #endif

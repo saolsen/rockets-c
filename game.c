@@ -300,8 +300,6 @@ game_setup(NVGcontext* vg)
     log_info("Setting up game");
     GameState* state = calloc(1, sizeof(GameState));
 
-    state->drag_target = -1;
-
     // @TODO: If you have more than one font you need to store a
     // reference to this.
     nvgCreateFont(vg,
@@ -366,11 +364,24 @@ game_update_and_render(void* gamestate,
         break;
     }
 
+    // @TODO: decide if you want a pause.
+    state->running = true;
+
+    // Reset button
+    // @TODO: reset the whole level not just the ship.
+    if (gui_button_with_text(state->gui, 660, 2.5, 10, 5, "Reset")) {
+            state->player_ship.position.x = 300;
+            state->player_ship.position.y = 99;
+            state->player_ship.rotation = 0;
+    }
+
     // Update rockets.
-    Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
-                                                       &state->player_ship);
-    state->player_ship.thrusters = new_thrusters;
-    ship_move(&state->player_ship, dt);
+    if (state->running) {
+        Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
+                                                           &state->player_ship);
+        state->player_ship.thrusters = new_thrusters;
+        ship_move(&state->player_ship, dt);
+    }
 
     // Render
 
