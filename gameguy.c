@@ -125,8 +125,8 @@ int main(int argc, char* argv[])
     float target_seconds_per_frame = 1.0f / game_update_hz;
 
     // @TODO: have a better error handling scheme that has all of these
-    //                goto the end and write an error message instead of a bunch
-    //                of different checks.
+    //        goto the end and write an error message instead of a bunch
+    //        of different checks.
     if (0 != SDL_Init(SDL_INIT_VIDEO)) {
         log_info("Error initializing SDL: %s", SDL_GetError());
     }

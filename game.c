@@ -191,7 +191,7 @@ nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
             } else {
                 nvgFillColor(gg_Debug_vg, nvgRGBf(1,0,0));
             }
-            debug_square(gg_Debug_vg, node->position.x-25, node->position.y);
+            debug_draw_square(gg_Debug_vg, node->position.x-25, node->position.y);
         }
         nvgRestore(gg_Debug_vg);
 
@@ -413,7 +413,7 @@ game_update_and_render(void* gamestate,
              state->player_ship.position.y,
              state->player_ship.rotation);
 
-    debug_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
+    debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
 }
 
 
