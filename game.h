@@ -973,7 +973,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             // Debug draw angle @TODO: a gameguy debug text drawing thing would be helpful.
             char buf[64] = {'\0'};
             snprintf(buf, 64, "angle: %f, scale_value: %f, value: %f", angle, scale_value, value);
-            debug_draw_text(gui->vg, gui->drag_target.from_position.x, gui->drag_target.from_position.y - 35, 14, buf);
+            debug_draw_text(gui->vg, gui->drag_target.from_position.x,
+                            gui->drag_target.from_position.y - 35, 14, buf);
         }
     }
 
@@ -1040,14 +1041,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     lhs->signal = signal_next(lhs->signal);
                 }
             } else {
-                /* if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+15, 5, 5)) { */
-                /*     // toggle lhs up */
-                /*     lhs->constant++; */
-                /* } */
-                /* if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+25, 5, 5)) { */
-                /*     // toggle lhs down */
-                /*     lhs->constant--; */
-                /* } */
+                // Constant.
+                // @TODO: Draw something for editing other than the current debug stuff drawn above.
             }
 
             V2 center = bb_center(body.bb);
@@ -1160,7 +1155,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                   5.0);
         nvgFill(gui->vg);
         nvgRestore(gui->vg);
-    }                
+    }
 
     // free memory
     sb_free(bodies);

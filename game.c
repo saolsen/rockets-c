@@ -54,8 +54,6 @@ ship_move(Ship* ship, float dt)
     V2 abs_force = v2_rotate(force, deg_to_rad(ship->rotation));
     float speed = 50;
 
-    /* log_info("force: %f, %f", force.x, force.y); */
-
     ship->position.x += abs_force.x*speed*dt;
     ship->position.y += abs_force.y*speed*dt;
     int new_rot = ship->rotation + rotation;
@@ -220,80 +218,6 @@ nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
 }
 
 
-void
-nodestore_load_test_nodes(NodeStore* ns)
-{
-    // HOLY MOLY GET A MACRO OR SOMETHING!
-    int a = nodestore_add_signal(ns, 0, 0, ROTATION);
-    int b = nodestore_add_constant(ns, 0, 0, 180);
-    int c = nodestore_add_predicate(ns, 75, 50, NEQ);
-    Node* node_c = nodestore_get_node_by_id(ns, c);
-    node_c->input.lhs = a;
-    node_c->input.rhs = b;
-
-    int d = nodestore_add_signal(ns, 0, 0, ROTATION);
-    int e = nodestore_add_constant(ns, 0, 0, 0);
-    int f = nodestore_add_predicate(ns, 450, 50, NEQ);
-    Node* node_f = nodestore_get_node_by_id(ns, f);
-    node_f->input.lhs = d;
-    node_f->input.rhs = e;
-
-    int g = nodestore_add_signal(ns, 0, 0, POS_Y);
-    int h = nodestore_add_constant(ns, 0, 0, 600);
-    int i = nodestore_add_predicate(ns, 200, 50, GT);
-    Node* node_i = nodestore_get_node_by_id(ns, i);
-    node_i->input.lhs = g;
-    node_i->input.rhs = h;
-
-    int j = nodestore_add_signal(ns, 0, 0, POS_Y);
-    int k = nodestore_add_constant(ns, 0, 0, 100);
-    int l = nodestore_add_predicate(ns, 325, 50, LT);
-    Node* node_l = nodestore_get_node_by_id(ns, l);
-    node_l->input.lhs = j;
-    node_l->input.rhs = k;
-
-    int m = nodestore_add_gate(ns, 125, 125, AND);
-    Node* node_m = nodestore_get_node_by_id(ns, m);
-    node_m->input.lhs = c;
-    node_m->input.rhs = i;
-
-    int n = nodestore_add_gate(ns, 325, 125, AND);
-    Node* node_n = nodestore_get_node_by_id(ns, n);
-    node_n->input.lhs = f;
-    node_n->input.rhs = l;
-
-    int o = nodestore_add_gate(ns, 100, 225, OR);
-    Node* node_o = nodestore_get_node_by_id(ns, o);
-    node_o->input.lhs = m;
-    node_o->input.rhs = n;
-
-    int p = nodestore_add_thruster(ns, 75, 325, BP);
-    Node* node_p = nodestore_get_node_by_id(ns, p);
-    node_p->parent = o;
-
-    int q = nodestore_add_thruster(ns, 175, 325, SS);
-    Node* node_q = nodestore_get_node_by_id(ns, q);
-    node_q->parent = o;
-
-    int r = nodestore_add_gate(ns, 375, 325, NOT);
-    Node* node_r = nodestore_get_node_by_id(ns, r);
-    node_r->parent = m;
-
-    int s = nodestore_add_gate(ns, 475, 325, NOT);
-    Node* node_s = nodestore_get_node_by_id(ns, s);
-    node_s->parent = n;
-
-    int t = nodestore_add_gate(ns, 435, 425, AND);
-    Node* node_t = nodestore_get_node_by_id(ns, t);
-    node_t->input.lhs = r;
-    node_t->input.rhs = s;
-
-    int u = nodestore_add_thruster(ns, 425, 525, BOOST);
-    Node* node_u = nodestore_get_node_by_id(ns, u);
-    node_u->parent = t;
-}
-
-
 static void*
 game_setup(NVGcontext* vg)
 {
@@ -307,9 +231,6 @@ game_setup(NVGcontext* vg)
             "SourceSansPro-Regular.ttf");
 
     nodestore_init(&state->node_store, 5);
-
-    /* NodeStore* ns = &state->node_store; */
-    /* nodestore_load_test_nodes(ns); */
 
     state->player_ship.position.x = 300;
     state->player_ship.position.y = 99;
