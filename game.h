@@ -10,10 +10,14 @@
 #ifndef _game_h
 #define _game_h
 
+#include <stdio.h>
+#include <string.h>
+
 #include <math.h>
+#include "gameguy.h"
 #include "stretchy_buffer.h"
 
-// this is strait up taken from stb.h which I couldn't figure out how to include.
+// this is strait up taken from stb.h which I couldn't figure out how to include
 #define clamp(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
 
 static const int X_PADDING = 12.0;
@@ -58,7 +62,7 @@ v2_scale(const V2 v, const float f)
 float
 deg_to_rad(const float deg)
 {
-    return deg * M_PI / 180.0; 
+    return deg * M_PI / 180.0;
 }
 
 
@@ -167,7 +171,7 @@ typedef struct {
 void
 nodestore_init(NodeStore* ns, size_t init_size)
 {
-    ns->array = (Node *)malloc(init_size * sizeof(Node));
+    ns->array = (Node *)calloc(1, init_size * sizeof(Node));
     ns->size = init_size;
     ns->next_id = 0;
 }
@@ -206,7 +210,7 @@ nodestore_init_new_node(NodeStore* ns, float pos_x, float pos_y)
     node->id = (int)id;
     node->position.x = pos_x;
     node->position.y = pos_y;
-    
+
     node->input.lhs = -1;
     node->input.rhs = -1;
 
@@ -265,7 +269,7 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
     Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
     node->type = THRUSTER;
     node->thruster = thruster;
-    
+
     return node->id;
 }
 
@@ -296,7 +300,7 @@ typedef struct {
 void
 node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
 {
-    const char* txt = NULL;    
+    const char* txt = NULL;
     switch(node->type) {
     case SIGNAL: {
         switch(node->signal) {
@@ -318,18 +322,17 @@ node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
         txt = str;
         break;
     } break;
-
     case PREDICATE: {
         char str[15] = {'\0'};
         size_t max_len = size -1;
-        
+
         if (NULL != lhs) {
             node_get_text(lhs, str, 15, NULL, NULL);
             strncat(buffer, str, max_len);
             strncat(buffer, " ", max_len - strlen(buffer));
             str[0] = '\0';
         }
-        
+
         switch(node->predicate) {
         case LT:   txt = "<";  break;
         case GT:   txt = ">";  break;
@@ -349,7 +352,7 @@ node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
         }
 
         return;
-        
+
     } break;
 
     case GATE: {
@@ -357,12 +360,12 @@ node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
         case AND: txt = "AND"; break;
         case OR: txt = "OR"; break;
         case NOT: txt = "NOT"; break;
-        } 
+        }
     } break;
     default:
         break;
     }
-    
+
     strcpy(buffer, txt);
 }
 
@@ -454,7 +457,7 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
                              node->position.y),
                           v2(node->position.x + 60,
                              node->position.y + 70)};
-    
+
         return bb;
     }
 
@@ -468,11 +471,11 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
             lhs = nodestore_get_node_by_id(ns, node->input.lhs);
             rhs = nodestore_get_node_by_id(ns, node->input.rhs);
         }
-        
+
         nvgFontSize(vg, 14);
         char buf[256] = {'\0'};
         node_get_text(node, buf, 256, lhs, rhs);
-        
+
         float bounds[4];
         nvgTextBounds(vg, node->position.x+X_PADDING,
                       node->position.y+Y_PADDING, buf, NULL, bounds);
@@ -569,7 +572,7 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
 {
     nvgSave(vg);
     {
-        
+
         if (grayscale) {
             nvgFillColor(vg, nvgRGBf(1, 1, 1));
         } else {
@@ -580,11 +583,11 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
         nvgBeginPath(vg);
         nvgRect(vg, -10.0, -25.0, 20.0, 40.0);
         nvgFill(vg);
-        
+
         nvgBeginPath(vg);
         nvgRect(vg, -20.0, -5.0, 15.0, 30.0);
         nvgFill(vg);
-        
+
         nvgBeginPath(vg);
         nvgRect(vg, 5.0, -5.0, 15.0, 30.0);
         nvgFill(vg);
@@ -673,7 +676,7 @@ typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
 bool
 gui_button_with_text(GUIState gui, float x, float y, float width, float height, char* txt) {
     ButtonState bs = BS_NAH;
-    
+
     if (bounds_contains(x, y, x+width, y+height, gui.input.mouse_x, gui.input.mouse_y)) {
         if (gui.input.click) {
             bs = BS_CLICK;
@@ -681,7 +684,7 @@ gui_button_with_text(GUIState gui, float x, float y, float width, float height, 
             bs = BS_HOVER;
         }
     }
-    
+
     // draw button
     nvgSave(gui.vg);
     nvgFontSize(gui.vg, 14);
@@ -697,13 +700,13 @@ gui_button_with_text(GUIState gui, float x, float y, float width, float height, 
         nvgFillColor(gui.vg, nvgRGBf(0.0, 0.0, 1.0));
         break;
     };
-    
+
     nvgBeginPath(gui.vg);
     nvgRect(gui.vg, x, y, width, height);
     nvgFill(gui.vg);
 
     nvgRestore(gui.vg);
-    
+
     return (BS_CLICK == bs);
 }
 
@@ -734,9 +737,9 @@ nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, DraggingState next_draggin
             }
 
             return true;
-        } 
+        }
     }
-    
+
     return false;
 }
 
@@ -805,7 +808,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
                     + body.bb.top_left.x;
                 float centery = body.bb.top_left.y;
-                
+
                 if (ns->array[i].type == GATE &&
                     ns->array[i].gate != NOT) {
                     // 2 inputs for AND and OR gates.
@@ -842,12 +845,12 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     }
                     sb_push(inputs, input);
                 }
-            }            
+            }
         }
     }
 
     // Handle current gui state.
-    
+
     // CLICK
     // START DRAGGING
     // - CONNECTOR
@@ -900,7 +903,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 }
             }
         }
-        
+
     } else if (gui->dragging_state == GUI_DRAGGING_INPUT ||
                gui->dragging_state == GUI_DRAGGING_OUTPUT) {
         if (gui->input.end_dragging) {
@@ -924,12 +927,12 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                             input->input.rhs = bodies[i].node->id;
                         }
                         break;
-                    }          
+                    }
                 }
             }
 
             gui->dragging_state = GUI_NOT_DRAGGING;
-            
+
         } else {
             if (gui->input.mouse_motion) {
                 gui->drag_target.position.x = gui->input.mouse_x;
@@ -937,14 +940,14 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             }
         }
 
-        
+
     } else if (gui->dragging_state == GUI_DRAGGING_CONSTANT) {
         Node* node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
         if (gui->input.end_dragging) {
             // set the constant value.
-            node->constant = gui->drag_target.value;                
+            node->constant = gui->drag_target.value;
             gui->dragging_state = GUI_NOT_DRAGGING;
-            
+
         } else {
             if (gui->input.mouse_motion) {
                 gui->drag_target.position.x = gui->input.mouse_x;
@@ -1015,7 +1018,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 nvgFillColor(gui->vg, nvgRGBf(0.5, 0.5, 0.5));
                 nvgFill(gui->vg);
 
-                
+
                 nvgTranslate(gui->vg,
                              body.draw_position.x+30,
                              body.draw_position.y+35);
@@ -1050,7 +1053,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 // toggle pred
                 bodies[i].node->predicate = predicate_next(node.predicate);
             }
-            
+
             if (rhs->type == SIGNAL) {
                 if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+20, 5, 5)) {
                     rhs->signal = signal_next(rhs->signal);
@@ -1098,7 +1101,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             nvgLineTo(gui->vg, parent_center.x, parent.bottom_right.y + 5);
             nvgStrokeColor(gui->vg, nvgRGBf(1.0, 1.0, 1.0));
             nvgStroke(gui->vg);
-            
+
             nvgRestore(gui->vg);
 
             if (gui_button(*gui,
@@ -1124,7 +1127,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             // @TODO: Come back to this, destroying is hard!
         }
     }
-    
+
     // draw the nodes
     // return various possible events to be handled outside
     // Drag a node (id of the node, new position and stuff)
@@ -1167,11 +1170,17 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 }
 
 typedef struct {
+    GUIState gui;
     NodeStore node_store;
     Ship player_ship;
-    GUIState gui;
+
+    // Don't know what all goes in a level or scene yet.
+    V2 goal;
+
     bool running;
-    
+
+    int current_level;
+
 } GameState;
 
 #endif

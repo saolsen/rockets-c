@@ -12,14 +12,14 @@ draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
         {
             nvgStrokeColor(vg, nvgRGBf(200.0, 200.0, 200.0));
             nvgBeginPath(vg);
+            nvgTextLineHeight(vg, 100);
             nvgMoveTo(vg, node->position.x, node->position.y);
             nvgLineTo(vg, parent->position.x, parent->position.y);
             nvgStroke(vg);
         }
-        nvgRestore(vg);
+        nvgRestore(vg);    
     }
 }
-
 
 void
 ship_move(Ship* ship, float dt)
@@ -39,7 +39,7 @@ ship_move(Ship* ship, float dt)
 
     if (ship->thrusters.sp) {
         force = v2_plus(force, v2(1, 0));
-        rotation += 1; 
+        rotation += 1;
     }
 
     if (ship->thrusters.ss) {
@@ -100,7 +100,7 @@ node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
     if (NULL == node) {
         return false;
     }
-    
+
     // SOME DEBUG PRINTING!
     switch(node->type) {
     case SIGNAL: {
@@ -159,7 +159,7 @@ node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
             return !lhs;
             break;
         }
-        
+
     } break;
     case THRUSTER: {
         return node_eval(nodestore_get_node_by_id(ns, node->parent), ns, ship);
@@ -168,7 +168,7 @@ node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 
     // This is actually an error tho...
     return false;
-    
+
 }
 
 Thrusters
@@ -213,8 +213,30 @@ nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
             }
         }
     }
-    
+
     return out_thrusters;
+}
+
+// Really need to get farther in handmade hero and see how casey does stuff.
+// Entity stores in tables, sparse storage, stuff like that.
+void
+gamestate_load_level_one(GameState* state) {
+    state->player_ship.position.x = 300;
+    state->player_ship.position.y = 99;
+    state->player_ship.rotation = 0;
+
+    state->goal = v2(300, 600);
+    state->current_level = 1;
+}
+
+void
+gamestate_load_level_two(GameState* state) {
+    state->player_ship.position.x = 300;
+    state->player_ship.position.y = 99;
+    state->player_ship.rotation = 0;
+
+    state->goal = v2(500, 600);
+    state->current_level = 2;
 }
 
 
@@ -226,18 +248,20 @@ game_setup(NVGcontext* vg)
 
     // @TODO: If you have more than one font you need to store a
     // reference to this.
-    nvgCreateFont(vg,
-            "basic",
-            "SourceSansPro-Regular.ttf");
+    int font = nvgCreateFont(vg,
+                             "basic",
+                             "SourceSansPro-Regular.ttf");
+    // Assert that the font got loaded.
+    assert(font >= 0);
 
     nodestore_init(&state->node_store, 5);
 
-    state->player_ship.position.x = 300;
-    state->player_ship.position.y = 99;
-    state->player_ship.rotation = 0;
+    state->running = true;
+    gamestate_load_level_one(state);
 
     return state;
 }
+
 
 static void
 game_update_and_render(void* gamestate,
@@ -249,6 +273,7 @@ game_update_and_render(void* gamestate,
     if (!gg_Debug_vg) {
         gg_Debug_vg = vg;
     }
+
     // Setup frame.
     GameState* state = (GameState*)gamestate;
     state->gui.vg = vg;
@@ -262,20 +287,18 @@ game_update_and_render(void* gamestate,
         Node* node_c = nodestore_get_node_by_id(&state->node_store, c);
         node_c->input.rhs = a;
         node_c->input.lhs = b;
-        
-        log_info("adding node");
+
+        log_info("adding predicate node");
     }
 
     if (gui_button(state->gui, 70, 10, 50, 25)) {
         nodestore_add_gate(&state->node_store, 10, 45, AND);
-        
-        log_info("adding node");
+        log_info("adding gate node");
     }
 
     if (gui_button(state->gui, 130, 10, 50, 25)) {
         nodestore_add_thruster(&state->node_store, 10, 45, BOOST);
-        
-        log_info("adding node");
+        log_info("adding thruster node");
     }
 
     // @TODO: It is very unfortunate that rendering happens in here....
@@ -286,7 +309,7 @@ game_update_and_render(void* gamestate,
     }
 
     // @TODO: decide if you want a pause.
-    state->running = true;
+    /* state->running = true; */
 
     // Reset button
     // @TODO: reset the whole level not just the ship.
@@ -304,6 +327,19 @@ game_update_and_render(void* gamestate,
         ship_move(&state->player_ship, dt);
     }
 
+    // Evaluate anything that happened.
+    // If rocket is in the goal circle, then you win!
+    
+    if (bounds_contains(state->goal.x - 10,
+                        state->goal.y - 10,
+                        state->goal.x + 10,
+                        state->goal.y + 10,
+                        state->player_ship.position.x, state->player_ship.position.y)) {
+
+        // Won the level!
+        state->running = false;
+    }
+
     // Render
 
     // Space background!
@@ -311,6 +347,11 @@ game_update_and_render(void* gamestate,
     nvgRect(vg, 660, 10, 600, 700);
     nvgFillColor(vg, nvgRGBf(0.25, 0.25, 0.25));
     nvgFill(vg);
+
+    // Level info
+    char buf[64] = {'\0'};
+    snprintf(buf, 64, "level %d", state->current_level);
+    debug_draw_text(vg, 660, 27, 24, buf);
 
     nvgSave(vg);
     {
@@ -332,20 +373,29 @@ game_update_and_render(void* gamestate,
             draw_ship(vg,
                       state->player_ship.thrusters,
                       false);
+
         }
         nvgRestore(vg);
+
+        // draw the goal
+        nvgBeginPath(vg);
+        nvgRect(vg, state->goal.x-10, -state->goal.y-10, 20, 20);
+        nvgFillColor(vg, nvgRGBf(1.0,1.0,0));
+        nvgFill(vg);
     }
     nvgRestore(vg);
 
     // @TODO: pull this out, this is hella useful.
     // debug print
-    char buf[64] = {'\0'};
-    snprintf(buf, 64, "position: (%f, %f), rotation: %d",
+    char buf2[64] = {'\0'};
+
+    snprintf(buf2, 64, "position: (%f, %f), rotation: %d",
              state->player_ship.position.x,
              state->player_ship.position.y,
              state->player_ship.rotation);
 
-    debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf);
+    debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);
+
 }
 
 
@@ -355,7 +405,7 @@ const gg_Game gg_game_api = {
 };
 
 
-char*
+const char*
 bool_string(bool b)
 {
     return b ? "true" : "false";

@@ -8,6 +8,7 @@ OPENGL_LIB= -framework OpenGL
 NANOVG_I= -Inanovg/src
 NANOVG_LD= -Lnanovg/build -lnanovg
 STB_I= -Istb
+
 # -Weverything -pedantic -Werror
 CFLAGS= $(NANOVG_I) $(STB_I) -std=c11 -g -Wall -O0 -fPIC `pkg-config --cflags sdl2`
 LDFLAGS= $(NANOVG_LD) $(OPENGL_LIB) `pkg-config --libs sdl2`
@@ -25,3 +26,6 @@ clean:
 
 check-syntax:
 	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
+
+tags:
+	etags gameguy.c gameguy.h game.c game.h stb/stretchy_buffer.h nanovg/src/nanovg.h

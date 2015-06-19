@@ -208,8 +208,8 @@ int main(int argc, char* argv[])
         
         while (SDL_PollEvent(&event)) {
             if (gg_handle_event(&event,
-                    &other_events_this_tick,
-                    &input)) {
+                                &other_events_this_tick,
+                                &input)) {
                 running = false;
             }
         }
