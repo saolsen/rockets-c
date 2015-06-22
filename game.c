@@ -1,3 +1,10 @@
+// I would really like to write some sofisticated algorithms for something some day.
+// precedural generation
+// AI
+// mcts monte carlo tree search rockets solver maybe or something like that?
+
+
+
 #include "gameguy.h"
 #include "game.h"
 
@@ -59,7 +66,6 @@ ship_move(Ship* ship, float dt)
     int new_rot = ship->rotation + rotation;
     if (new_rot < 0) new_rot += 360;
     ship->rotation = new_rot % 360;
-
 }
 
 
@@ -257,7 +263,7 @@ game_setup(NVGcontext* vg)
     nodestore_init(&state->node_store, 5);
 
     state->running = true;
-    gamestate_load_level_one(state);
+    gamestate_load_level_two(state);
 
     return state;
 }

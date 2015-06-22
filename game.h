@@ -217,7 +217,6 @@ nodestore_init_new_node(NodeStore* ns, float pos_x, float pos_y)
     return node;
 }
 
-
 int
 nodestore_add_gate(NodeStore* ns, float pos_x, float pos_y, Gate type)
 {
@@ -279,7 +278,33 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
 void
 nodestore_destory_node(NodeStore* ns, int id)
 {
+    assert(id < ns->next_id);
+    assert(id >= 0);
+    // remove the node with that id.
+    // compress rest of nodes.
+    // fix all pointers.
+    // if a pointer pointed to this one set it to -1
+    for(int i = 0; i < ns->next_id; i++) {
+        if(ns->array[i].input.lhs == id) {
+            ns->array[i].input.lhs = -1;
+        }
+        if(ns->array[i].input.rhs == id) {
+            ns->array[i].input.rhs = -1;
+        }
+        if(ns->array[i].input.lhs > id) {
+            ns->array[i].input.lhs--;
+        }
+        if(ns->array[i].input.rhs > id) {
+            ns->array[i].input.rhs--;
+        }
 
+        if (i > id) {
+            ns->array[i-1] = ns->array[i];
+            ns->array[i-1].id = i-1;
+        }
+    }
+    
+    ns->next_id--;
 }
 
 typedef struct {
@@ -743,6 +768,8 @@ nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, DraggingState next_draggin
     return false;
 }
 
+// @TODO: This really could just be inline int the update function. There's no real reason to have
+// it pulled out like this.
 NodeEvent
 gui_nodes(GUIState* gui, NodeStore* ns)
 {
@@ -914,11 +941,13 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             if (gui->dragging_state == GUI_DRAGGING_INPUT) {
                 for (int i = 0; i < sb_count(bodies); i++) {
                     // check if over a node.
-                    if (bb_contains(bodies[i].bb,
+                    if (bodies[i].node->id != gui->drag_target.from_id &&
+                        bb_contains(bodies[i].bb,
                                     gui->input.mouse_x,
                                     gui->input.mouse_y) &&
                         (bodies[i].node->type == PREDICATE ||
-                         bodies[i].node->type == GATE)) {
+                         bodies[i].node->type == GATE)
+                        ) {
                         // Connect input to this.
                         Node* input = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
                         if (gui->drag_target.from_input_num == 1) {
@@ -1123,20 +1152,9 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         if (gui_button(*gui,
                    bodies[i].bb.top_left.x, bodies[i].bb.top_left.y,
                        10, 10)) {
-            // @TODO: Return destroy event instead of destorying.
-            // @TODO: Come back to this, destroying is hard!
+            nodestore_destory_node(ns, bodies[i].node->id);
         }
     }
-
-    // draw the nodes
-    // return various possible events to be handled outside
-    // Drag a node (id of the node, new position and stuff)
-    // Drag from (between) node connectors.
-    // Delete a node
-    // Delete a connector.
-    // Edit a node
-       // toggle signal
-       // change value (keyboard entry or slider or arrows?)
 
     // Debug drawing
     debug_draw_nodebounds_sb(gui->vg, bodies);
