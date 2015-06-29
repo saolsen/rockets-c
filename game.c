@@ -3,8 +3,14 @@
 // AI
 // mcts monte carlo tree search rockets solver maybe or something like that?
 
+// For the actual gameplay how do I support
+// * Math 
+// * Lists / stacks / variable amounts of things
+// * Recursion? For loops? Map/fold/filter?
 
-
+// For math I can have two types of nodes, int nodes and bool nodes. That's ok I guess.
+// I could say no variable length stuff and just have different signals for each level.
+// How impossible is it going to be to do your own vector math in the nodes.
 #include "gameguy.h"
 #include "game.h"
 
@@ -24,7 +30,7 @@ draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
             nvgLineTo(vg, parent->position.x, parent->position.y);
             nvgStroke(vg);
         }
-        nvgRestore(vg);    
+        nvgRestore(vg);
     }
 }
 
@@ -177,6 +183,8 @@ node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 
 }
 
+
+// @TODO: see comment in game.h on the nodestore on how to improve this.
 Thrusters
 nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
 {
@@ -230,6 +238,7 @@ gamestate_load_level_one(GameState* state) {
     state->player_ship.position.x = 300;
     state->player_ship.position.y = 99;
     state->player_ship.rotation = 0;
+    state->num_obstacles = 0;
 
     state->goal = v2(300, 600);
     state->current_level = 1;
@@ -240,9 +249,24 @@ gamestate_load_level_two(GameState* state) {
     state->player_ship.position.x = 300;
     state->player_ship.position.y = 99;
     state->player_ship.rotation = 0;
+    state->num_obstacles = 0;
 
     state->goal = v2(500, 600);
     state->current_level = 2;
+}
+
+void
+gamestate_load_level_three(GameState* state) {
+    state->player_ship.position.x = 300;
+    state->player_ship.position.y = 99;
+    state->player_ship.rotation = 0;
+
+    state->obstacles[0] = boundingBox(v2(295, 595), 10, 10);
+    state->obstacles[1] = boundingBox(v2(495, 95), 10, 10);
+    state->num_obstacles = 2;
+
+    state->goal = v2(500, 600);
+    state->current_level = 3;
 }
 
 
@@ -262,8 +286,7 @@ game_setup(NVGcontext* vg)
 
     nodestore_init(&state->node_store, 5);
 
-    state->running = true;
-    gamestate_load_level_two(state);
+    gamestate_load_level_three(state);
 
     return state;
 }
@@ -323,19 +346,30 @@ game_update_and_render(void* gamestate,
             state->player_ship.position.x = 300;
             state->player_ship.position.y = 99;
             state->player_ship.rotation = 0;
+            state->status = RUNNING;
     }
 
     // Update rockets.
-    if (state->running) {
+    // @TODO: Collision detection!
+    // Need to see if a rocket hits anything. I can do a minkowsky thing I think
+    if (state->status == RUNNING) {
         Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
                                                            &state->player_ship);
         state->player_ship.thrusters = new_thrusters;
         ship_move(&state->player_ship, dt);
     }
 
+    // Collision Detection.
+    // Can't use bounding boxes for this as the rocket is not always axis aligned.
+    // @HARDCODE
+    // what do we do, like top and bottom and leftmost and rightmost?
+    
+    // If rocket hits something, you explode
+    // If rocket goes off the screen, you are lost in space!
+
     // Evaluate anything that happened.
     // If rocket is in the goal circle, then you win!
-    
+    // TODO: use the whole rocket bb instead of just the center point.
     if (bounds_contains(state->goal.x - 10,
                         state->goal.y - 10,
                         state->goal.x + 10,
@@ -343,7 +377,8 @@ game_update_and_render(void* gamestate,
                         state->player_ship.position.x, state->player_ship.position.y)) {
 
         // Won the level!
-        state->running = false;
+        state->status = WON;
+        
     }
 
     // Render
@@ -370,6 +405,10 @@ game_update_and_render(void* gamestate,
         nvgTranslate(vg, 660, 10);
         nvgTranslate(vg, 0, 700);
 
+        // @TODO: Figure out what you have to do to not have to make all y coordinates
+        // negative here.
+
+        // draw ship
         nvgSave(vg);
         {
             nvgTranslate(vg,
@@ -379,9 +418,20 @@ game_update_and_render(void* gamestate,
             draw_ship(vg,
                       state->player_ship.thrusters,
                       false);
-
         }
         nvgRestore(vg);
+
+        // draw obsticles
+        for (int i=0; i < state->num_obstacles; i++) {
+            nvgBeginPath(vg);
+            nvgRect(vg,
+                    state->obstacles[i].top_left.x,
+                    -state->obstacles[i].top_left.y,
+                    state->obstacles[i].bottom_right.x-state->obstacles[i].top_left.x,
+                    -state->obstacles[i].bottom_right.y+state->obstacles[i].top_left.y);
+            nvgFillColor(vg, nvgRGBf(0.0, 1.0, 1.0));
+            nvgFill(vg);
+        }
 
         // draw the goal
         nvgBeginPath(vg);

@@ -81,6 +81,12 @@ typedef struct BoundingBox {
     V2 bottom_right;
 } BoundingBox;
 
+BoundingBox
+boundingBox(V2 top_left, float width, float height)
+{
+    return (BoundingBox){top_left, v2_plus(top_left, v2(width, height))};
+}
+
 
 bool
 bounds_contains(float top_leftx, float top_lefty,
@@ -167,6 +173,14 @@ typedef struct {
     size_t next_id;
 } NodeStore;
 
+
+// So it occurs to be that I can do this in a better way.
+// I can sort the nodes topologically so that all parents will be found
+// earlier in the array than their children. Then evaluation of all the nodes
+// can be done with one linear scan down the array that keeps track of the results.
+
+// This way I don't have to do the recursive evaluation function and I can easily use
+// the state of each node in visualizations.
 
 void
 nodestore_init(NodeStore* ns, size_t init_size)
@@ -272,9 +286,7 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
     return node->id;
 }
 
-// Ok, this is a problem.
-// Destroying will nullify all pointers. If I compress the array then I need to update
-// all pointers.
+
 void
 nodestore_destory_node(NodeStore* ns, int id)
 {
@@ -320,7 +332,6 @@ typedef enum { NE_NAH } NodeEventType;
 typedef struct {
     NodeEventType type;
 } NodeEvent;
-
 
 void
 node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
@@ -791,7 +802,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             body.draw_position = ns->array[i].position;
             sb_push(bodies, body);
 
-            // Constant bounds
+           // Constant bounds
             Node* lhs = nodestore_get_node_by_id(ns, ns->array[i].input.lhs);
             Node* rhs = nodestore_get_node_by_id(ns, ns->array[i].input.rhs);
 
@@ -1187,17 +1198,23 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     return (NodeEvent){.type = NE_NAH};
 }
 
+typedef enum {RUNNING, PAUSED, WON, DIED} LevelStatus;
+
+const int MAX_OBSTICLES = 256;
+
 typedef struct {
     GUIState gui;
     NodeStore node_store;
     Ship player_ship;
 
     // Don't know what all goes in a level or scene yet.
-    V2 goal;
-
-    bool running;
-
     int current_level;
+    V2 goal;
+    BoundingBox obstacles[MAX_OBSTICLES];
+    size_t num_obstacles;
+
+    LevelStatus status;
+    char* DeathReason;
 
 } GameState;
 
