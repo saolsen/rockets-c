@@ -46,7 +46,7 @@ typedef struct {
 
 typedef struct {
     int gamestate_size;
-    void* (*init)(NVGcontext* vg);
+    void* (*init)(void* game_state, NVGcontext* vg);
     void (*update_and_render)(void* game_state,
                               NVGcontext* vg,
                               gg_Input input,

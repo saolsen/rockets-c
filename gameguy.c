@@ -191,8 +191,8 @@ int main(int argc, char* argv[])
     /* gg_Debug_vg = vg; */
 
     // Init Game
-    void *gamestate;
-    gamestate = current_game.game.init(vg);
+    void *gamestate = calloc(1, current_game.game.gamestate_size);
+    gamestate = current_game.game.init(gamestate, vg);
 
     gg_Input input = {};
 

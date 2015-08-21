@@ -10,6 +10,7 @@
 
 // this is strait up taken from stb.h which I couldn't figure out how to include
 #define clamp(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
+#define ARRAY_COUNT(x) (sizeof(x) / sizeof(x[0]))
 
 static const int X_PADDING = 12.0;
 static const int Y_PADDING = 12.0;
@@ -167,13 +168,21 @@ typedef struct Node {
         int       constant;
         Gate      gate;
     };
+
+    struct Node* next_in_hash;
 } Node;
 
 
 typedef struct {
-    Node* array;
-    size_t size;
-    size_t next_id;
+    int count;
+    int last_id; // last_id because we start with 1, increment before using.
+    Node nodes[256];
+    Node* first_free_node;
+
+    // @NOTE: Must be power of 2 for bad hash function.
+    Node* id_hash[128];
+
+    // @TODO: Add another index for the topological sort. Makes evaluation faster.
 } NodeStore;
 
 // So it occurs to be that I can do this in a better way.
@@ -184,51 +193,55 @@ typedef struct {
 // This way I don't have to do the recursive evaluation function and I can easily use
 // the state of each node in visualizations.
 
-void
-nodestore_init(NodeStore* ns, size_t init_size)
-{
-    ns->array = (Node *)calloc(1, init_size * sizeof(Node));
-    ns->size = init_size;
-    ns->next_id = 0;
-}
-
-
-void
-nodestore_resize(NodeStore* ns)
-{
-    if (ns->next_id == ns->size) {
-        ns->size *= 2;
-        ns->array = (Node *)realloc(ns->array, ns->size * sizeof(Node));
-    }
-}
-
-
 Node*
 nodestore_get_node_by_id(const NodeStore* ns, int id)
 {
-    if (id >= 0 && id < ns->next_id) {
-        Node* node = &(ns->array[id]);
-        return node;
-    } else {
-        return NULL;
+    if (id == 0) return NULL;
+
+    assert(id > 0);
+    assert(id <= ns->last_id);
+    
+    // @TODO: Better hash function.
+    uint32_t hash_bucket = id & (ARRAY_COUNT(ns->id_hash) - 1);
+    for (Node* node = ns->id_hash[hash_bucket];
+         node;
+         node = node->next_in_hash) {
+        if (node->id == id) {
+            return node;
+        }
     }
+    
+    return NULL;
 }
 
 
 Node*
 nodestore_init_new_node(NodeStore* ns, float pos_x, float pos_y)
 {
-    nodestore_resize(ns);
+    // Add to store.
+    // @NOTE: id == 0 means not initialized. Used when traversing.
+    int id = ++ns->last_id;
 
-    int id = ns->next_id++;
-    Node* node = &(ns->array[id]);
+    Node* node;
+    if (ns->first_free_node) {
+        node = ns->first_free_node;
+        ns->first_free_node = node->next_in_hash;
+    } else {
+        node = &(ns->nodes[ns->count++]);
+    }
 
-    node->id = (int)id;
+    // Add to hash.
+    // @TODO: Better hash function.
+    uint32_t hash_bucket = id & (ARRAY_COUNT(ns->id_hash) - 1);
+    node->next_in_hash = ns->id_hash[hash_bucket];
+    ns->id_hash[hash_bucket] = node;
+
+    node->id = id;
     node->position.x = pos_x;
     node->position.y = pos_y;
 
-    node->input.lhs = -1;
-    node->input.rhs = -1;
+    node->input.lhs = 0;
+    node->input.rhs = 0;
 
     return node;
 }
@@ -284,7 +297,6 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
     Node* node = nodestore_init_new_node(ns, pos_x, pos_y);
     node->type = THRUSTER;
     node->thruster = thruster;
-
     return node->id;
 }
 
@@ -292,33 +304,33 @@ nodestore_add_thruster(NodeStore* ns, float pos_x, float pos_y,
 void
 nodestore_destory_node(NodeStore* ns, int id)
 {
-    assert(id < ns->next_id);
-    assert(id >= 0);
-    // remove the node with that id.
-    // compress rest of nodes.
-    // fix all pointers.
-    // if a pointer pointed to this one set it to -1
-    for(int i = 0; i < ns->next_id; i++) {
-        if(ns->array[i].input.lhs == id) {
-            ns->array[i].input.lhs = -1;
-        }
-        if(ns->array[i].input.rhs == id) {
-            ns->array[i].input.rhs = -1;
-        }
-        if(ns->array[i].input.lhs > id) {
-            ns->array[i].input.lhs--;
-        }
-        if(ns->array[i].input.rhs > id) {
-            ns->array[i].input.rhs--;
-        }
+    assert(id <= ns->last_id);
+    assert(id > 0);
 
-        if (i > id) {
-            ns->array[i-1] = ns->array[i];
-            ns->array[i-1].id = i-1;
+    // @TODO: Better hash function.
+    uint32_t hash_bucket = id & (ARRAY_COUNT(ns->id_hash) - 1);
+    for (Node** node = &ns->id_hash[hash_bucket];
+         *node;
+         node = &(*node)->next_in_hash) {
+        if ((*node)->id == id) {
+            Node* removed_node = *node;
+            *node = (*node)->next_in_hash;
+            removed_node->next_in_hash = ns->first_free_node;
+            removed_node->id = 0;
+            ns->first_free_node = removed_node;
+            break;
         }
     }
-    
-    ns->next_id--;
+
+    // Fix all pointers, if a pointer pointed to this node set it to 0;
+    for(int i = 0; i < ns->count; i++) {
+        if (ns->nodes[i].input.lhs == id) {
+            ns->nodes[i].input.lhs = 0;
+        }
+        if (ns->nodes[i].input.rhs == id) {
+            ns->nodes[i].input.rhs = 0;
+        }
+    }
 }
 
 
@@ -803,18 +815,19 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     NodeBounds constants[256] = {};
 
     // Collect collision data.
-    for (int i=0; i<ns->next_id; i++) {
-        if (ns->array[i].type != SIGNAL && ns->array[i].type != CONSTANT) {
+    for (int i=0; i<ns->count; i++) {
+        if (ns->nodes[i].id == 0) continue;
+        if (ns->nodes[i].type != SIGNAL && ns->nodes[i].type != CONSTANT) {
             // Node body bounds
             NodeBounds body;
-            body.node = &ns->array[i];
-            body.bb = node_calc_bounding_box(gui->vg, &ns->array[i], ns);
-            body.draw_position = ns->array[i].position;
+            body.node = &ns->nodes[i];
+            body.bb = node_calc_bounding_box(gui->vg, &ns->nodes[i], ns);
+            body.draw_position = ns->nodes[i].position;
             bodies[num_bodies++] = body;
 
            // Constant bounds
-            Node* lhs = nodestore_get_node_by_id(ns, ns->array[i].input.lhs);
-            Node* rhs = nodestore_get_node_by_id(ns, ns->array[i].input.rhs);
+            Node* lhs = nodestore_get_node_by_id(ns, ns->nodes[i].input.lhs);
+            Node* rhs = nodestore_get_node_by_id(ns, ns->nodes[i].input.rhs);
 
             if (NULL != lhs && lhs->type == CONSTANT) {
                 NodeBounds constant = {};
@@ -837,9 +850,9 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             }
 
             // Output bounds
-            if (ns->array[i].type != THRUSTER) {
+            if (ns->nodes[i].type != THRUSTER) {
                 NodeBounds output = {};
-                output.node = &ns->array[i];
+                output.node = &ns->nodes[i];
                 float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
                     + body.bb.top_left.x;
                 float centery = body.bb.bottom_right.y;
@@ -851,22 +864,22 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             }
 
             // Inputs bounds
-            if (ns->array[i].type != PREDICATE) {
+            if (ns->nodes[i].type != PREDICATE) {
                 NodeBounds input = {};
                 float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
                     + body.bb.top_left.x;
                 float centery = body.bb.top_left.y;
 
-                if (ns->array[i].type == GATE &&
-                    ns->array[i].gate != NOT) {
+                if (ns->nodes[i].type == GATE &&
+                    ns->nodes[i].gate != NOT) {
                     // 2 inputs for AND and OR gates.
-                    input.node = &ns->array[i];
+                    input.node = &ns->nodes[i];
 
                     input.bb = (BoundingBox){v2(body.bb.top_left.x + 2.5, centery - 5),
                                              v2(body.bb.top_left.x + 17.5, centery + 5)};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 1;
-                    if (input.node->input.lhs != -1) {
+                    if (input.node->input.lhs != 0) {
                         input.input_to = nodestore_get_node_by_id(ns, input.node->input.lhs);
                     }
                     inputs[num_inputs++] = input;
@@ -875,7 +888,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                                              v2(body.bb.bottom_right.x - 2.5, centery + 5)};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 2;
-                    if (input.node->input.rhs != -1) {
+                    if (input.node->input.rhs != 0) {
                         input.input_to = nodestore_get_node_by_id(ns, input.node->input.rhs);
                     } else {
                         input.input_to = NULL;
@@ -883,12 +896,12 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     inputs[num_inputs++] = input;
                 } else {
                     // 1 of them for NOT gates and Thrusters.
-                    input.node = &ns->array[i];
+                    input.node = &ns->nodes[i];
                     input.bb = (BoundingBox){v2(centerx - 7.5, centery - 5),
                                              v2(centerx + 7.5, centery + 5)};
                     input.draw_position = input.bb.top_left;
                     input.input_index = 1;
-                    if (input.node->parent != -1) {
+                    if (input.node->parent != 0) {
                         input.input_to = nodestore_get_node_by_id(ns, input.node->parent);
                     }
                     inputs[num_inputs++] = input;
@@ -1160,9 +1173,9 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                            15, 15)) {
                 // Delete the connection!
                 if (inputs[i].input_index == 1) {
-                    inputs[i].node->input.lhs = -1;
+                    inputs[i].node->input.lhs = 0;
                 } else {
-                    inputs[i].node->input.rhs = -1;
+                    inputs[i].node->input.rhs = 0;
                 }
             }
         }
@@ -1395,15 +1408,17 @@ node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
 }
 
 
-// @TODO: see comment on the nodestore on how to improve this.
+// @TODO: Store these in a topologically sorted order so I can just traverse them
+//        instead of recuing through them.
 Thrusters
 nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
 {
     Thrusters out_thrusters = {false, false, false, false, false};
 
-    // iterate over thruster nodes
-    for (int i = 0; i < ns->next_id; i++) {
+    // Iterate over thruster nodes
+    for (int i = 1; i <= ns->last_id; i++) {
         Node* node = nodestore_get_node_by_id(ns, i);
+        if (!node) continue;
         bool value = node_eval(node, ns, ship);
 
         // @TODO: IF DEBUG
@@ -1482,10 +1497,10 @@ gamestate_load_level_three(GameState* state) {
 
 
 static void*
-game_setup(NVGcontext* vg)
+game_setup(void* game_state, NVGcontext* vg)
 {
     log_info("Setting up game");
-    GameState* state = calloc(1, sizeof(GameState));
+    GameState* state = (GameState*)game_state;
 
     // @TODO: If you have more than one font you need to store a
     // reference to this.
@@ -1495,7 +1510,7 @@ game_setup(NVGcontext* vg)
     // Assert that the font got loaded.
     assert(font >= 0);
 
-    nodestore_init(&state->node_store, 5);
+    /* nodestore_init(&state->node_store, 5); */
 
     gamestate_load_level_three(state);
 
