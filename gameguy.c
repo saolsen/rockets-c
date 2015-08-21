@@ -9,7 +9,6 @@
 #include <time.h>
 
 #include "gameguy.h"
-
 #define NANOVG_GL3_IMPLEMENTATION
 #include "nanovg_gl.h"
 
@@ -22,6 +21,43 @@ typedef struct gg_CurrentGame {
     gg_Game game;
 } gg_CurrentGame;
 
+void
+game_reload(gg_CurrentGame* current_game, char* library)
+{
+    struct stat attr;
+    if ((stat(library, &attr) == 0) && (current_game->id != attr.st_ino)) {
+        log_info("New Library to load.");
+        
+        if (current_game->handle) {
+            dlclose(current_game->handle);
+        }
+        
+        void* handle = dlopen(library, RTLD_NOW);
+
+        if (handle) {
+            current_game->handle = handle;
+            current_game->id = attr.st_ino;
+
+            gg_Game* game = dlsym(handle, "gg_game_api");
+            if (game != NULL) {
+                current_game->game = *game;
+                log_info("Reloaded Game Library");
+                
+            } else {
+                log_error("Error loading api symbol.");
+                dlclose(handle);
+                current_game->handle = NULL;
+                current_game->id = 0;
+            }
+            
+        } else {
+            log_error("Error loading game library.");
+            current_game->handle = NULL;
+            current_game->id = 0;
+        }   
+    }
+}
+
 
 float
 gg_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
@@ -30,11 +66,6 @@ gg_get_seconds_elapsed(uint64_t old_counter, uint64_t current_counter)
             (float)SDL_GetPerformanceFrequency());
 }
 
-// @TODO: Nikki says the timeout for dragging should be 300ms
-
-// @TODO: Print out other non handled events.
-// @TODO: Break out input handling into a seperate function so we can
-//                use SDL's watch event stuff.
 // @TODO: Have a way to record input over time, possibly using a
 //                persistent data structure if that turns out to be helpful.
 bool
@@ -98,24 +129,10 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
 
 int main(int argc, char* argv[])
 {
-    // @TODO: Error if library not specified.
-    char* game_library = "libgame.dylib";
-    log_info("Loading Game: %s", game_library);
 
-    // @TODO: function for reloading.
     gg_CurrentGame current_game;
-
-    if (current_game.handle) {
-        dlclose(current_game.handle);
-    }
-
-    current_game.handle = dlopen(game_library, RTLD_NOW);
-    if (!current_game.handle) {
-        log_info("Error loading library %s", dlerror());
-    }
-
-    gg_Game *game = dlsym(current_game.handle, "gg_game_api");
-    current_game.game = *game;
+    char* game_library = "libgame.dylib";
+    game_reload(&current_game, game_library);
 
     // @TODO: Figure out a better way to do random numbers.
     srand(time(NULL));
@@ -184,18 +201,7 @@ int main(int argc, char* argv[])
 
     while (running) {
         // Reload Library
-        // @TODO: only reload if file has changed.
-        if (NULL != current_game.handle) {
-            dlclose(current_game.handle);
-        }
-
-        current_game.handle = dlopen(game_library, RTLD_NOW);
-        if (!current_game.handle) {
-            log_info("Error loading library %s", dlerror());
-        }
-
-        gg_Game *game = dlsym(current_game.handle, "gg_game_api");
-        current_game.game = *game;
+        game_reload(&current_game, game_library);
 
         //@TODO: better event handling
         SDL_Event event;
@@ -224,7 +230,6 @@ int main(int argc, char* argv[])
                 GL_DEPTH_BUFFER_BIT |
                 GL_STENCIL_BUFFER_BIT);
 
-        // drawable resolution is
         // @TODO: Support non retina.
         nvgBeginFrame(vg, SCREEN_WIDTH, SCREEN_HEIGHT, 2.0);
 

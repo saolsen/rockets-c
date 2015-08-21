@@ -16,7 +16,6 @@
 
 // Libraries being used
 // nanovg
-// stb stuff, not sure which yet
 
 #define SCREEN_WIDTH  1280
 #define SCREEN_HEIGHT 720
@@ -46,6 +45,7 @@ typedef struct {
 
 
 typedef struct {
+    int gamestate_size;
     void* (*init)(NVGcontext* vg);
     void (*update_and_render)(void* game_state,
                               NVGcontext* vg,

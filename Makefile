@@ -7,10 +7,9 @@
 OPENGL_LIB= -framework OpenGL
 NANOVG_I= -Inanovg/src
 NANOVG_LD= -Lnanovg/build -lnanovg
-STB_I= -Istb
 
 # -Weverything -pedantic -Werror
-CFLAGS= $(NANOVG_I) $(STB_I) -std=c11 -g -Wall -O0 -fPIC `pkg-config --cflags sdl2`
+CFLAGS= $(NANOVG_I) -std=c11 -g -Wall -O0 -fPIC `pkg-config --cflags sdl2`
 LDFLAGS= $(NANOVG_LD) $(OPENGL_LIB) `pkg-config --libs sdl2`
 
 all: libgame.dylib rockets
@@ -28,4 +27,4 @@ check-syntax:
 	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
 
 tags:
-	etags gameguy.c gameguy.h game.c stb/stretchy_buffer.h nanovg/src/nanovg.h
+	etags gameguy.c gameguy.h game.c nanovg/src/nanovg.h

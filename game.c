@@ -1,6 +1,12 @@
+// Some stuff I want to do.
+// Drop the malloc stuff for nodes, do the memory management myself.
+// Break the nodes into more pieces, math nodes.
+// Figure out how to make the UI not suck.
+// Sort nodes topolocically so eval is *fast*.
+// Work on some more levels.
+
 #include <math.h>
 #include "gameguy.h"
-#include "stretchy_buffer.h"
 
 // this is strait up taken from stb.h which I couldn't figure out how to include
 #define clamp(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
@@ -19,6 +25,7 @@ typedef union {
     struct {float x; float y;};
     float arr[2];
 } V2;
+
 
 V2
 v2(float x, float y)
@@ -57,19 +64,20 @@ deg_to_rad(const float deg)
 }
 
 
-// theta must be in radians
 V2
-v2_rotate(const V2 v, const float theta)
+v2_rotate(const V2 v, const float radians)
 {
-    float nx = v.x * cos(theta) - v.y * sin(theta);
-    float ny = v.x * sin(theta) + v.y * cos(theta);
+    float nx = v.x * cos(radians) - v.y * sin(radians);
+    float ny = v.x * sin(radians) + v.y * cos(radians);
     return v2(nx, ny);
 }
+
 
 typedef struct BoundingBox {
     V2 top_left;
     V2 bottom_right;
 } BoundingBox;
+
 
 BoundingBox
 boundingBox(V2 top_left, float width, float height)
@@ -97,6 +105,7 @@ bb_contains(BoundingBox bb, float x, float y)
                            bb.bottom_right.y, x, y);
 }
 
+
 V2
 bb_center(BoundingBox bb)
 {
@@ -108,6 +117,7 @@ bb_center(BoundingBox bb)
     return v2(centerx, centery);
 }
 
+
 // Calculate width and height of bb
 V2
 bb_size(BoundingBox bb)
@@ -115,6 +125,7 @@ bb_size(BoundingBox bb)
     return v2(bb.bottom_right.x - bb.top_left.x,
               bb.bottom_right.y - bb.top_left.y);
 }
+
 
 // Rule Nodes
 typedef enum { THRUSTER, PREDICATE, SIGNAL, CONSTANT, GATE } NodeType;
@@ -550,9 +561,9 @@ debug_draw_text(NVGcontext* vg, float x, float y, int size, const char* txt)
 }
 
 void
-debug_draw_nodebounds_sb(NVGcontext* vg, NodeBounds* nb)
+debug_draw_nodebounds(NVGcontext* vg, NodeBounds* nb, size_t num_nb)
 {
-    for (int i = 0; i < sb_count(nb); i++) {
+    for (int i = 0; i < num_nb; i++) {
         NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
         debug_draw_bb(vg, color, nb[i].bb);
     }
@@ -738,15 +749,17 @@ gui_button_with_text(GUIState gui, float x, float y, float width, float height, 
     return (BS_CLICK == bs);
 }
 
+
 bool
 gui_button(GUIState gui, float x, float y, float width, float height) {
     return gui_button_with_text(gui, x, y, width, height, NULL);
 }
 
+
 bool
-nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, DraggingState next_dragging_state)
+nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, size_t num_nodebounds, DraggingState next_dragging_state)
 {
-    for (int i=0; i<sb_count(nodebounds); i++) {
+    for (int i=0; i<num_nodebounds; i++) {
         if (bb_contains(nodebounds[i].bb,
                          gui->input.mouse_x - gui->input.mouse_xrel,
                          gui->input.mouse_y - gui->input.mouse_yrel)) {
@@ -771,6 +784,7 @@ nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, DraggingState next_draggin
     return false;
 }
 
+
 // @TODO: This really could just be inline int the update function. There's no real reason to have
 // it pulled out like this.
 NodeEvent
@@ -779,10 +793,14 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     //@TODO: Replace these with variable length arrays, you do not need to allocate.
     // They also could just be parallel arrays in the gamestate and then I don't have to
     // calculate them every single frame....
-    NodeBounds* bodies = NULL;
-    NodeBounds* inputs = NULL;
-    NodeBounds* outputs = NULL;
-    NodeBounds* constants = NULL;
+    size_t num_bodies = 0;
+    NodeBounds bodies[256] = {};
+    size_t num_inputs = 0;
+    NodeBounds inputs[256] = {};
+    size_t num_outputs = 0;
+    NodeBounds outputs[256] = {};
+    size_t num_constants = 0;
+    NodeBounds constants[256] = {};
 
     // Collect collision data.
     for (int i=0; i<ns->next_id; i++) {
@@ -792,7 +810,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             body.node = &ns->array[i];
             body.bb = node_calc_bounding_box(gui->vg, &ns->array[i], ns);
             body.draw_position = ns->array[i].position;
-            sb_push(bodies, body);
+            bodies[num_bodies++] = body;
 
            // Constant bounds
             Node* lhs = nodestore_get_node_by_id(ns, ns->array[i].input.lhs);
@@ -805,7 +823,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                                             body.draw_position.y+25);
                 constant.bb = (BoundingBox){constant.draw_position,
                                             v2_plus(constant.draw_position, v2(10, 10))};
-                sb_push(constants, constant);
+                constants[num_constants++] = constant;
             }
 
             if (NULL != rhs && rhs->type == CONSTANT) {
@@ -815,7 +833,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                                               .y = body.bb.top_left.y+25};
                 constant.bb = (BoundingBox){constant.draw_position,
                                             v2_plus(constant.draw_position, v2(10, 10))};
-                sb_push(constants, constant);
+                constants[num_constants++] = constant;
             }
 
             // Output bounds
@@ -829,7 +847,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 output.bb = (BoundingBox){v2(centerx - 7.5, centery - 5),
                                           v2(centerx + 7.5, centery + 5)};
                 output.draw_position = output.bb.top_left;
-                sb_push(outputs, output);
+                outputs[num_outputs++] = output;
             }
 
             // Inputs bounds
@@ -851,7 +869,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     if (input.node->input.lhs != -1) {
                         input.input_to = nodestore_get_node_by_id(ns, input.node->input.lhs);
                     }
-                    sb_push(inputs, input);
+                    inputs[num_inputs++] = input;
 
                     input.bb = (BoundingBox){v2(body.bb.bottom_right.x - 17.5, centery - 5),
                                              v2(body.bb.bottom_right.x - 2.5, centery + 5)};
@@ -862,7 +880,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     } else {
                         input.input_to = NULL;
                     }
-                    sb_push(inputs, input);
+                    inputs[num_inputs++] = input;
                 } else {
                     // 1 of them for NOT gates and Thrusters.
                     input.node = &ns->array[i];
@@ -873,7 +891,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                     if (input.node->parent != -1) {
                         input.input_to = nodestore_get_node_by_id(ns, input.node->parent);
                     }
-                    sb_push(inputs, input);
+                    inputs[num_inputs++] = input;
                 }
             }
         }
@@ -890,18 +908,18 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     if (gui->dragging_state == GUI_NOT_DRAGGING) {
         if (gui->input.start_dragging) {
             // Find what we are dragging.
-            bool found = nb_is_dragging(gui, outputs, GUI_DRAGGING_OUTPUT);
+            bool found = nb_is_dragging(gui, outputs, num_outputs, GUI_DRAGGING_OUTPUT);
 
             if (!found) {
-                found = nb_is_dragging(gui, inputs, GUI_DRAGGING_INPUT);
+                found = nb_is_dragging(gui, inputs, num_inputs, GUI_DRAGGING_INPUT);
             }
 
             if (!found) {
-                found = nb_is_dragging(gui, constants, GUI_DRAGGING_CONSTANT);
+                found = nb_is_dragging(gui, constants, num_constants, GUI_DRAGGING_CONSTANT);
             }
 
             if (!found) {
-                found = nb_is_dragging(gui, bodies, GUI_DRAGGING_NODE);
+                found = nb_is_dragging(gui, bodies, num_bodies, GUI_DRAGGING_NODE);
                 if (found) {
                     // Update the node's position
                     Node* node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
@@ -924,7 +942,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
                 // Update draw position, could probably combine this with above and
                 // only loop once.
-                for (int i=0; i<sb_count(bodies); i++) {
+                for (int i=0; i<num_bodies/* num_bodies */; i++) {
                     if (bodies[i].node->id == drag_node->id) {
                         bodies[i].draw_position.x += gui->input.mouse_xrel;
                         bodies[i].draw_position.y += gui->input.mouse_yrel;
@@ -942,7 +960,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             // Connect input
             // @TODO: Check outputs too.
             if (gui->dragging_state == GUI_DRAGGING_INPUT) {
-                for (int i = 0; i < sb_count(bodies); i++) {
+                for (int i = 0; i < num_bodies/* num_bodies */; i++) {
                     // check if over a node.
                     if (bodies[i].node->id != gui->drag_target.from_id &&
                         bb_contains(bodies[i].bb,
@@ -1014,7 +1032,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     }
 
     // Draw gui elements.
-    for (int i=0; i<sb_count(bodies); i++) {
+    for (int i=0; i<num_bodies/* num_bodies */; i++) {
         char buf[256] = {'\0'};
         NodeBounds body = bodies[i];
         Node node = *body.node;
@@ -1118,7 +1136,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     }
 
     // Draw connection lines. Arows from output to input?
-    for (int i = 0; i < sb_count(inputs); i++) {
+    for (int i = 0; i < num_inputs; i++) {
         if (inputs[i].input_to != NULL) {
             // draw line to input_to's output.
             nvgSave(gui->vg);
@@ -1151,7 +1169,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     }
 
     // Draw destroy buttons for nodes.
-    for (int i = 0; i < sb_count(bodies); i++) {
+    for (int i = 0; i < num_bodies; i++) {
         if (gui_button(*gui,
                    bodies[i].bb.top_left.x, bodies[i].bb.top_left.y,
                        10, 10)) {
@@ -1160,10 +1178,10 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     }
 
     // Debug drawing
-    debug_draw_nodebounds_sb(gui->vg, bodies);
-    debug_draw_nodebounds_sb(gui->vg, constants);
-    debug_draw_nodebounds_sb(gui->vg, inputs);
-    debug_draw_nodebounds_sb(gui->vg, outputs);
+    debug_draw_nodebounds(gui->vg, bodies, num_bodies);
+    debug_draw_nodebounds(gui->vg, constants, num_constants);
+    debug_draw_nodebounds(gui->vg, inputs, num_inputs);
+    debug_draw_nodebounds(gui->vg, outputs, num_outputs);
 
     // debug draw drag target.
     if (gui->dragging_state == GUI_DRAGGING_INPUT ||
@@ -1180,12 +1198,6 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         nvgFill(gui->vg);
         nvgRestore(gui->vg);
     }
-
-    // free memory
-    sb_free(bodies);
-    sb_free(constants);
-    sb_free(inputs);
-    sb_free(outputs);
 
     return (NodeEvent){.type = NE_NAH};
 }
@@ -1653,10 +1665,12 @@ game_update_and_render(void* gamestate,
 
     debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);
 
+    
 }
 
 
 const gg_Game gg_game_api = {
-        .init = game_setup,
-        .update_and_render = game_update_and_render
+    .gamestate_size = sizeof(GameState),
+    .init = game_setup,
+    .update_and_render = game_update_and_render
 };
