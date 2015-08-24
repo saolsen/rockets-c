@@ -1,5 +1,7 @@
+// @TODO: @IMPORTANT: JUST DO IT
+// think next could be more levels? collision detection?
+
 // Some stuff I want to do.
-// Drop the malloc stuff for nodes, do the memory management myself.
 // Break the nodes into more pieces, math nodes.
 // Figure out how to make the UI not suck.
 // Sort nodes topolocically so eval is *fast*.
@@ -7,6 +9,7 @@
 
 #include <math.h>
 #include "gameguy.h"
+#include "game.h"
 
 // this is strait up taken from stb.h which I couldn't figure out how to include
 #define clamp(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
@@ -20,12 +23,6 @@ bool_string(bool b)
 {
     return b ? "true" : "false";
 }
-
-
-typedef union {
-    struct {float x; float y;};
-    float arr[2];
-} V2;
 
 
 V2
@@ -74,12 +71,6 @@ v2_rotate(const V2 v, const float radians)
 }
 
 
-typedef struct BoundingBox {
-    V2 top_left;
-    V2 bottom_right;
-} BoundingBox;
-
-
 BoundingBox
 boundingBox(V2 top_left, float width, float height)
 {
@@ -126,64 +117,6 @@ bb_size(BoundingBox bb)
     return v2(bb.bottom_right.x - bb.top_left.x,
               bb.bottom_right.y - bb.top_left.y);
 }
-
-
-// Rule Nodes
-typedef enum { THRUSTER, PREDICATE, SIGNAL, CONSTANT, GATE } NodeType;
-typedef enum { BP, BS, SP, SS, BOOST }                       Thruster;
-typedef enum { LT, GT, LEQT, GEQT, EQ, NEQ }                 Predicate;
-typedef enum { POS_X, POS_Y, ROTATION }                      Signal;
-typedef enum { AND, OR, NOT }                                Gate;
-
-typedef struct Thrusters {
-    bool bp;
-    bool bs;
-    bool sp;
-    bool ss;
-    bool boost;
-} Thrusters;
-
-typedef struct Ship {
-    V2 position;
-    int rotation;
-    Thrusters thrusters;
-} Ship;
-
-typedef struct Node {
-    int id;
-    NodeType type;
-    V2 position;
-    BoundingBox bb;
-
-    union {
-        struct {
-            int lhs;
-            int rhs; } input;
-        int parent;
-    };
-    union {
-        Thruster  thruster;
-        Predicate predicate;
-        Signal    signal;
-        int       constant;
-        Gate      gate;
-    };
-
-    struct Node* next_in_hash;
-} Node;
-
-
-typedef struct {
-    int count;
-    int last_id; // last_id because we start with 1, increment before using.
-    Node nodes[256];
-    Node* first_free_node;
-
-    // @NOTE: Must be power of 2 for bad hash function.
-    Node* id_hash[128];
-
-    // @TODO: Add another index for the topological sort. Makes evaluation faster.
-} NodeStore;
 
 // So it occurs to be that I can do this in a better way.
 // I can sort the nodes topologically so that all parents will be found
@@ -332,21 +265,6 @@ nodestore_destory_node(NodeStore* ns, int id)
         }
     }
 }
-
-
-typedef struct {
-    Node* node;
-    BoundingBox bb;
-    V2 draw_position;
-    int input_index;
-    Node* input_to;
-} NodeBounds;
-
-typedef enum { NE_NAH } NodeEventType;
-
-typedef struct {
-    NodeEventType type;
-} NodeEvent;
 
 void
 node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
@@ -698,29 +616,6 @@ bb_blow_up(BoundingBox bb)
     return bb;
 }
 
-typedef enum {GUI_NOT_DRAGGING,
-              GUI_DRAGGING_NODE,
-              GUI_DRAGGING_INPUT,
-              GUI_DRAGGING_OUTPUT,
-              GUI_DRAGGING_CONSTANT} DraggingState;
-
-typedef struct {
-    int from_id;
-    int from_input_num;
-    V2 from_position; // can calculate from from_id but meh...
-    V2 position;
-    int value;
-} DragTarget;
-
-
-typedef struct {
-    NVGcontext* vg;
-    gg_Input input;
-    DraggingState dragging_state;
-    DragTarget drag_target;
-} GUIState;
-
-typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
 
 // draws a button there, if there was a click of it this frame returns true
 // @TODO: Text
@@ -1215,28 +1110,6 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     return (NodeEvent){.type = NE_NAH};
 }
 
-typedef enum {RUNNING, PAUSED, WON, DIED} LevelStatus;
-
-const int MAX_OBSTICLES = 256;
-
-typedef struct {
-    GUIState gui;
-    NodeStore node_store;
-    Ship player_ship;
-
-    // Don't know what all goes in a level or scene yet.
-    int current_level;
-    V2 goal;
-    BoundingBox obstacles[MAX_OBSTICLES];
-    size_t num_obstacles;
-
-    LevelStatus status;
-    char* DeathReason;
-
-} GameState;
-
-
-// END STUFF FROM GAME.H THAT IS CODE
 
 static NVGcontext* gg_Debug_vg = NULL;
 
@@ -1559,6 +1432,9 @@ game_update_and_render(void* gamestate,
     // @TODO: It is very unfortunate that rendering happens in here....
     // I can probably do this return events system if I want to. Don't know if I need to though.
     NodeEvent event = gui_nodes(&state->gui, &state->node_store);
+
+
+    
     switch(event.type) {
     case NE_NAH:
         break;
@@ -1682,7 +1558,6 @@ game_update_and_render(void* gamestate,
 
     
 }
-
 
 const gg_Game gg_game_api = {
     .gamestate_size = sizeof(GameState),
