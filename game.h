@@ -11,7 +11,7 @@ typedef struct BoundingBox {
     V2 bottom_right;
 } BoundingBox;
 
-
+// @TODO: Some day you're gonna want math, that's gonna be a lot of work.
 // Rule Nodes
 typedef enum { THRUSTER, PREDICATE, SIGNAL, CONSTANT, GATE } NodeType;
 typedef enum { BP, BS, SP, SS, BOOST }                       Thruster;
@@ -84,12 +84,24 @@ typedef struct {
     NodeEventType type;
 } NodeEvent;
 
-typedef enum {GUI_NOT_DRAGGING,
+/* typedef enum {GUI_NOT_DRAGGING, */
+/*               GUI_DRAGGING_NODE, */
+/*               GUI_DRAGGING_INPUT, */
+/*               GUI_DRAGGING_OUTPUT, */
+/*               GUI_DRAGGING_CONSTANT} DraggingState; */
+
+typedef enum {GUI_NAH,
               GUI_DRAGGING_NODE,
               GUI_DRAGGING_INPUT,
               GUI_DRAGGING_OUTPUT,
-              GUI_DRAGGING_CONSTANT} DraggingState;
+              GUI_EDITING_NODE} GUI_State;
 
+typedef struct {
+    int id;
+    int value;
+} NodeEdit;
+
+// @TODO: maybe break this out for different things we're dragging.
 typedef struct {
     int from_id;
     int from_input_num;
@@ -98,11 +110,16 @@ typedef struct {
     int value;
 } DragTarget;
 
+/* typedef struct { */
+/*     gg_Input input; */
+/*     GUIState gui_state; */
+/*     DragTarget drag_target; */
+/* } GUIState;  */
 
 typedef struct {
     NVGcontext* vg;
     gg_Input input;
-    DraggingState dragging_state;
+    GUI_State state;
     DragTarget drag_target;
 } GUIState;
 

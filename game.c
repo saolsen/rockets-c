@@ -12,7 +12,7 @@
 #include "game.h"
 
 // this is strait up taken from stb.h which I couldn't figure out how to include
-#define clamp(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
+#define CLAMP(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
 #define ARRAY_COUNT(x) (sizeof(x) / sizeof(x[0]))
 
 static const int X_PADDING = 12.0;
@@ -289,19 +289,9 @@ node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
         char str[15] = {'\0'};
         snprintf(str, 15, "%d", node->signal);
         txt = str;
-        break;
     } break;
+        
     case PREDICATE: {
-        char str[15] = {'\0'};
-        size_t max_len = size -1;
-
-        if (NULL != lhs) {
-            node_get_text(lhs, str, 15, NULL, NULL);
-            strncat(buffer, str, max_len);
-            strncat(buffer, " ", max_len - strlen(buffer));
-            str[0] = '\0';
-        }
-
         switch(node->predicate) {
         case LT:   txt = "<";  break;
         case GT:   txt = ">";  break;
@@ -310,27 +300,22 @@ node_get_text(const Node* node, char* buffer, size_t size, Node* lhs, Node* rhs)
         case EQ:   txt = "=="; break;
         case NEQ:  txt = "<>"; break;
         }
-
-        strncat(buffer, txt, max_len - strlen(buffer));
-
-        if (NULL != rhs) {
-            node_get_text(rhs, str, 15, NULL, NULL);
-            strncat(buffer, " ", max_len - strlen(buffer));
-            strncat(buffer, str, max_len);
-            str[0] = '\0';
-        }
-
-        return;
-
     } break;
 
     case GATE: {
         switch(node->gate) {
-        case AND: txt = "AND"; break;
-        case OR: txt = "OR"; break;
-        case NOT: txt = "NOT"; break;
+        case AND:
+            txt = "AND";
+            break;
+        case OR:
+            txt = "OR";
+            break;
+        case NOT:
+            txt = "NOT";
+            break;
         }
     } break;
+
     default:
         break;
     }
@@ -664,25 +649,19 @@ gui_button(GUIState gui, float x, float y, float width, float height) {
 
 
 bool
-nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, size_t num_nodebounds, DraggingState next_dragging_state)
+nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, size_t num_nodebounds, GUI_State next_gui_state)
 {
     for (int i=0; i<num_nodebounds; i++) {
         if (bb_contains(nodebounds[i].bb,
                          gui->input.mouse_x - gui->input.mouse_xrel,
                          gui->input.mouse_y - gui->input.mouse_yrel)) {
-            gui->dragging_state = next_dragging_state;
+            gui->state = next_gui_state;
             gui->drag_target.from_id = nodebounds[i].node->id;
             gui->drag_target.from_input_num = nodebounds[i].input_index;
 
             V2 nb_center = bb_center(nodebounds[i].bb);
             gui->drag_target.from_position = nb_center;
             gui->drag_target.position = nodebounds[i].bb.top_left;
-
-
-            if (gui->input.mouse_motion) {
-                gui->drag_target.position.x += gui->input.mouse_xrel;
-                gui->drag_target.position.y += gui->input.mouse_yrel;
-            }
 
             return true;
         }
@@ -697,123 +676,87 @@ nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, size_t num_nodebounds, Dra
 NodeEvent
 gui_nodes(GUIState* gui, NodeStore* ns)
 {
-    //@TODO: Replace these with variable length arrays, you do not need to allocate.
-    // They also could just be parallel arrays in the gamestate and then I don't have to
-    // calculate them every single frame....
     size_t num_bodies = 0;
     NodeBounds bodies[256] = {};
     size_t num_inputs = 0;
     NodeBounds inputs[256] = {};
     size_t num_outputs = 0;
     NodeBounds outputs[256] = {};
-    size_t num_constants = 0;
-    NodeBounds constants[256] = {};
 
     // Collect collision data.
     for (int i=0; i<ns->count; i++) {
         if (ns->nodes[i].id == 0) continue;
+        
+        // Node body bounds
+        NodeBounds body;
+        body.node = &ns->nodes[i];
+        body.bb = node_calc_bounding_box(gui->vg, &ns->nodes[i], ns);
+        body.draw_position = ns->nodes[i].position;
+        bodies[num_bodies++] = body;
+
+        // Output bounds
+        if (ns->nodes[i].type != THRUSTER) {
+            NodeBounds output = {};
+            output.node = &ns->nodes[i];
+            float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
+                + body.bb.top_left.x;
+            float centery = body.bb.bottom_right.y;
+            // @HARDCODE
+            output.bb = (BoundingBox){v2(centerx - 7.5, centery - 5),
+                                      v2(centerx + 7.5, centery + 5)};
+            output.draw_position = output.bb.top_left;
+            outputs[num_outputs++] = output;
+        }
+
+        // Inputs bounds
         if (ns->nodes[i].type != SIGNAL && ns->nodes[i].type != CONSTANT) {
-            // Node body bounds
-            NodeBounds body;
-            body.node = &ns->nodes[i];
-            body.bb = node_calc_bounding_box(gui->vg, &ns->nodes[i], ns);
-            body.draw_position = ns->nodes[i].position;
-            bodies[num_bodies++] = body;
+            NodeBounds input = {};
+            float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
+                + body.bb.top_left.x;
+            float centery = body.bb.top_left.y;
 
-           // Constant bounds
-            Node* lhs = nodestore_get_node_by_id(ns, ns->nodes[i].input.lhs);
-            Node* rhs = nodestore_get_node_by_id(ns, ns->nodes[i].input.rhs);
+            if (ns->nodes[i].type == PREDICATE ||
+                (ns->nodes[i].type == GATE &&
+                 ns->nodes[i].gate != NOT)) {
+                // 2 inputs for AND and OR gates.
+                input.node = &ns->nodes[i];
 
-            if (NULL != lhs && lhs->type == CONSTANT) {
-                NodeBounds constant = {};
-                constant.node = lhs;
-                constant.draw_position = v2(body.draw_position.x+7,
-                                            body.draw_position.y+25);
-                constant.bb = (BoundingBox){constant.draw_position,
-                                            v2_plus(constant.draw_position, v2(10, 10))};
-                constants[num_constants++] = constant;
-            }
-
-            if (NULL != rhs && rhs->type == CONSTANT) {
-                NodeBounds constant = {};
-                constant.node = rhs;
-                constant.draw_position = (V2){.x = body.bb.bottom_right.x-12,
-                                              .y = body.bb.top_left.y+25};
-                constant.bb = (BoundingBox){constant.draw_position,
-                                            v2_plus(constant.draw_position, v2(10, 10))};
-                constants[num_constants++] = constant;
-            }
-
-            // Output bounds
-            if (ns->nodes[i].type != THRUSTER) {
-                NodeBounds output = {};
-                output.node = &ns->nodes[i];
-                float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
-                    + body.bb.top_left.x;
-                float centery = body.bb.bottom_right.y;
-                // @HARDCODE
-                output.bb = (BoundingBox){v2(centerx - 7.5, centery - 5),
-                                          v2(centerx + 7.5, centery + 5)};
-                output.draw_position = output.bb.top_left;
-                outputs[num_outputs++] = output;
-            }
-
-            // Inputs bounds
-            if (ns->nodes[i].type != PREDICATE) {
-                NodeBounds input = {};
-                float centerx = ((body.bb.bottom_right.x - body.bb.top_left.x) / 2)
-                    + body.bb.top_left.x;
-                float centery = body.bb.top_left.y;
-
-                if (ns->nodes[i].type == GATE &&
-                    ns->nodes[i].gate != NOT) {
-                    // 2 inputs for AND and OR gates.
-                    input.node = &ns->nodes[i];
-
-                    input.bb = (BoundingBox){v2(body.bb.top_left.x + 2.5, centery - 5),
-                                             v2(body.bb.top_left.x + 17.5, centery + 5)};
-                    input.draw_position = input.bb.top_left;
-                    input.input_index = 1;
-                    if (input.node->input.lhs != 0) {
-                        input.input_to = nodestore_get_node_by_id(ns, input.node->input.lhs);
-                    }
-                    inputs[num_inputs++] = input;
-
-                    input.bb = (BoundingBox){v2(body.bb.bottom_right.x - 17.5, centery - 5),
-                                             v2(body.bb.bottom_right.x - 2.5, centery + 5)};
-                    input.draw_position = input.bb.top_left;
-                    input.input_index = 2;
-                    if (input.node->input.rhs != 0) {
-                        input.input_to = nodestore_get_node_by_id(ns, input.node->input.rhs);
-                    } else {
-                        input.input_to = NULL;
-                    }
-                    inputs[num_inputs++] = input;
-                } else {
-                    // 1 of them for NOT gates and Thrusters.
-                    input.node = &ns->nodes[i];
-                    input.bb = (BoundingBox){v2(centerx - 7.5, centery - 5),
-                                             v2(centerx + 7.5, centery + 5)};
-                    input.draw_position = input.bb.top_left;
-                    input.input_index = 1;
-                    if (input.node->parent != 0) {
-                        input.input_to = nodestore_get_node_by_id(ns, input.node->parent);
-                    }
-                    inputs[num_inputs++] = input;
+                input.bb = (BoundingBox){v2(body.bb.top_left.x + 2.5, centery - 5),
+                                         v2(body.bb.top_left.x + 17.5, centery + 5)};
+                input.draw_position = input.bb.top_left;
+                input.input_index = 1;
+                if (input.node->input.lhs != 0) {
+                    input.input_to = nodestore_get_node_by_id(ns, input.node->input.lhs);
                 }
+                inputs[num_inputs++] = input;
+
+                input.bb = (BoundingBox){v2(body.bb.bottom_right.x - 17.5, centery - 5),
+                                         v2(body.bb.bottom_right.x - 2.5, centery + 5)};
+                input.draw_position = input.bb.top_left;
+                input.input_index = 2;
+                if (input.node->input.rhs != 0) {
+                    input.input_to = nodestore_get_node_by_id(ns, input.node->input.rhs);
+                } else {
+                    input.input_to = NULL;
+                }
+                inputs[num_inputs++] = input;
+            } else {
+                // 1 of them for everything else.
+                input.node = &ns->nodes[i];
+                input.bb = (BoundingBox){v2(centerx - 7.5, centery - 5),
+                                         v2(centerx + 7.5, centery + 5)};
+                input.draw_position = input.bb.top_left;
+                input.input_index = 1;
+                if (input.node->parent != 0) {
+                    input.input_to = nodestore_get_node_by_id(ns, input.node->parent);
+                }
+                inputs[num_inputs++] = input;
             }
         }
     }
 
     // Handle current gui state.
-
-    // CLICK
-    // START DRAGGING
-    // - CONNECTOR
-    // - NODE
-    // CONTINUE DRAGGING
-    // END DRAGGING
-    if (gui->dragging_state == GUI_NOT_DRAGGING) {
+    if (gui->state == GUI_NAH) {
         if (gui->input.start_dragging) {
             // Find what we are dragging.
             bool found = nb_is_dragging(gui, outputs, num_outputs, GUI_DRAGGING_OUTPUT);
@@ -823,22 +766,18 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             }
 
             if (!found) {
-                found = nb_is_dragging(gui, constants, num_constants, GUI_DRAGGING_CONSTANT);
-            }
-
-            if (!found) {
                 found = nb_is_dragging(gui, bodies, num_bodies, GUI_DRAGGING_NODE);
                 if (found) {
-                    // Update the node's position
-                    Node* node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
-                    node->position = gui->drag_target.position;
+                    // Update the node's position (why were we doing this?)
+                    /* Node* node = nodestore_get_node_by_id(ns, gui->drag_target.from_id); */
+                    /* node->position = gui->drag_target.position; */
                 }
             }
         }
 
-    } else if (gui->dragging_state == GUI_DRAGGING_NODE) {
+    } else if (gui->state == GUI_DRAGGING_NODE) {
         if (gui->input.end_dragging) {
-            gui->dragging_state = GUI_NOT_DRAGGING;
+            gui->state = GUI_NAH;
 
         } else {
             if (gui->input.mouse_motion) {
@@ -850,7 +789,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
                 // Update draw position, could probably combine this with above and
                 // only loop once.
-                for (int i=0; i<num_bodies/* num_bodies */; i++) {
+                for (int i=0; i<num_bodies; i++) {
                     if (bodies[i].node->id == drag_node->id) {
                         bodies[i].draw_position.x += gui->input.mouse_xrel;
                         bodies[i].draw_position.y += gui->input.mouse_yrel;
@@ -860,14 +799,15 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             }
         }
 
-    } else if (gui->dragging_state == GUI_DRAGGING_INPUT ||
-               gui->dragging_state == GUI_DRAGGING_OUTPUT) {
+    } else if (gui->state == GUI_DRAGGING_INPUT ||
+               gui->state == GUI_DRAGGING_OUTPUT) {
         if (gui->input.end_dragging) {
             // @TODO: Handle connecting the nodes here.
 
             // Connect input
             // @TODO: Check outputs too.
-            if (gui->dragging_state == GUI_DRAGGING_INPUT) {
+            // @TODO: Deal with what kind of nodes can connect to what kind of nodes.
+            if (gui->state == GUI_DRAGGING_INPUT) {
                 for (int i = 0; i < num_bodies/* num_bodies */; i++) {
                     // check if over a node.
                     if (bodies[i].node->id != gui->drag_target.from_id &&
@@ -875,7 +815,9 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                                     gui->input.mouse_x,
                                     gui->input.mouse_y) &&
                         (bodies[i].node->type == PREDICATE ||
-                         bodies[i].node->type == GATE)
+                         bodies[i].node->type == GATE ||
+                         bodies[i].node->type == CONSTANT ||
+                         bodies[i].node->type == SIGNAL)
                         ) {
                         // Connect input to this.
                         Node* input = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
@@ -889,58 +831,18 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 }
             }
 
-            gui->dragging_state = GUI_NOT_DRAGGING;
+            gui->state = GUI_NAH;
 
         } else {
             if (gui->input.mouse_motion) {
                 gui->drag_target.position.x = gui->input.mouse_x;
                 gui->drag_target.position.y = gui->input.mouse_y;
             }
-        }
-
-
-    } else if (gui->dragging_state == GUI_DRAGGING_CONSTANT) {
-        Node* node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
-        if (gui->input.end_dragging) {
-            // set the constant value.
-            node->constant = gui->drag_target.value;
-            gui->dragging_state = GUI_NOT_DRAGGING;
-
-        } else {
-            if (gui->input.mouse_motion) {
-                gui->drag_target.position.x = gui->input.mouse_x;
-                gui->drag_target.position.y = gui->input.mouse_y;
-            }
-            // Show what the number is. @TODO: Show some gui stuff which should
-            // maybe be moved to another place.
-            V2 diff = v2_minus(gui->drag_target.position, gui->drag_target.from_position);
-            float angle = atan2(-diff.y, diff.x) + 3.14159/4.0;   // angle is between 0 and pi/2
-            float scale_value = (clamp(angle, 0, 3.14159/2.0) / 3.14159/2.0) / 0.25;
-
-            // To get the right value I need to know what the signal we are comparing it to is....
-            // @TODO: need to know what signal I am comparing this to.
-            float value = (int)(scale_value * 700);
-            gui->drag_target.value = value;
-
-            // Debug draw dragging line.
-            nvgSave(gui->vg);
-            nvgBeginPath(gui->vg);
-            nvgMoveTo(gui->vg, gui->drag_target.from_position.x, gui->drag_target.from_position.y);
-            nvgLineTo(gui->vg, gui->drag_target.position.x, gui->drag_target.position.y);
-            nvgStrokeColor(gui->vg, nvgRGBf(0.3, 0.3, 1.0));
-            nvgStroke(gui->vg);
-            nvgRestore(gui->vg);
-
-            // Debug draw angle @TODO: a gameguy debug text drawing thing would be helpful.
-            char buf[64] = {'\0'};
-            snprintf(buf, 64, "angle: %f, scale_value: %f, value: %f", angle, scale_value, value);
-            debug_draw_text(gui->vg, gui->drag_target.from_position.x,
-                            gui->drag_target.from_position.y - 35, 14, buf);
         }
     }
 
     // Draw gui elements.
-    for (int i=0; i<num_bodies/* num_bodies */; i++) {
+    for (int i=0; i<num_bodies; i++) {
         char buf[256] = {'\0'};
         NodeBounds body = bodies[i];
         Node node = *body.node;
@@ -990,42 +892,28 @@ gui_nodes(GUIState* gui, NodeStore* ns)
         } break;
 
         case PREDICATE: {
-            Node* lhs = nodestore_get_node_by_id(ns, node.input.lhs);
-            Node* rhs = nodestore_get_node_by_id(ns, node.input.rhs);
-            node_get_text(&node, buf, 256, lhs, rhs);
+            node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
-
-            // @TODO: all of these should return events instead of mutate!
-            // Buttons!
-            if (lhs->type == SIGNAL) {
-                if (gui_button(*gui, body.draw_position.x+5, body.draw_position.y+20, 5, 5)) {
-                    lhs->signal = signal_next(lhs->signal);
-                }
-            } else {
-                // Constant.
-                // @TODO: Draw something for editing other than the current debug stuff drawn above.
-            }
 
             V2 center = bb_center(body.bb);
             if (gui_button(*gui, center.x-2.5, body.bb.top_left.y+25, 5, 5)) {
-                // toggle pred
                 bodies[i].node->predicate = predicate_next(node.predicate);
             }
-
-            if (rhs->type == SIGNAL) {
-                if (gui_button(*gui, body.bb.bottom_right.x-10, body.bb.top_left.y+20, 5, 5)) {
-                    rhs->signal = signal_next(rhs->signal);
-                }
-            } else {
-                // Constant.
-                // @TODO: Draw something for editing other than the current debug stuff drawn above.
-            }
+            
         } break;
 
-        case SIGNAL:
+        case CONSTANT:
+            node_get_text(&node, buf, 256, NULL, NULL);
+            draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
             break;
 
-        case CONSTANT:
+        case SIGNAL:
+            node_get_text(&node, buf, 256, NULL, NULL);
+            draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
+
+            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 5, 5)) {
+                bodies[i].node->signal = signal_next(node.signal);
+            }
             break;
 
         case GATE: {
@@ -1087,14 +975,12 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
     // Debug drawing
     debug_draw_nodebounds(gui->vg, bodies, num_bodies);
-    debug_draw_nodebounds(gui->vg, constants, num_constants);
     debug_draw_nodebounds(gui->vg, inputs, num_inputs);
     debug_draw_nodebounds(gui->vg, outputs, num_outputs);
 
     // debug draw drag target.
-    if (gui->dragging_state == GUI_DRAGGING_INPUT ||
-        gui->dragging_state == GUI_DRAGGING_OUTPUT ||
-        gui->dragging_state == GUI_DRAGGING_CONSTANT) {
+    if (gui->state == GUI_DRAGGING_INPUT ||
+        gui->state == GUI_DRAGGING_OUTPUT) {
         NVGcolor color = nvgRGBf(0.0, 1.0, 1.0);
         nvgSave(gui->vg);
         nvgFillColor(gui->vg, color);
@@ -1195,6 +1081,9 @@ ship_get_signal(const Ship* ship, Signal signal)
 int
 node_eval_sub_node(const Node* node, const Ship* ship)
 {
+    if (node == NULL) {
+        return 0;
+    }
     if (node->type == SIGNAL) {
         return ship_get_signal(ship, node->signal);
     } else { // Constant
@@ -1408,23 +1297,30 @@ game_update_and_render(void* gamestate,
     state->gui.input = input;
 
     // Update Gui
-    if (gui_button(state->gui, 10, 10, 50, 25)) {
-        int a = nodestore_add_constant(&state->node_store, 0, 0, 0);
-        int b = nodestore_add_signal(&state->node_store, 0, 0, POS_X);
-        int c = nodestore_add_predicate(&state->node_store, 10, 45, EQ);
-        Node* node_c = nodestore_get_node_by_id(&state->node_store, c);
-        node_c->input.rhs = a;
-        node_c->input.lhs = b;
 
-        log_info("adding predicate node");
+    // @TODO: All kinds of gates!
+    if (gui_button(state->gui, 10, 10, 50, 25)) {
+        nodestore_add_signal(&state->node_store, 10, 45, POS_X);
+        log_info("adding signal node");
     }
 
     if (gui_button(state->gui, 70, 10, 50, 25)) {
+
+        nodestore_add_constant(&state->node_store, 10, 45, 0);
+        log_info("adding constant node");
+    }
+
+    if (gui_button(state->gui, 130, 10, 50, 25)) {
+        nodestore_add_predicate(&state->node_store, 10, 45, EQ);
+        log_info("adding predicate node");
+    }
+
+    if (gui_button(state->gui, 190, 10, 50, 25)) {
         nodestore_add_gate(&state->node_store, 10, 45, AND);
         log_info("adding gate node");
     }
 
-    if (gui_button(state->gui, 130, 10, 50, 25)) {
+    if (gui_button(state->gui, 250, 10, 50, 25)) {
         nodestore_add_thruster(&state->node_store, 10, 45, BOOST);
         log_info("adding thruster node");
     }
