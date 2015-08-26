@@ -69,7 +69,7 @@ typedef struct {
     // @TODO: Add another index for the topological sort. Makes evaluation faster.
 } NodeStore;
 
-
+// @NOTE: I feel great about the nodestore, I don't feel good about the UI code.
 typedef struct {
     Node* node;
     BoundingBox bb;
@@ -84,37 +84,26 @@ typedef struct {
     NodeEventType type;
 } NodeEvent;
 
-/* typedef enum {GUI_NOT_DRAGGING, */
-/*               GUI_DRAGGING_NODE, */
-/*               GUI_DRAGGING_INPUT, */
-/*               GUI_DRAGGING_OUTPUT, */
-/*               GUI_DRAGGING_CONSTANT} DraggingState; */
-
 typedef enum {GUI_NAH,
               GUI_DRAGGING_NODE,
               GUI_DRAGGING_INPUT,
               GUI_DRAGGING_OUTPUT,
-              GUI_EDITING_NODE} GUI_State;
+              GUI_DRAGGING_SLIDER} GUI_State;
+
+typedef enum {DT_NAH,
+              DT_BODY,
+              DT_OUTPUT,
+              DT_INPUT,
+              DT_SLIDER} DragTarget_Type;
 
 typedef struct {
-    int id;
-    int value;
-} NodeEdit;
-
-// @TODO: maybe break this out for different things we're dragging.
-typedef struct {
+    DragTarget_Type type;
     int from_id;
     int from_input_num;
     V2 from_position; // can calculate from from_id but meh...
     V2 position;
     int value;
 } DragTarget;
-
-/* typedef struct { */
-/*     gg_Input input; */
-/*     GUIState gui_state; */
-/*     DragTarget drag_target; */
-/* } GUIState;  */
 
 typedef struct {
     NVGcontext* vg;

@@ -682,6 +682,8 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     NodeBounds inputs[256] = {};
     size_t num_outputs = 0;
     NodeBounds outputs[256] = {};
+    size_t num_sliders = 0;
+    NodeBounds sliders[256] = {};
 
     // Collect collision data.
     for (int i=0; i<ns->count; i++) {
@@ -753,13 +755,43 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 inputs[num_inputs++] = input;
             }
         }
+
+        // Slider bounds
+        if (ns->nodes[i].type == CONSTANT) {
+            float height = body.bb.bottom_right.y - body.bb.top_left.y;
+            float slider_basey = body.bb.bottom_right.y + height * 0.25;
+            float slider_basex = body.bb.bottom_right.x + 5.0;
+            float slider_length = height * 1.5;
+
+            // @TODO: Don't just have the slider go from 0 to 700 because that's the max val
+            // needed. Have the slider range be dependent on the nodes depending on it.
+            // position is from the bottom.
+            int current_value = ns->nodes[i].constant;
+            float slider_percent = (float)current_value / 700;
+            float slider_position = slider_length * slider_percent;
+
+            V2 slider_node_position = v2(slider_basex,
+                                         slider_basey - slider_position);
+
+            BoundingBox slider_bb = boundingBox(v2_minus(slider_node_position, v2(4, 2)), 12, 8);
+            NodeBounds slider = {};
+            slider.node = &ns->nodes[i];
+            slider.bb = slider_bb;
+            slider.draw_position = slider.bb.top_left;
+            sliders[num_sliders++] = slider;
+        }
+        
     }
 
     // Handle current gui state.
     if (gui->state == GUI_NAH) {
         if (gui->input.start_dragging) {
             // Find what we are dragging.
-            bool found = nb_is_dragging(gui, outputs, num_outputs, GUI_DRAGGING_OUTPUT);
+            bool found = nb_is_dragging(gui, sliders, num_sliders, GUI_DRAGGING_SLIDER);
+            
+            if (!found) {
+                found = nb_is_dragging(gui, outputs, num_outputs, GUI_DRAGGING_OUTPUT);
+            }
 
             if (!found) {
                 found = nb_is_dragging(gui, inputs, num_inputs, GUI_DRAGGING_INPUT);
@@ -839,6 +871,42 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 gui->drag_target.position.y = gui->input.mouse_y;
             }
         }
+    } else if (gui->state == GUI_DRAGGING_SLIDER) {
+        if (gui->input.end_dragging) {
+            gui->state = GUI_NAH;
+            
+        } else {
+            if (gui->input.mouse_motion) {
+                Node* constant_node = nodestore_get_node_by_id(ns, gui->drag_target.from_id);
+
+                // @NOTE: Grab the body (this is done a few places, maybe in bodies we need
+                // support for grabbing a body by id.
+                for (int i=0; i<num_bodies; i++) {
+                    if (bodies[i].node->id == constant_node->id) {
+
+                        // @TODO: There's a problem in that I don't get full resolution in the
+                        // slider because the slider isn't 700 pixels long. Need a way to
+                        // finetune the value to any number.
+                        NodeBounds body = bodies[i];
+
+                        float height = body.bb.bottom_right.y - body.bb.top_left.y;
+                        float slider_basey = body.bb.bottom_right.y + height * 0.25;
+                        float slider_length = height * 1.5;
+
+                        float new_slider_y = gui->input.mouse_y;
+                        float new_slider_height = CLAMP(slider_basey - new_slider_y,
+                                                        0.0,
+                                                        slider_length);
+                        float new_slider_percent = new_slider_height / slider_length;
+
+                        float new_slider_value = new_slider_percent * 700.0;
+                        constant_node->constant = new_slider_value;
+                        break;
+                    }
+                }
+                
+            }
+        }
     }
 
     // Draw gui elements.
@@ -902,6 +970,9 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             
         } break;
 
+            // @TODO: Add a slider for editing the value. This is kind of hard because it's
+            // a drag target and we need to make sure it's the one being dragged.
+            // I guess I just draw it here, and I handle the input stuff above?
         case CONSTANT:
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
@@ -977,6 +1048,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     debug_draw_nodebounds(gui->vg, bodies, num_bodies);
     debug_draw_nodebounds(gui->vg, inputs, num_inputs);
     debug_draw_nodebounds(gui->vg, outputs, num_outputs);
+    debug_draw_nodebounds(gui->vg, sliders, num_sliders);
 
     // debug draw drag target.
     if (gui->state == GUI_DRAGGING_INPUT ||
@@ -1450,9 +1522,7 @@ game_update_and_render(void* gamestate,
              state->player_ship.position.y,
              state->player_ship.rotation);
 
-    debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);
-
-    
+    debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);    
 }
 
 const gg_Game gg_game_api = {
