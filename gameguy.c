@@ -85,12 +85,18 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
             // @NOTE: might want zooming
         case SDL_MOUSEBUTTONDOWN:
             /* log_info("mouse down"); */
-            input_state->click = true;
+            input_state->down_time = SDL_GetTicks();
+            /* input_state->click = true; */
             input_state->start_dragging = true;
             input_state->is_dragging = true;
             break;
 
         case SDL_MOUSEBUTTONUP:
+            if (!input_state->holding) {
+                input_state->click = true;
+            }
+            input_state->down_time = 0;
+            input_state->holding = false;
             input_state->end_dragging = true;
             input_state->is_dragging = false;
             break;
@@ -219,6 +225,14 @@ int main(int argc, char* argv[])
                 running = false;
             }
         }
+
+        // Decide if the mouse is being held down?
+        if (input.down_time != 0) {
+            if (SDL_GetTicks() - input.down_time > 500) {
+                input.holding = true;
+            }
+        }
+
         if (other_events_this_tick > 0) {
             /* log_info("%d unhandled events this tick.",
                other_events_this_tick); */

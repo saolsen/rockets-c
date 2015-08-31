@@ -47,6 +47,7 @@ v2_minus(const V2 i, const V2 j)
               i.y - j.y);
 }
 
+
 V2
 v2_scale(const V2 v, const float f)
 {
@@ -256,7 +257,7 @@ nodestore_destory_node(NodeStore* ns, int id)
     }
 
     // Fix all pointers, if a pointer pointed to this node set it to 0;
-    for(int i = 0; i < ns->count; i++) {
+    for (int i = 0; i < ns->count; i++) {
         if (ns->nodes[i].input.lhs == id) {
             ns->nodes[i].input.lhs = 0;
         }
@@ -970,12 +971,23 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             
         } break;
 
-            // @TODO: Add a slider for editing the value. This is kind of hard because it's
-            // a drag target and we need to make sure it's the one being dragged.
-            // I guess I just draw it here, and I handle the input stuff above?
         case CONSTANT:
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
+
+            // @TODO: Handle making the value change faster based on how long it has been
+            //        held down.
+            V2 center = bb_center(body.bb);
+            if (gui_button(*gui, center.x+10, center.y-10, 5, 5)) {
+                // Up
+                body.node->constant++;
+            }
+
+            if (gui_button(*gui, center.x+10, center.y+10, 5, 5)) {
+                // Down
+                body.node->constant--;
+            }
+            
             break;
 
         case SIGNAL:
@@ -1344,8 +1356,6 @@ game_setup(void* game_state, NVGcontext* vg)
     // Assert that the font got loaded.
     assert(font >= 0);
 
-    /* nodestore_init(&state->node_store, 5); */
-
     gamestate_load_level_three(state);
 
     return state;
@@ -1400,16 +1410,11 @@ game_update_and_render(void* gamestate,
     // @TODO: It is very unfortunate that rendering happens in here....
     // I can probably do this return events system if I want to. Don't know if I need to though.
     NodeEvent event = gui_nodes(&state->gui, &state->node_store);
-
-
     
     switch(event.type) {
     case NE_NAH:
         break;
     }
-
-    // @TODO: decide if you want a pause.
-    /* state->running = true; */
 
     // Reset button
     // @TODO: reset the whole level not just the ship.

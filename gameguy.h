@@ -32,12 +32,15 @@
 
 // Interface with Game.
 typedef struct {
+    int down_time; // ms, used internally.
+    
     int mouse_x;
     int mouse_y;
     int mouse_xrel;
     int mouse_yrel;
     bool mouse_motion;
     bool click;
+    bool holding;
     bool start_dragging;
     bool is_dragging;
     bool end_dragging;
