@@ -1,12 +1,17 @@
 // @TODO: @IMPORTANT: JUST DO IT
 // think next could be more levels? collision detection?
 
+#include <stdlib.h>
+#include <stdio.h>
 #include <math.h>
-#include "gameguy.h"
-#include "game.h"
+#include <assert.h>
+#include <string.h>
+
+#include "gameguy.hpp"
+#include "game.hpp"
 
 // this is strait up taken from stb.h which I couldn't figure out how to include
-#define CLAMP(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
+#define CLAMP(x,xmin,xmax) ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
 #define ARRAY_COUNT(x) (sizeof(x) / sizeof(x[0]))
 
 static const int X_PADDING = 12.0;
@@ -25,13 +30,18 @@ v2(float x, float y)
     return (V2){.x = x, .y = y};
 }
 
-
 V2
-v2_plus(const V2 i, const V2 j)
+operator+(V2 i, V2 j)
 {
     return v2(i.x + j.x,
               i.y + j.y);
 }
+
+// V2
+// v2_plus(const V2 i, const V2 j)
+// {
+    
+// }
 
 
 V2
@@ -70,7 +80,7 @@ v2_rotate(const V2 v, const float radians)
 BoundingBox
 boundingBox(V2 top_left, float width, float height)
 {
-    return (BoundingBox){top_left, v2_plus(top_left, v2(width, height))};
+    return (BoundingBox){top_left, top_left + v2(width, height)};
 }
 
 
@@ -602,7 +612,7 @@ bb_blow_up(BoundingBox bb)
 // draws a button there, if there was a click of it this frame returns true
 // @TODO: Text
 bool
-gui_button_with_text(GUIState gui, float x, float y, float width, float height, char* txt) {
+gui_button_with_text(GUIState gui, float x, float y, float width, float height, const char* txt) {
     ButtonState bs = BS_NAH;
 
     if (bounds_contains(x, y, x+width, y+height, gui.input.mouse_x, gui.input.mouse_y)) {
@@ -1102,27 +1112,27 @@ ship_move(Ship* ship, float dt)
     int rotation = 0;
 
     if (ship->thrusters.bp) {
-        force = v2_plus(force, v2(1, 0));
+        force = force + v2(1, 0);
         rotation -= 1;
     }
 
     if (ship->thrusters.bs) {
-        force = v2_plus(force, v2(-1, 0));
+        force = force + v2(-1, 0);
         rotation += 1;
     }
 
     if (ship->thrusters.sp) {
-        force = v2_plus(force, v2(1, 0));
+        force = force +v2(1, 0);
         rotation += 1;
     }
 
     if (ship->thrusters.ss) {
-        force = v2_plus(force, v2(-1, 0));
+        force = force + v2(-1, 0);
         rotation -= 1;
     }
 
     if (ship->thrusters.boost) {
-        force = v2_plus(force, v2(0, 5));
+        force = force + v2(0, 5);
     }
 
     V2 abs_force = v2_rotate(force, deg_to_rad(ship->rotation));
@@ -1336,7 +1346,7 @@ gamestate_load_level_three(GameState* state) {
 }
 
 
-static void*
+extern "C" void*
 game_setup(void* game_state, NVGcontext* vg)
 {
     log_info("Setting up game");
@@ -1356,7 +1366,7 @@ game_setup(void* game_state, NVGcontext* vg)
 }
 
 
-static void
+extern "C" void
 game_update_and_render(void* gamestate,
                        NVGcontext* vg,
                        gg_Input input,
@@ -1412,7 +1422,7 @@ game_update_and_render(void* gamestate,
 
     // Reset button
     // @TODO: reset the whole level not just the ship.
-    char* reset = "Reset";
+    const char* reset = "Reset";
     if (gui_button_with_text(state->gui, 660, 2.5, 10, 5, reset)) {
             state->player_ship.position.x = 300;
             state->player_ship.position.y = 99;
@@ -1525,7 +1535,7 @@ game_update_and_render(void* gamestate,
     debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);    
 }
 
-const gg_Game gg_game_api = {
+extern "C" const gg_Game gg_game_api = {
     .gamestate_size = sizeof(GameState),
     .init = game_setup,
     .update_and_render = game_update_and_render

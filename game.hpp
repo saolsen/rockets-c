@@ -1,15 +1,21 @@
 #ifndef _game_h
 #define _game_h
 
+#include <stdlib.h>
+#include "gameguy.hpp"
+
 typedef union {
-    struct {float x; float y;};
-    float arr[2];
+    struct {
+        float x; 
+        float y;
+    };
+    float e[2];
 } V2;
 
-typedef struct BoundingBox {
+struct BoundingBox {
     V2 top_left;
     V2 bottom_right;
-} BoundingBox;
+};
 
 // @TODO: Some day you're gonna want math, that's gonna be a lot of work.
 // Rule Nodes
@@ -19,21 +25,21 @@ typedef enum { LT, GT, LEQT, GEQT, EQ, NEQ }                 Predicate;
 typedef enum { POS_X, POS_Y, ROTATION }                      Signal;
 typedef enum { AND, OR, NOT }                                Gate;
 
-typedef struct Thrusters {
+struct Thrusters {
     bool bp;
     bool bs;
     bool sp;
     bool ss;
     bool boost;
-} Thrusters;
+};
 
-typedef struct Ship {
+struct Ship {
     V2 position;
     int rotation;
     Thrusters thrusters;
-} Ship;
+};
 
-typedef struct Node {
+struct Node {
     int id;
     NodeType type;
     V2 position;
@@ -54,10 +60,10 @@ typedef struct Node {
     };
 
     struct Node* next_in_hash;
-} Node;
+};
 
 
-typedef struct {
+struct NodeStore {
     int count;
     int last_id; // last_id because we start with 1, increment before using.
     Node nodes[256];
@@ -67,22 +73,22 @@ typedef struct {
     Node* id_hash[128];
 
     // @TODO: Add another index for the topological sort. Makes evaluation faster.
-} NodeStore;
+};
 
 // @NOTE: I feel great about the nodestore, I don't feel good about the UI code.
-typedef struct {
+struct NodeBounds {
     Node* node;
     BoundingBox bb;
     V2 draw_position;
     int input_index;
     Node* input_to;
-} NodeBounds;
+};
 
 typedef enum { NE_NAH } NodeEventType;
 
-typedef struct {
+struct NodeEvent{
     NodeEventType type;
-} NodeEvent;
+};
 
 typedef enum {GUI_NAH,
               GUI_DRAGGING_NODE,
@@ -96,21 +102,21 @@ typedef enum {DT_NAH,
               DT_INPUT,
               DT_SLIDER} DragTarget_Type;
 
-typedef struct {
+struct DragTarget {
     DragTarget_Type type;
     int from_id;
     int from_input_num;
     V2 from_position; // can calculate from from_id but meh...
     V2 position;
     int value;
-} DragTarget;
+};
 
-typedef struct {
+struct GUIState{
     NVGcontext* vg;
     gg_Input input;
     GUI_State state;
     DragTarget drag_target;
-} GUIState;
+};
 
 typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
 
@@ -118,7 +124,7 @@ typedef enum {RUNNING, PAUSED, WON, DIED} LevelStatus;
 
 const int MAX_OBSTICLES = 256;
 
-typedef struct {
+struct GameState {
     GUIState gui;
     NodeStore node_store;
     Ship player_ship;
@@ -132,6 +138,6 @@ typedef struct {
     LevelStatus status;
     char* DeathReason;
 
-} GameState;
+};
 
 #endif

@@ -1,16 +1,23 @@
-#include <SDL2/SDL.h>
-#include <OpenGL/gl3.h>
-
-#include <stdlib.h>
-#include <stdbool.h>
 // @TODO: Do reloading in a platform independent way.
 #include <dlfcn.h>
 // @TODO: Do random numbers in a platform independent way.
 #include <time.h>
 
-#include "gameguy.h"
+// @TODO: Figure out what of this stuff we can ditch.
+#include <stdbool.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <assert.h>
+#include <math.h>
+#include <sys/stat.h>
+
+#include <SDL2/SDL.h>
+#include <OpenGL/gl3.h>
+
+#include "gameguy.hpp"
 #define NANOVG_GL3_IMPLEMENTATION
-#include "nanovg_gl.h"
+#include "nanovg/src/nanovg_gl.h"
 
 // @TODO: Include in game config object.
 // @TODO: Screen resizing does not work.
@@ -22,7 +29,7 @@ typedef struct gg_CurrentGame {
 } gg_CurrentGame;
 
 void
-game_reload(gg_CurrentGame* current_game, char* library)
+game_reload(gg_CurrentGame* current_game, const char* library)
 {
     struct stat attr;
     if ((stat(library, &attr) == 0) && (current_game->id != attr.st_ino)) {
@@ -38,7 +45,7 @@ game_reload(gg_CurrentGame* current_game, char* library)
             current_game->handle = handle;
             current_game->id = attr.st_ino;
 
-            gg_Game* game = dlsym(handle, "gg_game_api");
+            gg_Game* game = (gg_Game*)dlsym(handle, "gg_game_api");
             if (game != NULL) {
                 current_game->game = *game;
                 log_info("Reloaded Game Library");
@@ -137,7 +144,7 @@ int main(int argc, char* argv[])
 {
 
     gg_CurrentGame current_game;
-    char* game_library = "libgame.dylib";
+    const char* game_library = "libgame.dylib";
     game_reload(&current_game, game_library);
 
     // @TODO: Figure out a better way to do random numbers.

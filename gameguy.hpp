@@ -1,18 +1,13 @@
 #ifndef _gameguy_h
 #define _gameguy_h
 
-#include <stdbool.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <math.h>
-#include <sys/stat.h>
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 // @TODO: Make this cross platform.
-#include <OpenGL/gl3.h>
-
-#include "nanovg.h"
+//#include <OpenGL/gl3.h>
+#include "nanovg/src/nanovg.h"
 
 // Libraries being used
 // nanovg
@@ -57,5 +52,9 @@ typedef struct {
 } gg_Game;
 
 extern const gg_Game gg_game_api;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
