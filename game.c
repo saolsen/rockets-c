@@ -1,12 +1,6 @@
 // @TODO: @IMPORTANT: JUST DO IT
 // think next could be more levels? collision detection?
 
-// Some stuff I want to do.
-// Break the nodes into more pieces, math nodes.
-// Figure out how to make the UI not suck.
-// Sort nodes topolocically so eval is *fast*.
-// Work on some more levels.
-
 #include <math.h>
 #include "gameguy.h"
 #include "game.h"
@@ -22,8 +16,8 @@ const char*
 bool_string(bool b)
 {
     return b ? "true" : "false";
-}
 
+}
 
 V2
 v2(float x, float y)
@@ -68,6 +62,7 @@ v2_rotate(const V2 v, const float radians)
 {
     float nx = v.x * cos(radians) - v.y * sin(radians);
     float ny = v.x * sin(radians) + v.y * cos(radians);
+
     return v2(nx, ny);
 }
 
@@ -446,6 +441,8 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
 void
 debug_draw_bb(NVGcontext* vg, NVGcolor color, BoundingBox bb)
 {
+    
+
     nvgSave(vg);
     nvgStrokeColor(vg, color);
     nvgBeginPath(vg);
@@ -483,7 +480,6 @@ debug_draw_nodebounds(NVGcontext* vg, NodeBounds* nb, size_t num_nb)
         NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
         debug_draw_bb(vg, color, nb[i].bb);
     }
-
 }
 
 // todo(stephen): The bounds checking is shared with node_calc_bounding_box
@@ -781,7 +777,6 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             slider.draw_position = slider.bb.top_left;
             sliders[num_sliders++] = slider;
         }
-        
     }
 
     // Handle current gui state.
@@ -971,7 +966,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             
         } break;
 
-        case CONSTANT:
+        case CONSTANT: {
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
 
@@ -987,17 +982,16 @@ gui_nodes(GUIState* gui, NodeStore* ns)
                 // Down
                 body.node->constant--;
             }
-            
-            break;
+        } break;
 
-        case SIGNAL:
+        case SIGNAL: {
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
 
             if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 5, 5)) {
                 bodies[i].node->signal = signal_next(node.signal);
             }
-            break;
+        } break;
 
         case GATE: {
             node_get_text(&node, buf, 256, NULL, NULL);
@@ -1418,7 +1412,8 @@ game_update_and_render(void* gamestate,
 
     // Reset button
     // @TODO: reset the whole level not just the ship.
-    if (gui_button_with_text(state->gui, 660, 2.5, 10, 5, "Reset")) {
+    char* reset = "Reset";
+    if (gui_button_with_text(state->gui, 660, 2.5, 10, 5, reset)) {
             state->player_ship.position.x = 300;
             state->player_ship.position.y = 99;
             state->player_ship.rotation = 0;
