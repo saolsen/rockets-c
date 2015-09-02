@@ -19,9 +19,6 @@ bool_string(bool b)
 
 }
 
-static const int X_PADDING = 12.0;
-static const int Y_PADDING = 12.0;
-
 /* Rendering */
 
 void
@@ -84,6 +81,9 @@ debug_draw_nodebounds(NVGcontext* vg, NodeBounds* nb, size_t num_nb)
         debug_draw_bb(vg, color, nb[i].bb);
     }
 }
+
+int X_PADDING = 12.0;
+int Y_PADDING = 12.0;
 
 // todo(stephen): The bounds checking is shared with node_calc_bounding_box
 // pull that part out.
@@ -1339,20 +1339,12 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     return (NodeEvent){.type = NE_NAH};
 }
 
-
-static void*
-game_setup(void* game_state, NVGcontext* vg)
-{
-    log_info("Setting up game");
-    GameState* state = (GameState*)game_state;
-
-    // @TODO: If you have more than one font you need to store a
-    // reference to this.
-    int font = nvgCreateFont(vg,
-                             "basic",
-                             "SourceSansPro-Regular.ttf");
-    // Assert that the font got loaded.
-    assert(font >= 0);
+void
+setup_level(GameState* state) {
+    // @NOTE: zero entities out.
+    memset(state->entities, 0, sizeof(Entity) * ARRAY_COUNT(state->entities));
+    state->num_entities = 0;
+    state->first_free_entity = NULL;
 
     Entity* ship = push_entity(state);
     ship->type = EntityType_SHIP;
@@ -1367,6 +1359,24 @@ game_setup(void* game_state, NVGcontext* vg)
     goal->rotation = 0;
 
     state->current_level = 1;
+}
+
+
+static void*
+game_setup(void* game_state, NVGcontext* vg)
+{   
+    log_info("Setting up game");
+    GameState* state = (GameState*)game_state;
+
+    // @TODO: If you have more than one font you need to store a
+    // reference to this.
+    int font = nvgCreateFont(vg,
+                             "basic",
+                             "SourceSansPro-Regular.ttf");
+    // Assert that the font got loaded.
+    assert(font >= 0);
+
+    setup_level(state);
 
     return state;
 }
@@ -1397,7 +1407,6 @@ game_update_and_render(void* gamestate,
     }
 
     if (gui_button(state->gui, 70, 10, 50, 25)) {
-
         nodestore_add_constant(&state->node_store, 10, 45, 0);
         log_info("adding constant node");
     }
@@ -1426,7 +1435,67 @@ game_update_and_render(void* gamestate,
         break;
     }
 
-    // Update and Render
+    char* reset = "Reset";
+    if (gui_button_with_text(state->gui, 660, 2.5, 10, 5, reset)) {
+        setup_level(state);
+    }
+
+    if (state->status == RUNNING) {
+        // Update Entities
+        for (int i = 0; i < state->num_entities; i++) {
+            Entity* entity = state->entities + i;
+            switch(entity->type) {
+
+            case (EntityType_NAH): {
+                // Nah
+            } break;
+
+            case (EntityType_SHIP): {
+                // Update Ship
+
+                // @TODO: Sort thrusters before
+                Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
+                                                                   entity);
+                entity->thrusters = new_thrusters;
+                ship_move(entity, dt);
+
+
+                // @HARDCODE: Fix with collision detection.
+                // Goal is at (500, 600)
+                if (bounds_contains(500 - 10,
+                                    600 - 10,
+                                    500 + 10,
+                                    600 + 10,
+                                    entity->position.x, entity->position.y)) {
+                    // Won the level!
+                    state->status = WON;
+                }
+
+                // @TODO: pull this out, this is hella useful.
+                // debug print
+                char buf2[64] = {'\0'};
+
+                snprintf(buf2, 64, "position: (%f, %f), rotation: %d",
+                         entity->position.x,
+                         entity->position.y,
+                         entity->rotation);
+
+                debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);    
+                
+            } break;
+
+            case (EntityType_BOUNDRY): {
+
+            } break;
+
+            case (EntityType_GOAL): {
+
+            } break;
+            }
+        }
+    }
+
+     // Render
 
     // Space background!
     nvgBeginPath(vg);
@@ -1450,10 +1519,7 @@ game_update_and_render(void* gamestate,
         nvgTranslate(vg, 660, 10);
         nvgTranslate(vg, 0, 700);
 
-        // @TODO: Make the renderer better so I don't have to update them from in here and can
-        //        have a seperate update step.
-
-        // Update Entities
+        // Render Entities
         for (int i = 0; i < state->num_entities; i++) {
             Entity* entity = state->entities + i;
             switch(entity->type) {
@@ -1463,26 +1529,6 @@ game_update_and_render(void* gamestate,
             } break;
 
             case (EntityType_SHIP): {
-                // Update Ship
-                if (state->status == RUNNING) {
-                    // @TODO: Sort thrusters before
-                    Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
-                                                                       entity);
-                    entity->thrusters = new_thrusters;
-                    ship_move(entity, dt);
-                }
-
-                // @HARDCODE: Fix with collision detection.
-                // Goal is at (500, 600)
-                if (bounds_contains(500 - 10,
-                                    600 - 10,
-                                    500 + 10,
-                                    600 + 10,
-                                    entity->position.x, entity->position.y)) {
-                    // Won the level!
-                    state->status = WON;
-                }
-
                 // Draw Ship
                 nvgSave(vg);
                 {
@@ -1495,17 +1541,6 @@ game_update_and_render(void* gamestate,
                               false);
                 }
                 nvgRestore(vg);
-
-                // @TODO: pull this out, this is hella useful.
-                // debug print
-                char buf2[64] = {'\0'};
-
-                snprintf(buf2, 64, "position: (%f, %f), rotation: %d",
-                         entity->position.x,
-                         entity->position.y,
-                         entity->rotation);
-
-                debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);    
                 
             } break;
 

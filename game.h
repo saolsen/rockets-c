@@ -117,11 +117,20 @@ typedef enum {EntityType_NAH,
 typedef enum {EntityFlag_COLLIDES = (1 << 0)} EntityFlag;
 
 // Start with a special case of just having all collision geometry be rectangles.
-// Need width, height, offset from the entity position and a rotation.
 // For now going to have rotation be about the entitiy's position. Makes math easy
 // and seems to make sense for things that are going to move around.
+
+// @NOTE: This is basically the same as bounding box but the names are different because this is
+// a different way to describe a rectangle.
 typedef struct {
-    
+    union {
+        struct {float x, y;};
+        V2 offset;
+    };
+    union {
+        struct {float width, height; };
+        V2 size;
+    };
 } CollisionRect;
 
 typedef struct entity_ {
@@ -161,5 +170,7 @@ typedef struct {
     Entity entities[128];
     Entity* first_free_entity;
 } GameState;
+
+// NAH.
 
 #endif
