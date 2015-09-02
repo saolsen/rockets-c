@@ -9,22 +9,22 @@ NANOVG_I= -Inanovg/src
 NANOVG_LD= -Lnanovg/build -lnanovg
 
 # -Weverything -pedantic -Werror
-CXXFLAGS= $(NANOVG_I) -std=c++11 -g -Wall -O0 -fPIC `pkg-config --cflags sdl2`
+CFLAGS= $(NANOVG_I) -std=c11 -g -Wall -O0 -fPIC `pkg-config --cflags sdl2`
 LDFLAGS= $(NANOVG_LD) $(OPENGL_LIB) `pkg-config --libs sdl2`
 
 all: libgame.dylib rockets
 
-libgame.dylib: game.cpp game.hpp gameguy.hpp
-	c++ -dynamiclib -undefined dynamic_lookup $(CFLAGS) -o libgame.dylib game.cpp
+libgame.dylib: game.c game.h gameguy.h
+	clang -dynamiclib -undefined dynamic_lookup $(CFLAGS) -o libgame.dylib game.c
 
-rockets: gameguy.cpp gameguy.hpp
-	c++ $(CFLAGS) $(LDFLAGS) -o rockets gameguy.cpp
+rockets: gameguy.c gameguy.h
+	clang $(CFLAGS) $(LDFLAGS) -o rockets gameguy.c
 
 clean:
 	rm -r rockets* libgame*
 
 check-syntax:
-	c++ -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
+	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
 
 tags:
-	etags gameguy.cpp gameguy.hpp game.cpp nanovg/src/nanovg.h
+	etags gameguy.c gameguy.h game.c nanovg/src/nanovg.h
