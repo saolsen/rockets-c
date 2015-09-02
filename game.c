@@ -5,12 +5,12 @@
 #include "gameguy.h"
 #include "game.h"
 
-// this is strait up taken from stb.h which I couldn't figure out how to include
+static NVGcontext* gg_Debug_vg = NULL;
+
+/* Util */
+
 #define CLAMP(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
 #define ARRAY_COUNT(x) (sizeof(x) / sizeof(x[0]))
-
-static const int X_PADDING = 12.0;
-static const int Y_PADDING = 12.0;
 
 const char*
 bool_string(bool b)
@@ -18,6 +18,179 @@ bool_string(bool b)
     return b ? "true" : "false";
 
 }
+
+static const int X_PADDING = 12.0;
+static const int Y_PADDING = 12.0;
+
+/* Rendering */
+
+void
+draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
+{
+    if (parent) {
+        nvgSave(vg);
+        {
+            nvgStrokeColor(vg, nvgRGBf(200.0, 200.0, 200.0));
+            nvgBeginPath(vg);
+            nvgTextLineHeight(vg, 100);
+            nvgMoveTo(vg, node->position.x, node->position.y);
+            nvgLineTo(vg, parent->position.x, parent->position.y);
+            nvgStroke(vg);
+        }
+        nvgRestore(vg);
+    }
+}
+
+void
+debug_draw_bb(NVGcontext* vg, NVGcolor color, BoundingBox bb)
+{
+    
+
+    nvgSave(vg);
+    nvgStrokeColor(vg, color);
+    nvgBeginPath(vg);
+    nvgRect(vg,
+            bb.top_left.x,
+            bb.top_left.y,
+            bb.bottom_right.x-bb.top_left.x,
+            bb.bottom_right.y-bb.top_left.y);
+    nvgStroke(vg);
+    nvgRestore(vg);
+}
+
+void
+debug_draw_square(NVGcontext* vg, float x, float y)
+{
+    nvgBeginPath(vg);
+    nvgRect(vg, x, y, 1, 1);
+    nvgFill(vg);
+}
+
+void
+debug_draw_text(NVGcontext* vg, float x, float y, int size, const char* txt)
+{
+    nvgSave(vg);
+    nvgFontSize(vg, size);
+    nvgFillColor(vg, nvgRGBf(1, 1, 1));
+    nvgText(vg, x, y, txt, NULL);
+    nvgRestore(vg);
+}
+
+void
+debug_draw_nodebounds(NVGcontext* vg, NodeBounds* nb, size_t num_nb)
+{
+    for (int i = 0; i < num_nb; i++) {
+        NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
+        debug_draw_bb(vg, color, nb[i].bb);
+    }
+}
+
+// todo(stephen): The bounds checking is shared with node_calc_bounding_box
+// pull that part out.
+void
+draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
+{
+    nvgSave(vg);
+    {
+        // Setup Text
+        nvgFontSize(vg, 14);
+
+        // Get Text Bounds
+        float bounds[4];
+        nvgTextBounds(vg, x+X_PADDING, y+Y_PADDING, txt, NULL, bounds);
+
+        // Draw Background
+        nvgSave(vg);
+        {
+            nvgBeginPath(vg);
+            nvgRect(vg,
+                    bounds[0] - X_PADDING,
+                    bounds[1],
+                    bounds[2] - bounds[0] +  2 * X_PADDING,
+                    bounds[3] - bounds[1] +  2 * Y_PADDING);
+            nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
+            nvgFill(vg);
+        }
+        nvgRestore(vg);
+
+        // Draw Text
+        nvgFillColor(vg, nvgRGBf(1, 1, 1));
+        nvgText(vg, x+X_PADDING, y+2*Y_PADDING, txt, NULL);
+    }
+    nvgRestore(vg);
+}
+
+
+void
+draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
+{
+    nvgSave(vg);
+    {
+
+        if (grayscale) {
+            nvgFillColor(vg, nvgRGBf(1, 1, 1));
+        } else {
+            nvgFillColor(vg, nvgRGBf(1.0, 0.0, 0.0));
+        }
+
+        // Ship body
+        nvgBeginPath(vg);
+        nvgRect(vg, -10.0, -25.0, 20.0, 40.0);
+        nvgFill(vg);
+
+        nvgBeginPath(vg);
+        nvgRect(vg, -20.0, -5.0, 15.0, 30.0);
+        nvgFill(vg);
+
+        nvgBeginPath(vg);
+        nvgRect(vg, 5.0, -5.0, 15.0, 30.0);
+        nvgFill(vg);
+
+        // Ship thrusters
+        if (grayscale) {
+            nvgFillColor(vg, nvgRGBf(0.75, 0.75, 0.75));
+        } else {
+            nvgFillColor(vg, nvgRGBf(1.0, 1.0, 0.0));
+        }
+
+        if (thrusters.bp) {
+            nvgBeginPath(vg);
+            nvgRect(vg, -20.0, -25.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        if (thrusters.bs) {
+            nvgBeginPath(vg);
+            nvgRect(vg, 10.0, -25.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        if (thrusters.sp) {
+            nvgBeginPath(vg);
+            nvgRect(vg, -30.0, 15.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        if (thrusters.ss) {
+            nvgBeginPath(vg);
+            nvgRect(vg, 20.0, 15.0, 10, 10);
+            nvgFill(vg);
+        }
+
+        if (thrusters.boost) {
+            nvgBeginPath(vg);
+            nvgRect(vg, -17.5, 25.0, 10, 10);
+            nvgFill(vg);
+            nvgBeginPath(vg);
+            nvgRect(vg, 7.5, 25.0, 10, 10);
+            nvgFill(vg);
+        }
+    }
+
+    nvgRestore(vg);
+}
+
+/* Vectors */
 
 V2
 v2(float x, float y)
@@ -66,6 +239,7 @@ v2_rotate(const V2 v, const float radians)
     return v2(nx, ny);
 }
 
+/* Bounding Box */
 
 BoundingBox
 boundingBox(V2 top_left, float width, float height)
@@ -113,6 +287,19 @@ bb_size(BoundingBox bb)
     return v2(bb.bottom_right.x - bb.top_left.x,
               bb.bottom_right.y - bb.top_left.y);
 }
+
+// up the size of a bb by 1
+BoundingBox
+bb_blow_up(BoundingBox bb)
+{
+    bb.top_left.x -= 1;
+    bb.top_left.y -= 1;
+    bb.bottom_right.x += 2;
+    bb.bottom_right.y += 2;
+    return bb;
+}
+
+/* Nodes and Nodestore */
 
 // So it occurs to be that I can do this in a better way.
 // I can sort the nodes topologically so that all parents will be found
@@ -438,166 +625,244 @@ node_calc_bounding_box(NVGcontext* vg, const Node* node, const NodeStore* ns)
     return bb;
 }
 
-void
-debug_draw_bb(NVGcontext* vg, NVGcolor color, BoundingBox bb)
-{
-    
+/* Ship */
 
-    nvgSave(vg);
-    nvgStrokeColor(vg, color);
-    nvgBeginPath(vg);
-    nvgRect(vg,
-            bb.top_left.x,
-            bb.top_left.y,
-            bb.bottom_right.x-bb.top_left.x,
-            bb.bottom_right.y-bb.top_left.y);
-    nvgStroke(vg);
-    nvgRestore(vg);
+// @TODO: Make this just return a velocity and handle the real moving with the collision detection
+// code.
+void
+ship_move(Entity* ship, float dt)
+{
+    V2 force = v2(0.0, 0.0);
+    int rotation = 0;
+
+    if (ship->thrusters.bp) {
+        force = v2_plus(force, v2(1, 0));
+        rotation -= 1;
+    }
+
+    if (ship->thrusters.bs) {
+        force = v2_plus(force, v2(-1, 0));
+        rotation += 1;
+    }
+
+    if (ship->thrusters.sp) {
+        force = v2_plus(force, v2(1, 0));
+        rotation += 1;
+    }
+
+    if (ship->thrusters.ss) {
+        force = v2_plus(force, v2(-1, 0));
+        rotation -= 1;
+    }
+
+    if (ship->thrusters.boost) {
+        force = v2_plus(force, v2(0, 5));
+    }
+
+    V2 abs_force = v2_rotate(force, deg_to_rad(ship->rotation));
+    float speed = 50;
+
+    ship->position.x += abs_force.x*speed*dt;
+    ship->position.y += abs_force.y*speed*dt;
+    int new_rot = ship->rotation + rotation;
+    if (new_rot < 0) new_rot += 360;
+    ship->rotation = new_rot % 360;
 }
 
-void
-debug_draw_square(NVGcontext* vg, float x, float y)
+
+int
+ship_get_signal(const Entity* ship, Signal signal)
 {
-    nvgBeginPath(vg);
-    nvgRect(vg, x, y, 1, 1);
-    nvgFill(vg);
+    switch(signal) {
+    case POS_X:
+        return ship->position.x;
+        break;
+    case POS_Y:
+        return ship->position.y;
+        break;
+    case ROTATION:
+        return ship->rotation;
+        break;
+    }
+
+    //error
+    return -1;
 }
 
-void
-debug_draw_text(NVGcontext* vg, float x, float y, int size, const char* txt)
-{
-    nvgSave(vg);
-    nvgFontSize(vg, size);
-    nvgFillColor(vg, nvgRGBf(1, 1, 1));
-    nvgText(vg, x, y, txt, NULL);
-    nvgRestore(vg);
-}
 
-void
-debug_draw_nodebounds(NVGcontext* vg, NodeBounds* nb, size_t num_nb)
+int
+node_eval_sub_node(const Node* node, const Entity* ship)
 {
-    for (int i = 0; i < num_nb; i++) {
-        NVGcolor color = nvgRGBf(0.0, 1.0, 0.0);
-        debug_draw_bb(vg, color, nb[i].bb);
+    if (node == NULL) {
+        return 0;
+    }
+    if (node->type == SIGNAL) {
+        return ship_get_signal(ship, node->signal);
+    } else { // Constant
+        return node->constant;
     }
 }
 
-// todo(stephen): The bounds checking is shared with node_calc_bounding_box
-// pull that part out.
-void
-draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
+
+bool
+node_eval(const Node* node, const NodeStore* ns, const Entity* ship)
 {
-    nvgSave(vg);
-    {
-        // Setup Text
-        nvgFontSize(vg, 14);
+    if (NULL == node) {
+        return false;
+    }
 
-        // Get Text Bounds
-        float bounds[4];
-        nvgTextBounds(vg, x+X_PADDING, y+Y_PADDING, txt, NULL, bounds);
+    // SOME DEBUG PRINTING!
+    switch(node->type) {
+    case SIGNAL: {
+        // only a sub node
+    } break;
+    case CONSTANT: {
+        // only a sub node
+    } break;
+    case PREDICATE: {
+        int lhs = node_eval_sub_node(nodestore_get_node_by_id(ns,
+                                                              node->input.lhs),
+                                     ship);
+        int rhs = node_eval_sub_node(nodestore_get_node_by_id(ns,
+                                                              node->input.rhs),
+                                     ship);
 
-        // Draw Background
-        nvgSave(vg);
+        switch(node->predicate) {
+        case LT:
+            return lhs < rhs;
+            break;
+        case GT:
+            return lhs > rhs;
+            break;
+        case LEQT:
+            return lhs <= rhs;
+            break;
+        case GEQT:
+            return lhs >= rhs;
+            break;
+        case EQ:
+            return lhs == rhs;
+            break;
+        case NEQ:
+            return lhs != rhs;
+            break;
+        }
+    } break;
+    case GATE: {
+        bool lhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs),
+                             ns, ship);
+        bool rhs = false;
+
+        if (node->gate != NOT) {
+            rhs = node_eval(nodestore_get_node_by_id(ns, node->input.rhs),
+                            ns, ship);
+        }
+
+        switch(node->gate) {
+        case AND:
+            return lhs && rhs;
+            break;
+        case OR:
+            return lhs || rhs;
+            break;
+        case NOT:
+            return !lhs;
+            break;
+        }
+
+    } break;
+    case THRUSTER: {
+        return node_eval(nodestore_get_node_by_id(ns, node->parent), ns, ship);
+    } break;
+    }
+
+    // This is actually an error tho...
+    return false;
+
+}
+
+// @TODO: Store these in a topologically sorted order so I can just traverse them
+//        instead of recuing through them.
+Thrusters
+nodestore_eval_thrusters(const NodeStore* ns, const Entity* ship)
+{
+    Thrusters out_thrusters = {false, false, false, false, false};
+
+    // Iterate over thruster nodes
+    for (int i = 1; i <= ns->last_id; i++) {
+        Node* node = nodestore_get_node_by_id(ns, i);
+        if (!node) continue;
+        bool value = node_eval(node, ns, ship);
+
+        // @TODO: IF DEBUG
+        nvgSave(gg_Debug_vg);
         {
-            nvgBeginPath(vg);
-            nvgRect(vg,
-                    bounds[0] - X_PADDING,
-                    bounds[1],
-                    bounds[2] - bounds[0] +  2 * X_PADDING,
-                    bounds[3] - bounds[1] +  2 * Y_PADDING);
-            nvgFillColor(vg, nvgRGBf(0.5, 0.5, 0.5));
-            nvgFill(vg);
+            if (value) {
+                nvgFillColor(gg_Debug_vg, nvgRGBf(0,1,0));
+            } else {
+                nvgFillColor(gg_Debug_vg, nvgRGBf(1,0,0));
+            }
+            debug_draw_square(gg_Debug_vg, node->position.x-25, node->position.y);
         }
-        nvgRestore(vg);
+        nvgRestore(gg_Debug_vg);
 
-        // Draw Text
-        nvgFillColor(vg, nvgRGBf(1, 1, 1));
-        nvgText(vg, x+X_PADDING, y+2*Y_PADDING, txt, NULL);
+        if (node->type == THRUSTER) {
+            switch(node->thruster) {
+            case BP:
+                out_thrusters.bp |= value;
+                break;
+            case BS:
+                out_thrusters.bs |= value;
+                break;
+            case SP:
+                out_thrusters.sp |= value;
+                break;
+            case SS:
+                out_thrusters.ss |= value;
+                break;
+            case BOOST:
+                out_thrusters.boost |= value;
+                break;
+            }
+        }
     }
-    nvgRestore(vg);
+
+    return out_thrusters;
 }
 
+/* Entities */
 
 void
-draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
+entity_add_flags(Entity* entity, uint32_t flags)
 {
-    nvgSave(vg);
-    {
+    entity->flags |= flags;
+}
 
-        if (grayscale) {
-            nvgFillColor(vg, nvgRGBf(1, 1, 1));
-        } else {
-            nvgFillColor(vg, nvgRGBf(1.0, 0.0, 0.0));
-        }
+bool
+entity_has_flags_set(Entity* entity, uint32_t flags)
+{
+    return entity->flags & flags;
+}
 
-        // Ship body
-        nvgBeginPath(vg);
-        nvgRect(vg, -10.0, -25.0, 20.0, 40.0);
-        nvgFill(vg);
+/* Gamestate */
 
-        nvgBeginPath(vg);
-        nvgRect(vg, -20.0, -5.0, 15.0, 30.0);
-        nvgFill(vg);
-
-        nvgBeginPath(vg);
-        nvgRect(vg, 5.0, -5.0, 15.0, 30.0);
-        nvgFill(vg);
-
-        // Ship thrusters
-        if (grayscale) {
-            nvgFillColor(vg, nvgRGBf(0.75, 0.75, 0.75));
-        } else {
-            nvgFillColor(vg, nvgRGBf(1.0, 1.0, 0.0));
-        }
-
-        if (thrusters.bp) {
-            nvgBeginPath(vg);
-            nvgRect(vg, -20.0, -25.0, 10, 10);
-            nvgFill(vg);
-        }
-
-        if (thrusters.bs) {
-            nvgBeginPath(vg);
-            nvgRect(vg, 10.0, -25.0, 10, 10);
-            nvgFill(vg);
-        }
-
-        if (thrusters.sp) {
-            nvgBeginPath(vg);
-            nvgRect(vg, -30.0, 15.0, 10, 10);
-            nvgFill(vg);
-        }
-
-        if (thrusters.ss) {
-            nvgBeginPath(vg);
-            nvgRect(vg, 20.0, 15.0, 10, 10);
-            nvgFill(vg);
-        }
-
-        if (thrusters.boost) {
-            nvgBeginPath(vg);
-            nvgRect(vg, -17.5, 25.0, 10, 10);
-            nvgFill(vg);
-            nvgBeginPath(vg);
-            nvgRect(vg, 7.5, 25.0, 10, 10);
-            nvgFill(vg);
-        }
+Entity*
+push_entity(GameState* gamestate)
+{
+    Entity* new_entity;
+    if (gamestate->first_free_entity) {
+        new_entity = gamestate->first_free_entity;
+        gamestate->first_free_entity = new_entity->next_entity;
+    } else {
+        assert(gamestate->num_entities < ARRAY_COUNT(gamestate->entities));
+        new_entity = gamestate->entities + gamestate->num_entities++; 
     }
 
-    nvgRestore(vg);
+    // @TODO: Maybe clear the entity out.
+    return new_entity;
 }
 
-// up the size of a bb by 1
-BoundingBox
-bb_blow_up(BoundingBox bb)
-{
-    bb.top_left.x -= 1;
-    bb.top_left.y -= 1;
-    bb.bottom_right.x += 2;
-    bb.bottom_right.y += 2;
-    return bb;
-}
-
+/* GUI stuff */
 
 // draws a button there, if there was a click of it this frame returns true
 // @TODO: Text
@@ -1075,267 +1340,6 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 }
 
 
-static NVGcontext* gg_Debug_vg = NULL;
-
-// Rendering Code
-void
-draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
-{
-    if (parent) {
-        nvgSave(vg);
-        {
-            nvgStrokeColor(vg, nvgRGBf(200.0, 200.0, 200.0));
-            nvgBeginPath(vg);
-            nvgTextLineHeight(vg, 100);
-            nvgMoveTo(vg, node->position.x, node->position.y);
-            nvgLineTo(vg, parent->position.x, parent->position.y);
-            nvgStroke(vg);
-        }
-        nvgRestore(vg);
-    }
-}
-
-void
-ship_move(Ship* ship, float dt)
-{
-    V2 force = v2(0.0, 0.0);
-    int rotation = 0;
-
-    if (ship->thrusters.bp) {
-        force = v2_plus(force, v2(1, 0));
-        rotation -= 1;
-    }
-
-    if (ship->thrusters.bs) {
-        force = v2_plus(force, v2(-1, 0));
-        rotation += 1;
-    }
-
-    if (ship->thrusters.sp) {
-        force = v2_plus(force, v2(1, 0));
-        rotation += 1;
-    }
-
-    if (ship->thrusters.ss) {
-        force = v2_plus(force, v2(-1, 0));
-        rotation -= 1;
-    }
-
-    if (ship->thrusters.boost) {
-        force = v2_plus(force, v2(0, 5));
-    }
-
-    V2 abs_force = v2_rotate(force, deg_to_rad(ship->rotation));
-    float speed = 50;
-
-    ship->position.x += abs_force.x*speed*dt;
-    ship->position.y += abs_force.y*speed*dt;
-    int new_rot = ship->rotation + rotation;
-    if (new_rot < 0) new_rot += 360;
-    ship->rotation = new_rot % 360;
-}
-
-
-int
-ship_get_signal(const Ship* ship, Signal signal)
-{
-    switch(signal) {
-    case POS_X:
-        return ship->position.x;
-        break;
-    case POS_Y:
-        return ship->position.y;
-        break;
-    case ROTATION:
-        return ship->rotation;
-        break;
-    }
-
-    //error
-    return -1;
-}
-
-
-int
-node_eval_sub_node(const Node* node, const Ship* ship)
-{
-    if (node == NULL) {
-        return 0;
-    }
-    if (node->type == SIGNAL) {
-        return ship_get_signal(ship, node->signal);
-    } else { // Constant
-        return node->constant;
-    }
-}
-
-
-bool
-node_eval(const Node* node, const NodeStore* ns, const Ship* ship)
-{
-    if (NULL == node) {
-        return false;
-    }
-
-    // SOME DEBUG PRINTING!
-    switch(node->type) {
-    case SIGNAL: {
-        // only a sub node
-    } break;
-    case CONSTANT: {
-        // only a sub node
-    } break;
-    case PREDICATE: {
-        int lhs = node_eval_sub_node(nodestore_get_node_by_id(ns,
-                                                              node->input.lhs),
-                                     ship);
-        int rhs = node_eval_sub_node(nodestore_get_node_by_id(ns,
-                                                              node->input.rhs),
-                                     ship);
-
-        switch(node->predicate) {
-        case LT:
-            return lhs < rhs;
-            break;
-        case GT:
-            return lhs > rhs;
-            break;
-        case LEQT:
-            return lhs <= rhs;
-            break;
-        case GEQT:
-            return lhs >= rhs;
-            break;
-        case EQ:
-            return lhs == rhs;
-            break;
-        case NEQ:
-            return lhs != rhs;
-            break;
-        }
-    } break;
-    case GATE: {
-        bool lhs = node_eval(nodestore_get_node_by_id(ns, node->input.lhs),
-                             ns, ship);
-        bool rhs = false;
-
-        if (node->gate != NOT) {
-            rhs = node_eval(nodestore_get_node_by_id(ns, node->input.rhs),
-                            ns, ship);
-        }
-
-        switch(node->gate) {
-        case AND:
-            return lhs && rhs;
-            break;
-        case OR:
-            return lhs || rhs;
-            break;
-        case NOT:
-            return !lhs;
-            break;
-        }
-
-    } break;
-    case THRUSTER: {
-        return node_eval(nodestore_get_node_by_id(ns, node->parent), ns, ship);
-    } break;
-    }
-
-    // This is actually an error tho...
-    return false;
-
-}
-
-
-// @TODO: Store these in a topologically sorted order so I can just traverse them
-//        instead of recuing through them.
-Thrusters
-nodestore_eval_thrusters(const NodeStore* ns, const Ship* ship)
-{
-    Thrusters out_thrusters = {false, false, false, false, false};
-
-    // Iterate over thruster nodes
-    for (int i = 1; i <= ns->last_id; i++) {
-        Node* node = nodestore_get_node_by_id(ns, i);
-        if (!node) continue;
-        bool value = node_eval(node, ns, ship);
-
-        // @TODO: IF DEBUG
-        nvgSave(gg_Debug_vg);
-        {
-            if (value) {
-                nvgFillColor(gg_Debug_vg, nvgRGBf(0,1,0));
-            } else {
-                nvgFillColor(gg_Debug_vg, nvgRGBf(1,0,0));
-            }
-            debug_draw_square(gg_Debug_vg, node->position.x-25, node->position.y);
-        }
-        nvgRestore(gg_Debug_vg);
-
-        if (node->type == THRUSTER) {
-            switch(node->thruster) {
-            case BP:
-                out_thrusters.bp |= value;
-                break;
-            case BS:
-                out_thrusters.bs |= value;
-                break;
-            case SP:
-                out_thrusters.sp |= value;
-                break;
-            case SS:
-                out_thrusters.ss |= value;
-                break;
-            case BOOST:
-                out_thrusters.boost |= value;
-                break;
-            }
-        }
-    }
-
-    return out_thrusters;
-}
-
-// Really need to get farther in handmade hero and see how casey does stuff.
-// Entity stores in tables, sparse storage, stuff like that.
-void
-gamestate_load_level_one(GameState* state) {
-    state->player_ship.position.x = 300;
-    state->player_ship.position.y = 99;
-    state->player_ship.rotation = 0;
-    state->num_obstacles = 0;
-
-    state->goal = v2(300, 600);
-    state->current_level = 1;
-}
-
-void
-gamestate_load_level_two(GameState* state) {
-    state->player_ship.position.x = 300;
-    state->player_ship.position.y = 99;
-    state->player_ship.rotation = 0;
-    state->num_obstacles = 0;
-
-    state->goal = v2(500, 600);
-    state->current_level = 2;
-}
-
-void
-gamestate_load_level_three(GameState* state) {
-    state->player_ship.position.x = 300;
-    state->player_ship.position.y = 99;
-    state->player_ship.rotation = 0;
-
-    state->obstacles[0] = boundingBox(v2(295, 595), 10, 10);
-    state->obstacles[1] = boundingBox(v2(495, 95), 10, 10);
-    state->num_obstacles = 2;
-
-    state->goal = v2(500, 600);
-    state->current_level = 3;
-}
-
-
 static void*
 game_setup(void* game_state, NVGcontext* vg)
 {
@@ -1350,7 +1354,19 @@ game_setup(void* game_state, NVGcontext* vg)
     // Assert that the font got loaded.
     assert(font >= 0);
 
-    gamestate_load_level_three(state);
+    Entity* ship = push_entity(state);
+    ship->type = EntityType_SHIP;
+    ship->position = v2(300, 99);
+    ship->rotation = 0;
+
+    entity_add_flags(ship, EntityFlag_COLLIDES);
+
+    Entity* goal = push_entity(state);
+    goal->type = EntityType_GOAL;
+    goal->position = v2(500, 600);
+    goal->rotation = 0;
+
+    state->current_level = 1;
 
     return state;
 }
@@ -1410,50 +1426,7 @@ game_update_and_render(void* gamestate,
         break;
     }
 
-    // Reset button
-    // @TODO: reset the whole level not just the ship.
-    char* reset = "Reset";
-    if (gui_button_with_text(state->gui, 660, 2.5, 10, 5, reset)) {
-            state->player_ship.position.x = 300;
-            state->player_ship.position.y = 99;
-            state->player_ship.rotation = 0;
-            state->status = RUNNING;
-    }
-
-    // Update rockets.
-    // @TODO: Collision detection!
-    // Need to see if a rocket hits anything. I can do a minkowsky thing I think
-    if (state->status == RUNNING) {
-        // @TODO: Sort thrusters before
-        Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
-                                                           &state->player_ship);
-        state->player_ship.thrusters = new_thrusters;
-        ship_move(&state->player_ship, dt);
-    }
-
-    // Collision Detection.
-    // Can't use bounding boxes for this as the rocket is not always axis aligned.
-    // @HARDCODE
-    // what do we do, like top and bottom and leftmost and rightmost?
-    
-    // If rocket hits something, you explode
-    // If rocket goes off the screen, you are lost in space!
-
-    // Evaluate anything that happened.
-    // If rocket is in the goal circle, then you win!
-    // TODO: use the whole rocket bb instead of just the center point.
-    if (bounds_contains(state->goal.x - 10,
-                        state->goal.y - 10,
-                        state->goal.x + 10,
-                        state->goal.y + 10,
-                        state->player_ship.position.x, state->player_ship.position.y)) {
-
-        // Won the level!
-        state->status = WON;
-        
-    }
-
-    // Render
+    // Update and Render
 
     // Space background!
     nvgBeginPath(vg);
@@ -1477,52 +1450,80 @@ game_update_and_render(void* gamestate,
         nvgTranslate(vg, 660, 10);
         nvgTranslate(vg, 0, 700);
 
-        // @TODO: Figure out what you have to do to not have to make all y coordinates
-        // negative here.
+        // @TODO: Make the renderer better so I don't have to update them from in here and can
+        //        have a seperate update step.
 
-        // draw ship
-        nvgSave(vg);
-        {
-            nvgTranslate(vg,
-                         state->player_ship.position.x,
-                         -state->player_ship.position.y);
-            nvgRotate(vg, -deg_to_rad(state->player_ship.rotation));
-            draw_ship(vg,
-                      state->player_ship.thrusters,
-                      false);
+        // Update Entities
+        for (int i = 0; i < state->num_entities; i++) {
+            Entity* entity = state->entities + i;
+            switch(entity->type) {
+
+            case (EntityType_NAH): {
+                // Nah
+            } break;
+
+            case (EntityType_SHIP): {
+                // Update Ship
+                if (state->status == RUNNING) {
+                    // @TODO: Sort thrusters before
+                    Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
+                                                                       entity);
+                    entity->thrusters = new_thrusters;
+                    ship_move(entity, dt);
+                }
+
+                // @HARDCODE: Fix with collision detection.
+                // Goal is at (500, 600)
+                if (bounds_contains(500 - 10,
+                                    600 - 10,
+                                    500 + 10,
+                                    600 + 10,
+                                    entity->position.x, entity->position.y)) {
+                    // Won the level!
+                    state->status = WON;
+                }
+
+                // Draw Ship
+                nvgSave(vg);
+                {
+                    nvgTranslate(vg,
+                                 entity->position.x,
+                                 -entity->position.y);
+                    nvgRotate(vg, -deg_to_rad(entity->rotation));
+                    draw_ship(vg,
+                              entity->thrusters,
+                              false);
+                }
+                nvgRestore(vg);
+
+                // @TODO: pull this out, this is hella useful.
+                // debug print
+                char buf2[64] = {'\0'};
+
+                snprintf(buf2, 64, "position: (%f, %f), rotation: %d",
+                         entity->position.x,
+                         entity->position.y,
+                         entity->rotation);
+
+                debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);    
+                
+            } break;
+
+            case (EntityType_BOUNDRY): {
+
+            } break;
+
+            case (EntityType_GOAL): {
+                // Draw the goal
+                nvgBeginPath(vg);
+                nvgRect(vg, entity->position.x-10, -entity->position.y-10, 20, 20);
+                nvgFillColor(vg, nvgRGBf(1.0,1.0,0));
+                nvgFill(vg);
+            } break;
+            }
         }
-        nvgRestore(vg);
-
-        // draw obsticles
-        for (int i=0; i < state->num_obstacles; i++) {
-            nvgBeginPath(vg);
-            nvgRect(vg,
-                    state->obstacles[i].top_left.x,
-                    -state->obstacles[i].top_left.y,
-                    state->obstacles[i].bottom_right.x-state->obstacles[i].top_left.x,
-                    -state->obstacles[i].bottom_right.y+state->obstacles[i].top_left.y);
-            nvgFillColor(vg, nvgRGBf(0.0, 1.0, 1.0));
-            nvgFill(vg);
-        }
-
-        // draw the goal
-        nvgBeginPath(vg);
-        nvgRect(vg, state->goal.x-10, -state->goal.y-10, 20, 20);
-        nvgFillColor(vg, nvgRGBf(1.0,1.0,0));
-        nvgFill(vg);
     }
     nvgRestore(vg);
-
-    // @TODO: pull this out, this is hella useful.
-    // debug print
-    char buf2[64] = {'\0'};
-
-    snprintf(buf2, 64, "position: (%f, %f), rotation: %d",
-             state->player_ship.position.x,
-             state->player_ship.position.y,
-             state->player_ship.rotation);
-
-    debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);    
 }
 
 const gg_Game gg_game_api = {

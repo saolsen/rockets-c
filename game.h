@@ -19,6 +19,7 @@ typedef enum { LT, GT, LEQT, GEQT, EQ, NEQ }                 Predicate;
 typedef enum { POS_X, POS_Y, ROTATION }                      Signal;
 typedef enum { AND, OR, NOT }                                Gate;
 
+// @TODO: Compress this to a bit array.
 typedef struct Thrusters {
     bool bp;
     bool bs;
@@ -26,12 +27,6 @@ typedef struct Thrusters {
     bool ss;
     bool boost;
 } Thrusters;
-
-typedef struct Ship {
-    V2 position;
-    int rotation;
-    Thrusters thrusters;
-} Ship;
 
 typedef struct Node {
     int id;
@@ -114,6 +109,40 @@ typedef struct {
 
 typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
 
+typedef enum {EntityType_NAH,
+              EntityType_SHIP,
+              EntityType_BOUNDRY,
+              EntityType_GOAL} EntityType;
+
+typedef enum {EntityFlag_COLLIDES = (1 << 0)} EntityFlag;
+
+// Start with a special case of just having all collision geometry be rectangles.
+// Need width, height, offset from the entity position and a rotation.
+// For now going to have rotation be about the entitiy's position. Makes math easy
+// and seems to make sense for things that are going to move around.
+typedef struct {
+    
+} CollisionRect;
+
+typedef struct entity_ {
+    EntityType type;
+    uint32_t flags;
+
+    V2 position;
+    int rotation;
+    Thrusters thrusters;
+
+    int num_collision_pieces;
+    CollisionRect collision_pieces[10];
+
+    struct entity_* next_entity;
+} Entity;
+
+typedef struct entity_pointer_ {
+    Entity* entity;
+    struct entity_pointer_* next_entity;
+} EntityPointer;
+
 typedef enum {RUNNING, PAUSED, WON, DIED} LevelStatus;
 
 const int MAX_OBSTICLES = 256;
@@ -121,17 +150,16 @@ const int MAX_OBSTICLES = 256;
 typedef struct {
     GUIState gui;
     NodeStore node_store;
-    Ship player_ship;
 
     // Don't know what all goes in a level or scene yet.
     int current_level;
-    V2 goal;
-    BoundingBox obstacles[MAX_OBSTICLES];
-    size_t num_obstacles;
-
     LevelStatus status;
+
     char* DeathReason;
 
+    int num_entities;
+    Entity entities[128];
+    Entity* first_free_entity;
 } GameState;
 
 #endif
