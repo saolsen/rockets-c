@@ -1,5 +1,20 @@
-// @TODO: @IMPORTANT: JUST DO IT
-// think next could be more levels? collision detection?
+/*
+  TODO: Stuff I think I should do.
+  * Debug code.
+  I really want more debug code. I was leaning on it heavily for the collision detection stuff. I 
+  think I could just add some helper functions for drawing to the space scen which would help but
+  I also really want performance counters and a log and ways to visualize it. I should maybe wait
+  until casey is done with his stuff and see what of that I can use. 
+  I should also probably do the live code reloading stuff and I maybe want a level editor.
+
+  * Platform
+    I need to figure out my cpu/battery issue. I think I'm either not letting the process sleep
+    while waiting for vsync or something else bad. Need to look into sdl resources to see what's up.
+
+  * Game
+    Gonna add some obsticles and things to try and fly around and make a few harder levels and see
+    what it's like to play the game with these nodes and what else I should add or change.
+ */
 
 #include <math.h>
 #include "gameguy.h"
@@ -1536,7 +1551,7 @@ game_update_and_render(void* gamestate,
         // @OPTOMIZE:
         // Start by checking each entity against each other entity? Seems like a bit much.
         // Also feel like looping over all entities 3 times is a bad move. Re-evaluate later.
-
+ 
         // @TODO: Add rotations, starting with simpler case of just AABB.
         for (int i = 0; i < state->num_entities; i++) {
             Entity* entity = state->entities + i;
