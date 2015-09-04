@@ -16,7 +16,6 @@ const char*
 bool_string(bool b)
 {
     return b ? "true" : "false";
-
 }
 
 /* Rendering */
@@ -662,8 +661,13 @@ ship_move(Entity* ship, float dt)
     V2 abs_force = v2_rotate(force, deg_to_rad(ship->rotation));
     float speed = 50;
 
-    ship->position.x += abs_force.x*speed*dt;
-    ship->position.y += abs_force.y*speed*dt;
+    /* ship->position.x += abs_force.x*speed*dt; */
+    /* ship->position.y += abs_force.y*speed*dt; */
+
+    // Not sure exactly how to do this yet.
+    ship->velocity.x = abs_force.x*speed;
+    ship->velocity.y = abs_force.y*speed;
+    
     int new_rot = ship->rotation + rotation;
     if (new_rot < 0) new_rot += 360;
     ship->rotation = new_rot % 360;
@@ -915,8 +919,8 @@ nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, size_t num_nodebounds, GUI
 {
     for (int i=0; i<num_nodebounds; i++) {
         if (bb_contains(nodebounds[i].bb,
-                         gui->input.mouse_x - gui->input.mouse_xrel,
-                         gui->input.mouse_y - gui->input.mouse_yrel)) {
+                        gui->input.mouse_x - gui->input.mouse_xrel,
+                        gui->input.mouse_y - gui->input.mouse_yrel)) {
             gui->state = next_gui_state;
             gui->drag_target.from_id = nodebounds[i].node->id;
             gui->drag_target.from_input_num = nodebounds[i].input_index;
@@ -1215,7 +1219,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             }
             nvgRestore(gui->vg);
 
-            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 5, 5)) {
+            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 10, 10)) {
                 bodies[i].node->thruster = thruster_next(node.thruster);
             }
         } break;
@@ -1225,7 +1229,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
 
             V2 center = bb_center(body.bb);
-            if (gui_button(*gui, center.x-2.5, body.bb.top_left.y+25, 5, 5)) {
+            if (gui_button(*gui, center.x-2.5, body.bb.top_left.y+25, 10, 10)) {
                 bodies[i].node->predicate = predicate_next(node.predicate);
             }
             
@@ -1253,7 +1257,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
 
-            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 5, 5)) {
+            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 10, 10)) {
                 bodies[i].node->signal = signal_next(node.signal);
             }
         } break;
@@ -1262,7 +1266,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
             node_get_text(&node, buf, 256, NULL, NULL);
             draw_text_box(gui->vg, buf, body.draw_position.x, body.draw_position.y);
 
-            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 5, 5)) {
+            if (gui_button(*gui, body.bb.bottom_right.x - 10, body.bb.top_left.y + 20, 10, 10)) {
                 bodies[i].node->gate = gate_next(node.gate);
             }
         } break;
@@ -1309,7 +1313,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
     // Draw destroy buttons for nodes.
     for (int i = 0; i < num_bodies; i++) {
         if (gui_button(*gui,
-                   bodies[i].bb.top_left.x, bodies[i].bb.top_left.y,
+                       bodies[i].bb.top_left.x, bodies[i].bb.top_left.y,
                        10, 10)) {
             nodestore_destory_node(ns, bodies[i].node->id);
         }
@@ -1353,12 +1357,41 @@ setup_level(GameState* state) {
 
     entity_add_flags(ship, EntityFlag_COLLIDES);
 
+    CollisionRect* s1 = &ship->collision_pieces[ship->num_collision_pieces++];
+    s1->offset = v2(-10, -15);
+    s1->size = v2(20, 40);
+    CollisionRect* s2 = &ship->collision_pieces[ship->num_collision_pieces++];
+    s2->offset = v2(-20, -25);
+    s2->size = v2(15, 30);
+    CollisionRect* s3 = &ship->collision_pieces[ship->num_collision_pieces++];
+    s3->offset = v2(5, -25);
+    s3->size = v2(15, 30);
+
     Entity* goal = push_entity(state);
     goal->type = EntityType_GOAL;
     goal->position = v2(500, 600);
     goal->rotation = 0;
 
+    entity_add_flags(goal, EntityFlag_COLLIDES);
+
+    CollisionRect* g = &goal->collision_pieces[goal->num_collision_pieces++];
+    g->offset = v2(-10, -10);
+    g->size = v2(20, 20);
+
     state->current_level = 1;
+
+    Entity* test_block = push_entity(state);
+    test_block->type = EntityType_BOUNDRY;
+    test_block->position = v2(300, 300);
+    test_block->rotation = 0;
+
+    entity_add_flags(test_block, EntityFlag_COLLIDES);
+
+    CollisionRect* r = &test_block->collision_pieces[test_block->num_collision_pieces++];
+    r->offset = v2(30, 0);
+    r->size = v2(50, 50);
+
+    state->status = RUNNING;
 }
 
 
@@ -1377,6 +1410,7 @@ game_setup(void* game_state, NVGcontext* vg)
     assert(font >= 0);
 
     setup_level(state);
+    state->collision_area_x = state->collision_area_y = state->collision_area_width = state->collision_area_height = 0;
 
     return state;
 }
@@ -1480,12 +1514,12 @@ game_update_and_render(void* gamestate,
                          entity->position.y,
                          entity->rotation);
 
-                debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);    
-                
+                debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);
+
             } break;
 
             case (EntityType_BOUNDRY): {
-
+                
             } break;
 
             case (EntityType_GOAL): {
@@ -1493,9 +1527,91 @@ game_update_and_render(void* gamestate,
             } break;
             }
         }
+        // @NOTE: This is my first pass at collision detection so I'm guessing it won't be that good.
+        // One thing you can do is wrap complex objects in a AABB bounding box, do the collision detect
+        // on that and only if that passes do the check on their actual geometry. Speeds up the scene
+        // a lot probably.
+
+        // Move entities based on speed. Handle collisions.
+        // @OPTOMIZE:
+        // Start by checking each entity against each other entity? Seems like a bit much.
+        // Also feel like looping over all entities 3 times is a bad move. Re-evaluate later.
+
+        // @TODO: Add rotations, starting with simpler case of just AABB.
+        for (int i = 0; i < state->num_entities; i++) {
+            Entity* entity = state->entities + i;
+            if (entity->type == EntityType_NAH) continue;
+
+            // @DEBUG
+            if (entity->type == EntityType_BOUNDRY) continue;
+            // if (entity->velocity.x == 0 && entity->velocity.y == 0) continue;
+
+            // @NOTE: This moves entities one at a time. Could miss collisions.
+            V2 next_entity_position = v2_plus(entity->position, v2_scale(entity->velocity, dt));
+            bool collides = false;
+
+            for (int j = 0; j < state->num_entities; j++) {
+                Entity* collision_entity = state->entities + j;
+                if (collision_entity->type == EntityType_NAH) continue;
+                if (collision_entity == entity) continue; // Don't collide with self.
+
+                // Check if any of the entity collision pieces overlap any other ones.
+                for (int ep = 0; ep < entity->num_collision_pieces; ep++) {
+                    CollisionRect entity_piece = entity->collision_pieces[ep];
+
+                    for (int cep = 0; cep < collision_entity->num_collision_pieces; cep++) {
+                        CollisionRect collision_entity_piece = collision_entity->collision_pieces[cep];
+
+                        // Check if they collide.
+                        // TODO: Look up how to actuially do minkowski.
+                        float area_width = collision_entity_piece.width + entity_piece.width;
+                        float area_height = collision_entity_piece.height + entity_piece.height;
+
+                        V2 bottom_left = v2_plus(collision_entity->position,
+                                              collision_entity_piece.offset);
+
+                        /* // Translate to entity_piece origin */
+                        bottom_left = v2_minus(bottom_left, entity_piece.size);
+
+                        /* // Translate to entity origin */
+                        bottom_left = v2_minus(bottom_left, entity_piece.offset);
+
+                        // @TODO: Have a way better way to debug this.
+                        state->collision_area_x = bottom_left.x;
+                        state->collision_area_y = bottom_left.y;
+                        state->collision_area_width = area_width;
+                        state->collision_area_height = area_height;
+                    
+                        if ((next_entity_position.x > bottom_left.x &&
+                             next_entity_position.x < bottom_left.x + area_height) &&
+                            (next_entity_position.y > bottom_left.y &&
+                             next_entity_position.y < bottom_left.y + area_width)) {
+                            collides = true;
+
+                            log_info("me: (%f.2,%f.2) piece: (%f.2,%f.2) w:%f.2, h:%f.2",
+                                     next_entity_position.x, next_entity_position.y,
+                                     bottom_left.x, bottom_left.y, area_width, area_height);
+                        
+                            break;
+                        }
+                    }
+                    if (collides) break;
+                }
+                if (collides) break;
+            }
+
+            if (collides) {
+                // Dead
+                state->status = DIED;
+            } else {
+                // Why does this seem to go 1 frame past when I died?
+            
+                entity->position = next_entity_position;
+            }
+        }
     }
 
-     // Render
+    // Render
 
     // Space background!
     nvgBeginPath(vg);
@@ -1522,6 +1638,7 @@ game_update_and_render(void* gamestate,
         // Render Entities
         for (int i = 0; i < state->num_entities; i++) {
             Entity* entity = state->entities + i;
+
             switch(entity->type) {
 
             case (EntityType_NAH): {
@@ -1556,7 +1673,32 @@ game_update_and_render(void* gamestate,
                 nvgFill(vg);
             } break;
             }
+
+            // Render collision geometry for debugging.
+            for (int c=0; c<entity->num_collision_pieces; c++) {
+                CollisionRect rect = entity->collision_pieces[c];
+                
+                nvgBeginPath(vg);
+                nvgRect(vg,
+                        entity->position.x + rect.x,
+                        -entity->position.y - rect.y - rect.height,
+                        rect.width,
+                        rect.height);
+                nvgStrokeColor(vg, nvgRGBf(1, 1, 1));
+                nvgStroke(vg);
+            }
         }
+
+        /* // Debug draw collision Area. This only works for 1.... */
+        /* nvgBeginPath(vg); */
+        /* nvgRect(vg, */
+        /*         state->collision_area_x, */
+        /*         -state->collision_area_y - state->collision_area_height, */
+        /*         state->collision_area_width, */
+        /*         state->collision_area_height); */
+        /* nvgStrokeColor(vg, nvgRGBf(1, 0, 0)); */
+        /* nvgStroke(vg); */
+        
     }
     nvgRestore(vg);
 }

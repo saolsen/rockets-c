@@ -133,6 +133,8 @@ typedef struct {
     };
 } CollisionRect;
 
+
+// How do I determine entity equality? Just pointer equality?
 typedef struct entity_ {
     EntityType type;
     uint32_t flags;
@@ -140,6 +142,8 @@ typedef struct entity_ {
     V2 position;
     int rotation;
     Thrusters thrusters;
+
+    V2 velocity;
 
     int num_collision_pieces;
     CollisionRect collision_pieces[10];
@@ -169,6 +173,10 @@ typedef struct {
     int num_entities;
     Entity entities[128];
     Entity* first_free_entity;
+
+    // This is just the last collision area checked and a crappy way to debug.
+    float collision_area_x, collision_area_y, collision_area_width, collision_area_height;
+    
 } GameState;
 
 // NAH.
