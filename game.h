@@ -1,3 +1,34 @@
+/*
+  @TODO: Stuff I think I should do.
+  * Debug code.
+  I really want more debug code. I was leaning on it heavily for the collision detection stuff. I 
+  think I could just add some helper functions for drawing to the space scen which would help but
+  I also really want performance counters and a log and ways to visualize it. I should maybe wait
+  until casey is done with his stuff and see what of that I can use. 
+  I should also probably do the live code reloading stuff and I maybe want a level editor.
+
+  * Platform
+    I need to figure out my cpu/battery issue. I think I'm either not letting the process sleep
+    while waiting for vsync or something else bad. Need to look into sdl resources to see what's up.
+
+  * Game
+    Gonna add some obsticles and things to try and fly around and make a few harder levels and see
+    what it's like to play the game with these nodes and what else I should add or change.
+
+    There are more bugs in the collision detection stuff and I'm going to have to write a more
+    advanced version that handles rotations too so maybe I should just invest in debug tools a
+    bit more.
+
+  * Rendering
+    Pull out any raw nanovg calls. Put all that behind a rendering API. Make the debug stuff part
+    of debug utils and the drawing stuff abstracted so I can ditch nanovg later.
+
+  @TODO: next steps.
+  * Better debug setup. Logging, performance counters, easier debug visualizations.
+    (watch casey on this stuff today)
+  * Debug the collision detection code.
+  * Use collisions for gameplay stuff.
+ */
 #ifndef _game_h
 #define _game_h
 
@@ -11,15 +42,13 @@ typedef struct BoundingBox {
     V2 bottom_right;
 } BoundingBox;
 
-// @TODO: Some day you're gonna want math, that's gonna be a lot of work.
-// Rule Nodes
 typedef enum { THRUSTER, PREDICATE, SIGNAL, CONSTANT, GATE } NodeType;
 typedef enum { BP, BS, SP, SS, BOOST }                       Thruster;
 typedef enum { LT, GT, LEQT, GEQT, EQ, NEQ }                 Predicate;
 typedef enum { POS_X, POS_Y, ROTATION }                      Signal;
 typedef enum { AND, OR, NOT }                                Gate;
 
-// @TODO: Compress this to a bit array.
+// @OPTOMIZE: Compress this to a bit array.
 typedef struct Thrusters {
     bool bp;
     bool bs;
@@ -64,7 +93,6 @@ typedef struct {
     // @TODO: Add another index for the topological sort. Makes evaluation faster.
 } NodeStore;
 
-// @NOTE: I feel great about the nodestore, I don't feel good about the UI code.
 typedef struct {
     Node* node;
     BoundingBox bb;
@@ -145,6 +173,11 @@ typedef struct entity_ {
 
     V2 velocity;
 
+    // @TODO: I think I should probably use a memory area for this instead of allocating
+    // 10 slots for every entity. Many will just have 1 piece and lots won't have any.
+    // If I have a memory area I can track memory usage in it too.
+    // Also could let me pack all collision pieces in a single array which might be dope
+    // if I want to SIMD my collision checking.
     int num_collision_pieces;
     CollisionRect collision_pieces[10];
 
@@ -175,6 +208,7 @@ typedef struct {
     Entity* first_free_entity;
 
     // This is just the last collision area checked and a crappy way to debug.
+    // @TODO: Way better debug tools.
     float collision_area_x, collision_area_y, collision_area_width, collision_area_height;
     
 } GameState;

@@ -1,21 +1,3 @@
-/*
-  TODO: Stuff I think I should do.
-  * Debug code.
-  I really want more debug code. I was leaning on it heavily for the collision detection stuff. I 
-  think I could just add some helper functions for drawing to the space scen which would help but
-  I also really want performance counters and a log and ways to visualize it. I should maybe wait
-  until casey is done with his stuff and see what of that I can use. 
-  I should also probably do the live code reloading stuff and I maybe want a level editor.
-
-  * Platform
-    I need to figure out my cpu/battery issue. I think I'm either not letting the process sleep
-    while waiting for vsync or something else bad. Need to look into sdl resources to see what's up.
-
-  * Game
-    Gonna add some obsticles and things to try and fly around and make a few harder levels and see
-    what it's like to play the game with these nodes and what else I should add or change.
- */
-
 #include <math.h>
 #include "gameguy.h"
 #include "game.h"
@@ -1425,7 +1407,7 @@ game_setup(void* game_state, NVGcontext* vg)
     assert(font >= 0);
 
     setup_level(state);
-    /* state->collision_area_x = state->collision_area_y = state->collision_area_width = state->collision_area_height = 0; */
+    state->collision_area_x = state->collision_area_y = state->collision_area_width = state->collision_area_height = 0;
 
     return state;
 }
@@ -1591,10 +1573,10 @@ game_update_and_render(void* gamestate,
                         bottom_left = v2_minus(bottom_left, entity_piece.offset);
 
                         /* // @TODO: Have a way better way to debug this. */
-                        /* state->collision_area_x = bottom_left.x; */
-                        /* state->collision_area_y = bottom_left.y; */
-                        /* state->collision_area_width = area_width; */
-                        /* state->collision_area_height = area_height; */
+                        state->collision_area_x = bottom_left.x;
+                        state->collision_area_y = bottom_left.y;
+                        state->collision_area_width = area_width;
+                        state->collision_area_height = area_height;
                     
                         if ((next_entity_position.x > bottom_left.x &&
                              next_entity_position.x < bottom_left.x + area_height) &&
@@ -1701,15 +1683,15 @@ game_update_and_render(void* gamestate,
             }
         }
 
-        /* // Debug draw collision Area. This only works for 1.... */
-        /* nvgBeginPath(vg); */
-        /* nvgRect(vg, */
-        /*         state->collision_area_x, */
-        /*         -state->collision_area_y - state->collision_area_height, */
-        /*         state->collision_area_width, */
-        /*         state->collision_area_height); */
-        /* nvgStrokeColor(vg, nvgRGBf(1, 0, 0)); */
-        /* nvgStroke(vg); */
+        // Debug draw collision Area. This only works for 1....
+        nvgBeginPath(vg);
+        nvgRect(vg,
+                state->collision_area_x,
+                -state->collision_area_y - state->collision_area_height,
+                state->collision_area_width,
+                state->collision_area_height);
+        nvgStrokeColor(vg, nvgRGBf(1, 0, 0));
+        nvgStroke(vg);
         
     }
     nvgRestore(vg);
