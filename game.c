@@ -1410,7 +1410,7 @@ game_setup(void* game_state, NVGcontext* vg)
     assert(font >= 0);
 
     setup_level(state);
-    state->collision_area_x = state->collision_area_y = state->collision_area_width = state->collision_area_height = 0;
+    /* state->collision_area_x = state->collision_area_y = state->collision_area_width = state->collision_area_height = 0; */
 
     return state;
 }
@@ -1544,9 +1544,9 @@ game_update_and_render(void* gamestate,
 
             // @DEBUG
             if (entity->type == EntityType_BOUNDRY) continue;
-            // if (entity->velocity.x == 0 && entity->velocity.y == 0) continue;
 
             // @NOTE: This moves entities one at a time. Could miss collisions.
+            // Not a big deal if only the rocket moves but problematic if two moving objects.
             V2 next_entity_position = v2_plus(entity->position, v2_scale(entity->velocity, dt));
             bool collides = false;
 
@@ -1563,24 +1563,23 @@ game_update_and_render(void* gamestate,
                         CollisionRect collision_entity_piece = collision_entity->collision_pieces[cep];
 
                         // Check if they collide.
-                        // TODO: Look up how to actuially do minkowski.
                         float area_width = collision_entity_piece.width + entity_piece.width;
                         float area_height = collision_entity_piece.height + entity_piece.height;
 
                         V2 bottom_left = v2_plus(collision_entity->position,
                                               collision_entity_piece.offset);
 
-                        /* // Translate to entity_piece origin */
+                        // Translate to entity_piece origin
                         bottom_left = v2_minus(bottom_left, entity_piece.size);
 
-                        /* // Translate to entity origin */
+                        // Translate to entity origin
                         bottom_left = v2_minus(bottom_left, entity_piece.offset);
 
-                        // @TODO: Have a way better way to debug this.
-                        state->collision_area_x = bottom_left.x;
-                        state->collision_area_y = bottom_left.y;
-                        state->collision_area_width = area_width;
-                        state->collision_area_height = area_height;
+                        /* // @TODO: Have a way better way to debug this. */
+                        /* state->collision_area_x = bottom_left.x; */
+                        /* state->collision_area_y = bottom_left.y; */
+                        /* state->collision_area_width = area_width; */
+                        /* state->collision_area_height = area_height; */
                     
                         if ((next_entity_position.x > bottom_left.x &&
                              next_entity_position.x < bottom_left.x + area_height) &&
@@ -1588,9 +1587,9 @@ game_update_and_render(void* gamestate,
                              next_entity_position.y < bottom_left.y + area_width)) {
                             collides = true;
 
-                            log_info("me: (%f.2,%f.2) piece: (%f.2,%f.2) w:%f.2, h:%f.2",
-                                     next_entity_position.x, next_entity_position.y,
-                                     bottom_left.x, bottom_left.y, area_width, area_height);
+                            /* log_info("me: (%f.2,%f.2) piece: (%f.2,%f.2) w:%f.2, h:%f.2", */
+                            /*          next_entity_position.x, next_entity_position.y, */
+                            /*          bottom_left.x, bottom_left.y, area_width, area_height); */
                         
                             break;
                         }
@@ -1604,8 +1603,6 @@ game_update_and_render(void* gamestate,
                 // Dead
                 state->status = DIED;
             } else {
-                // Why does this seem to go 1 frame past when I died?
-            
                 entity->position = next_entity_position;
             }
         }
