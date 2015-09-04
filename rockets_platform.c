@@ -8,7 +8,7 @@
 // @TODO: Do random numbers in a platform independent way.
 #include <time.h>
 
-#include "gameguy.h"
+#include "rockets_platform.h"
 #define NANOVG_GL3_IMPLEMENTATION
 #include "nanovg_gl.h"
 
