@@ -14,17 +14,17 @@ LDFLAGS= $(NANOVG_LD) $(OPENGL_LIB) `pkg-config --libs sdl2`
 
 all: libgame.dylib rockets
 
-libgame.dylib: game.c game.h gameguy.h
-	clang -dynamiclib -undefined dynamic_lookup $(CFLAGS) -o libgame.dylib game.c
+libgame.dylib: rockets.c rockets.h rockets_platform.h
+	clang -dynamiclib -undefined dynamic_lookup $(CFLAGS) -o libgame.dylib rockets.c
 
-rockets: gameguy.c gameguy.h
-	clang $(CFLAGS) $(LDFLAGS) -o rockets gameguy.c
+rockets: rockets_platform.c rockets_platform.h
+	clang $(CFLAGS) $(LDFLAGS) -o rockets rockets_platform.c
 
 clean:
-	rm -r rockets* libgame*
+	rm -r rockets libgame.dylib*
 
 check-syntax:
 	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
 
 tags:
-	etags gameguy.c gameguy.h game.c nanovg/src/nanovg.h
+	etags rockets_platform.c rockets_platform.h rockets.c nanovg/src/nanovg.h
