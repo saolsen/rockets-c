@@ -27,4 +27,5 @@ check-syntax:
 	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
 
 tags:
-	etags gameguy.c gameguy.h game.c nanovg/src/nanovg.h
+	etags ./*.c ./*.h nanovg/src/nanovg.h
+
