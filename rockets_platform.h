@@ -13,7 +13,6 @@
 #include <OpenGL/gl3.h>
 
 #include "nanovg.h"
-
 // Libraries being used
 // nanovg
 
@@ -27,8 +26,7 @@
 // @TODO: Have errors log in red.
 #define log_error(M, ...) fprintf(stderr, "[ERROR] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
-// @TODO: IF DEBUG
-/* extern void* gg_Debug_Memory; */
+uint64_t performance_counter();
 
 // Interface with Game.
 typedef struct {

@@ -12,6 +12,12 @@
 #define NANOVG_GL3_IMPLEMENTATION
 #include "nanovg_gl.h"
 
+// Library functions for game.
+uint64_t performance_counter()
+{
+    return SDL_GetPerformanceCounter();
+}
+
 // @TODO: Include in game config object.
 // @TODO: Screen resizing does not work.
 

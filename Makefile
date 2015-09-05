@@ -14,7 +14,7 @@ LDFLAGS= $(NANOVG_LD) $(OPENGL_LIB) `pkg-config --libs sdl2`
 
 all: libgame.dylib rockets
 
-libgame.dylib: rockets.c rockets.h rockets_platform.h
+libgame.dylib: rockets.c rockets.h rockets_platform.h rockets_*.h rockets_*.c
 	clang -dynamiclib -undefined dynamic_lookup $(CFLAGS) -o libgame.dylib rockets.c
 
 rockets: rockets_platform.c rockets_platform.h

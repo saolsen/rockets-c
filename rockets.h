@@ -36,8 +36,8 @@
 
 #include "rockets_platform.h"
 #include "rockets_math.h"
+#include "rockets_debug.h"
 #include "rockets_nodes.h"
-
 
 // GUI stuff
 // @TODO: rockets_gui
@@ -158,11 +158,6 @@ typedef struct {
     int num_entities;
     Entity entities[128];
     Entity* first_free_entity;
-
-    // This is just the last collision area checked and a crappy way to debug.
-    // @TODO: Way better debug tools.
-    float collision_area_x, collision_area_y, collision_area_width, collision_area_height;
-    
 } GameState;
 
 // NAH.

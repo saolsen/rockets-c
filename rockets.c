@@ -3,10 +3,9 @@
 #include "rockets.h"
 #include "rockets_nodes.c"
 
-static NVGcontext* gg_Debug_vg = NULL;
-
 /* Rendering */
 
+// @TODO: Pull out the GUI debug drawing stuff too.
 void
 draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
 {
@@ -27,8 +26,6 @@ draw_parent_line(NVGcontext* vg, const Node* node, const Node* parent)
 void
 debug_draw_bb(NVGcontext* vg, NVGcolor color, BoundingBox bb)
 {
-    
-
     nvgSave(vg);
     nvgStrokeColor(vg, color);
     nvgBeginPath(vg);
@@ -110,6 +107,7 @@ draw_text_box(NVGcontext* vg, const char* txt, float x, float y)
 void
 draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
 {
+    int timer = BEGIN_TIME_BLOCK();
     nvgSave(vg);
     {
 
@@ -174,6 +172,7 @@ draw_ship(NVGcontext* vg, Thrusters thrusters, bool grayscale)
     }
 
     nvgRestore(vg);
+    END_TIME_BLOCK(timer);
 }
 
 
@@ -394,18 +393,6 @@ nodestore_eval_thrusters(const NodeStore* ns, const Entity* ship)
         if (!node) continue;
         bool value = node_eval(node, ns, ship);
 
-        // @TODO: IF DEBUG
-        nvgSave(gg_Debug_vg);
-        {
-            if (value) {
-                nvgFillColor(gg_Debug_vg, nvgRGBf(0,1,0));
-            } else {
-                nvgFillColor(gg_Debug_vg, nvgRGBf(1,0,0));
-            }
-            debug_draw_square(gg_Debug_vg, node->position.x-25, node->position.y);
-        }
-        nvgRestore(gg_Debug_vg);
-
         if (node->type == THRUSTER) {
             switch(node->thruster) {
             case BP:
@@ -533,8 +520,6 @@ nb_is_dragging(GUIState* gui, NodeBounds* nodebounds, size_t num_nodebounds, GUI
 }
 
 
-// @TODO: This really could just be inline int the update function. There's no real reason to have
-// it pulled out like this.
 NodeEvent
 gui_nodes(GUIState* gui, NodeStore* ns)
 {
@@ -1006,7 +991,6 @@ game_setup(void* game_state, NVGcontext* vg)
     assert(font >= 0);
 
     setup_level(state);
-    state->collision_area_x = state->collision_area_y = state->collision_area_width = state->collision_area_height = 0;
 
     return state;
 }
@@ -1018,10 +1002,8 @@ game_update_and_render(void* gamestate,
                        gg_Input input,
                        float dt)
 {
-    // Setup debug frame.
-    if (!gg_Debug_vg) {
-        gg_Debug_vg = vg;
-    }
+    debug_setup_records();
+    debug_setup_drawing();
 
     // Setup frame.
     GameState* state = (GameState*)gamestate;
@@ -1082,13 +1064,12 @@ game_update_and_render(void* gamestate,
 
             case (EntityType_SHIP): {
                 // Update Ship
-
+                int block = BEGIN_TIME_BLOCK();
                 // @TODO: Sort thrusters before
                 Thrusters new_thrusters = nodestore_eval_thrusters(&state->node_store,
                                                                    entity);
                 entity->thrusters = new_thrusters;
                 ship_move(entity, dt);
-
 
                 // @HARDCODE: Fix with collision detection.
                 // Goal is at (500, 600)
@@ -1111,6 +1092,7 @@ game_update_and_render(void* gamestate,
                          entity->rotation);
 
                 debug_draw_text(vg, 10, SCREEN_HEIGHT - 50, 24, buf2);
+                END_TIME_BLOCK(block);
 
             } break;
 
@@ -1137,9 +1119,6 @@ game_update_and_render(void* gamestate,
         for (int i = 0; i < state->num_entities; i++) {
             Entity* entity = state->entities + i;
             if (entity->type == EntityType_NAH) continue;
-
-            // @DEBUG
-            if (entity->type == EntityType_BOUNDRY) continue;
 
             // @NOTE: This moves entities one at a time. Could miss collisions.
             // Not a big deal if only the rocket moves but problematic if two moving objects.
@@ -1171,21 +1150,14 @@ game_update_and_render(void* gamestate,
                         // Translate to entity origin
                         bottom_left = v2_minus(bottom_left, entity_piece.offset);
 
-                        /* // @TODO: Have a way better way to debug this. */
-                        state->collision_area_x = bottom_left.x;
-                        state->collision_area_y = bottom_left.y;
-                        state->collision_area_width = area_width;
-                        state->collision_area_height = area_height;
+                        // @DEBUG: Draw the collision bounds.
+                        // debug_draw_box(bottom_left.x, bottom_left.y, area_width, area_height, RED);
                     
                         if ((next_entity_position.x > bottom_left.x &&
                              next_entity_position.x < bottom_left.x + area_height) &&
                             (next_entity_position.y > bottom_left.y &&
                              next_entity_position.y < bottom_left.y + area_width)) {
                             collides = true;
-
-                            /* log_info("me: (%f.2,%f.2) piece: (%f.2,%f.2) w:%f.2, h:%f.2", */
-                            /*          next_entity_position.x, next_entity_position.y, */
-                            /*          bottom_left.x, bottom_left.y, area_width, area_height); */
                         
                             break;
                         }
@@ -1267,33 +1239,23 @@ game_update_and_render(void* gamestate,
             } break;
             }
 
-            // Render collision geometry for debugging.
-            for (int c=0; c<entity->num_collision_pieces; c++) {
-                CollisionRect rect = entity->collision_pieces[c];
-                
-                nvgBeginPath(vg);
-                nvgRect(vg,
-                        entity->position.x + rect.x,
-                        -entity->position.y - rect.y - rect.height,
-                        rect.width,
-                        rect.height);
-                nvgStrokeColor(vg, nvgRGBf(1, 1, 1));
-                nvgStroke(vg);
-            }
+            /* // Render collision geometry for debugging. */
+            /* for (int c=0; c<entity->num_collision_pieces; c++) { */
+            /*     CollisionRect rect = entity->collision_pieces[c]; */
+            /*     debug_draw_box(entity->position.x + rect.x, */
+            /*                    entity->position.y + rect.y, */
+            /*                    rect.width, */
+            /*                    rect.height, */
+            /*                    WHITE); */
+            /* } */
         }
 
-        // Debug draw collision Area. This only works for 1....
-        nvgBeginPath(vg);
-        nvgRect(vg,
-                state->collision_area_x,
-                -state->collision_area_y - state->collision_area_height,
-                state->collision_area_width,
-                state->collision_area_height);
-        nvgStrokeColor(vg, nvgRGBf(1, 0, 0));
-        nvgStroke(vg);
+        debug_draw_debug_drawings(vg);
         
     }
     nvgRestore(vg);
+
+    // debug_print_records();
 }
 
 const gg_Game gg_game_api = {
@@ -1301,3 +1263,6 @@ const gg_Game gg_game_api = {
     .init = game_setup,
     .update_and_render = game_update_and_render
 };
+
+DebugRecord debug_records[__COUNTER__];
+int num_debug_records = ARRAY_COUNT(debug_records);
