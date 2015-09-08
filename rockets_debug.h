@@ -1,6 +1,9 @@
 #ifndef _rockets_debug_h
 #define _rockets_debug_h
 
+// @TODO: Maybe think about using IMGUI. Problem with that is that I need to be in c++ tho. :(
+// Maybe just for the next game.
+
 // Rockets Debug Code
 
 // Going to use nanovg for debug drawing.
@@ -14,6 +17,7 @@ typedef struct {
     char* function_name;
     
     uint64_t clocks;
+    uint64_t start_tick;
     uint64_t hit_count;
 } DebugRecord;
 
@@ -33,7 +37,7 @@ _begin_timed_block(int index, int line_number, const char* file_name, const char
 
     record->line_number = line_number;
 
-    record->clocks -= performance_counter();
+    record->start_tick = performance_counter();
     record->hit_count++;
     return index;
 }
@@ -42,7 +46,7 @@ void
 _end_timed_block(int index)
 {
     DebugRecord* record = debug_records + index;
-    record->clocks += performance_counter();
+    record->clocks += (performance_counter() - record->start_tick);
 }
 
 /* @NOTE:
@@ -65,10 +69,9 @@ _end_timed_block(int index)
 void
 debug_setup_records()
 {
-    uint64_t start_tick = performance_counter();
     for (int i = 0; i < num_debug_records; i++) {
         DebugRecord* record = debug_records + i;
-        record->clocks = start_tick;
+        record->clocks = 0;
         record->hit_count = 0;
     }
 }
@@ -86,9 +89,18 @@ debug_setup_records()
 void
 debug_print_records()
 {
+    uint64_t frequency = performance_frequency();
     for (int i = 0; i < num_debug_records; i++) {
         DebugRecord* record = debug_records + i;
-        log_info("Record %i, Clocks: %zi, Hits: %zi", i, record->clocks, record->hit_count);
+        log_info("Record %i, File: %s, Function: %s, Line: %i, Clocks: %zi, Hits: %zi Time: %fms, Avg: %fms",
+                 i,
+                 record->file_name,
+                 record->function_name,
+                 record->line_number,
+                 record->clocks,
+                 record->hit_count,
+                 record->clocks*1000.0 / frequency,
+                 record->clocks*1000.0 / (record->hit_count * frequency));
     }
 }
 
@@ -105,7 +117,8 @@ debug_print_records()
 // need some UI integration. Like "show collisions" "show collision area for these two entities"
 typedef enum {DebugObject_NAH,
               DebugObject_V2,
-              DebugObject_BOX} DebugObjectType;
+              DebugObject_BOX,
+              DebugObject_POINT} DebugObjectType;
 
 typedef enum {WHITE,
               BLUE,
@@ -131,6 +144,15 @@ DebugObjects _debug_objects;
 // @TODO: Make these macros so when not in a debug build all of this can be turned off.
 
 // Debug drawing functions for the space scene.
+void
+debug_draw_point(V2 position, DebugColor color)
+{
+    DebugObject* obj = _debug_objects.objects + _debug_objects.num_objects++;
+    obj->type = DebugObject_POINT;
+    obj->v = position;
+    obj->color = color;
+}
+
 void
 debug_draw_v2(V2 origin, V2 v, DebugColor color)
 {
@@ -177,6 +199,8 @@ debug_draw_debug_drawings(NVGcontext* vg)
         DebugObject obj = _debug_objects.objects[i];
         if (obj.type == DebugObject_NAH) continue;
 
+        bool stroke = true;
+
         nvgBeginPath(vg);
         
         switch(obj.type) {
@@ -184,6 +208,7 @@ debug_draw_debug_drawings(NVGcontext* vg)
         case(DebugObject_V2): {
             nvgMoveTo(vg, obj.origin.x, -obj.origin.y);
             nvgLineTo(vg, obj.origin.x + obj.v.x, -obj.origin.y - obj.v.y);
+            stroke = true;
         } break;
         case(DebugObject_BOX): {
             nvgRect(vg,
@@ -191,7 +216,12 @@ debug_draw_debug_drawings(NVGcontext* vg)
                     -obj.origin.y - obj.size.y,
                     obj.size.x,
                     obj.size.y);
+            stroke = true;
         } break;
+        case(DebugObject_POINT): {
+            nvgCircle(vg, obj.v.x, -obj.v.y, 3);
+            stroke = false;
+        }
         }
 
         NVGcolor color;
@@ -210,8 +240,13 @@ debug_draw_debug_drawings(NVGcontext* vg)
             break;
         }
 
-        nvgStrokeColor(vg, color);
-        nvgStroke(vg);
+        if (stroke) {
+            nvgStrokeColor(vg, color);
+            nvgStroke(vg);
+        } else {
+            nvgFillColor(vg, color);
+            nvgFill(vg);
+        }
     }
 }
 

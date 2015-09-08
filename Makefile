@@ -23,6 +23,7 @@ rockets: rockets_platform.c rockets_platform.h
 clean:
 	rm -r rockets libgame.dylib*
 
+# @TODO: Make this work with my single compilation unit build and drop the unnecessary includes
 check-syntax:
 	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
 

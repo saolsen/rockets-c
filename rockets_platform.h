@@ -27,6 +27,7 @@
 #define log_error(M, ...) fprintf(stderr, "[ERROR] (%s:%d) " M "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 uint64_t performance_counter();
+uint64_t performance_frequency(); // Returns number of performance counter ticks per second.
 
 // Interface with Game.
 typedef struct {

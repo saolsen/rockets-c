@@ -18,6 +18,11 @@ uint64_t performance_counter()
     return SDL_GetPerformanceCounter();
 }
 
+uint64_t performance_frequency()
+{
+    return SDL_GetPerformanceFrequency();
+}
+
 // @TODO: Include in game config object.
 // @TODO: Screen resizing does not work.
 

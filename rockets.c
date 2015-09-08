@@ -938,15 +938,15 @@ setup_level(GameState* state) {
 
     entity_add_flags(ship, EntityFlag_COLLIDES);
 
-    CollisionRect* s1 = &ship->collision_pieces[ship->num_collision_pieces++];
-    s1->offset = v2(-10, -15);
-    s1->size = v2(20, 40);
+    /* CollisionRect* s1 = &ship->collision_pieces[ship->num_collision_pieces++]; */
+    /* s1->offset = v2(-10, -15); */
+    /* s1->size = v2(20, 40); */
     CollisionRect* s2 = &ship->collision_pieces[ship->num_collision_pieces++];
     s2->offset = v2(-20, -25);
     s2->size = v2(15, 30);
-    CollisionRect* s3 = &ship->collision_pieces[ship->num_collision_pieces++];
-    s3->offset = v2(5, -25);
-    s3->size = v2(15, 30);
+    /* CollisionRect* s3 = &ship->collision_pieces[ship->num_collision_pieces++]; */
+    /* s3->offset = v2(5, -25); */
+    /* s3->size = v2(15, 30); */
 
     Entity* goal = push_entity(state);
     goal->type = EntityType_GOAL;
@@ -968,9 +968,9 @@ setup_level(GameState* state) {
 
     entity_add_flags(test_block, EntityFlag_COLLIDES);
 
-    CollisionRect* r = &test_block->collision_pieces[test_block->num_collision_pieces++];
-    r->offset = v2(30, 0);
-    r->size = v2(50, 50);
+    /* CollisionRect* r = &test_block->collision_pieces[test_block->num_collision_pieces++]; */
+    /* r->offset = v2(30, 0); */
+    /* r->size = v2(50, 50); */
 
     state->status = RUNNING;
 }
@@ -1114,6 +1114,11 @@ game_update_and_render(void* gamestate,
         // @OPTOMIZE:
         // Start by checking each entity against each other entity? Seems like a bit much.
         // Also feel like looping over all entities 3 times is a bad move. Re-evaluate later.
+
+        // @OPTOMIZE:
+        // This is pretty bad on the cache. I should probably pack all my collision geometry
+        // in a single array, instead I have it as part of the entity and at a fixed array size
+        // so I'm wasting a ton of each cache line.
  
         // @TODO: Add rotations, starting with simpler case of just AABB.
         for (int i = 0; i < state->num_entities; i++) {
@@ -1135,23 +1140,35 @@ game_update_and_render(void* gamestate,
                     CollisionRect entity_piece = entity->collision_pieces[ep];
 
                     for (int cep = 0; cep < collision_entity->num_collision_pieces; cep++) {
+                        int time_block = BEGIN_TIME_BLOCK();
                         CollisionRect collision_entity_piece = collision_entity->collision_pieces[cep];
+                        
 
+                        // wudabout the entity_piece.offset
+                        
                         // Check if they collide.
                         float area_width = collision_entity_piece.width + entity_piece.width;
                         float area_height = collision_entity_piece.height + entity_piece.height;
 
                         V2 bottom_left = v2_plus(collision_entity->position,
-                                              collision_entity_piece.offset);
+                                                 collision_entity_piece.offset);
+
+                        /* debug_draw_v2(v2(0,0), bottom_left, GREEN); */
 
                         // Translate to entity_piece origin
                         bottom_left = v2_minus(bottom_left, entity_piece.size);
 
+                        /* debug_draw_v2(v2(0,0), bottom_left, RED); */
+
                         // Translate to entity origin
                         bottom_left = v2_minus(bottom_left, entity_piece.offset);
 
+                        /* debug_draw_v2(v2(0,0), bottom_left, BLUE); */
+
                         // @DEBUG: Draw the collision bounds.
-                        // debug_draw_box(bottom_left.x, bottom_left.y, area_width, area_height, RED);
+                        debug_draw_box(bottom_left.x, bottom_left.y, area_width, area_height, RED);
+
+                        debug_draw_point(next_entity_position, GREEN);
                     
                         if ((next_entity_position.x > bottom_left.x &&
                              next_entity_position.x < bottom_left.x + area_height) &&
@@ -1161,6 +1178,7 @@ game_update_and_render(void* gamestate,
                         
                             break;
                         }
+                        END_TIME_BLOCK(time_block);
                     }
                     if (collides) break;
                 }
@@ -1239,15 +1257,15 @@ game_update_and_render(void* gamestate,
             } break;
             }
 
-            /* // Render collision geometry for debugging. */
-            /* for (int c=0; c<entity->num_collision_pieces; c++) { */
-            /*     CollisionRect rect = entity->collision_pieces[c]; */
-            /*     debug_draw_box(entity->position.x + rect.x, */
-            /*                    entity->position.y + rect.y, */
-            /*                    rect.width, */
-            /*                    rect.height, */
-            /*                    WHITE); */
-            /* } */
+            // Render collision geometry for debugging.
+            for (int c=0; c<entity->num_collision_pieces; c++) {
+                CollisionRect rect = entity->collision_pieces[c];
+                debug_draw_box(entity->position.x + rect.x,
+                               entity->position.y + rect.y,
+                               rect.width,
+                               rect.height,
+                               WHITE);
+            }
         }
 
         debug_draw_debug_drawings(vg);
@@ -1255,7 +1273,7 @@ game_update_and_render(void* gamestate,
     }
     nvgRestore(vg);
 
-    // debug_print_records();
+    debug_print_records();
 }
 
 const gg_Game gg_game_api = {

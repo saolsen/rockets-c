@@ -1,4 +1,7 @@
 /*
+  @TODO: Known Bugs, fix these ASAP.
+  * The collision detection stuff isn't working properly.
+
   @TODO: Stuff I think I should do.
   * Debug code.
   I really want more debug code. I was leaning on it heavily for the collision detection stuff. I 
