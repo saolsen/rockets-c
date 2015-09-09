@@ -1,6 +1,23 @@
 /*
-  @TODO: Known Bugs, fix these ASAP.
+  @TODO: @IMPORTANT: Known Bugs, fix these ASAP.
   * The collision detection stuff isn't working properly.
+
+  @TODO: next steps.
+  * Better debug setup. Logging, performance counters, easier debug visualizations.
+    (watch casey on this stuff today)
+  * Debug the collision detection code.
+  * Use collisions for gameplay stuff.
+  * Start really making some levels and play with the game mechanics. Any platform work before having
+    a viable game and levels is just wasted.
+
+  What do I need for a minimum viable level system.
+  - Track what level you on.
+  - Build levels from a simple description.
+  - Compile description into scene entities.
+
+  Don't make a website or design a ui or anything until you got a bunch of fun levels.
+  If I make an actualy fun game, I can actually make money on it if I push it.
+  But if the game isn't fun, it's never gonna happen.
 
   @TODO: Stuff I think I should do.
   * Debug code.
@@ -22,15 +39,27 @@
     advanced version that handles rotations too so maybe I should just invest in debug tools a
     bit more.
 
+    I really really need to start making levels and playing with the mechanics. I need to figure
+    out if there is enough depth in the mechanic to make meaningful puzzles and a fun game. This
+    is the real make or break point for the game, it has to have good puzzles. After that I also
+    need a good story.
+
   * Rendering
     Pull out any raw nanovg calls. Put all that behind a rendering API. Make the debug stuff part
     of debug utils and the drawing stuff abstracted so I can ditch nanovg later.
+    Real renderer is probably going to be a lot more complex. I want a nice looking game.
+    For now this vector stuff works fine.
 
-  @TODO: next steps.
-  * Better debug setup. Logging, performance counters, easier debug visualizations.
-    (watch casey on this stuff today)
-  * Debug the collision detection code.
-  * Use collisions for gameplay stuff.
+  Porting
+  * Once I really have a game it would be great to get it running on a lot of platforms.
+  - This probably means abstracting the rendering api which would also probably mean writing the
+    rendering from scratch, casey style but adding hardware acceleration. Can port this to any tablet
+    that has a rendering api and those that don't even.
+  
+  I'll keep saying and believing this. HMH is the absolute best thing I've ever watched.
+  Just keep watching it!
+    
+
  */
 #ifndef _game_h
 #define _game_h
@@ -41,6 +70,8 @@
 #include "rockets_math.h"
 #include "rockets_debug.h"
 #include "rockets_nodes.h"
+#include "rockets_entities.h"
+#include "rockets_levels.h"
 
 // GUI stuff
 // @TODO: rockets_gui
@@ -89,56 +120,6 @@ typedef struct {
 
 typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
 
-// Entities
-// @TODO: rockets_entities
-
-typedef enum {EntityType_NAH,
-              EntityType_SHIP,
-              EntityType_BOUNDRY,
-              EntityType_GOAL} EntityType;
-
-typedef enum {EntityFlag_COLLIDES = (1 << 0)} EntityFlag;
-
-// Start with a special case of just having all collision geometry be rectangles.
-// For now going to have rotation be about the entitiy's position. Makes math easy
-// and seems to make sense for things that are going to move around.
-
-// @NOTE: This is basically the same as bounding box but the names are different because this is
-// a different way to describe a rectangle.
-typedef struct {
-    union {
-        struct {float x, y;};
-        V2 offset;
-    };
-    union {
-        struct {float width, height; };
-        V2 size;
-    };
-} CollisionRect;
-
-
-// How do I determine entity equality? Just pointer equality?
-typedef struct entity_ {
-    EntityType type;
-    uint32_t flags;
-
-    V2 position;
-    int rotation;
-    Thrusters thrusters;
-
-    V2 velocity;
-
-    // @TODO: I think I should probably use a memory area for this instead of allocating
-    // 10 slots for every entity. Many will just have 1 piece and lots won't have any.
-    // If I have a memory area I can track memory usage in it too.
-    // Also could let me pack all collision pieces in a single array which might be dope
-    // if I want to SIMD my collision checking.
-    int num_collision_pieces;
-    CollisionRect collision_pieces[10];
-
-    struct entity_* next_entity;
-} Entity;
-
 typedef struct entity_pointer_ {
     Entity* entity;
     struct entity_pointer_* next_entity;
@@ -163,6 +144,10 @@ typedef struct {
     Entity* first_free_entity;
 } GameState;
 
-// NAH.
+// @TODO: These can go in rockets_entities.c if I make that.
+void entity_add_flags(Entity* entity, uint32_t flags);
+bool entity_has_flags_set(Entity* entity, uint32_t flags);
+Entity* push_entity(GameState* gamestate);
+
 
 #endif

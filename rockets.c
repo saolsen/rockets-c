@@ -3,6 +3,40 @@
 #include "rockets.h"
 #include "rockets_nodes.c"
 
+// @TODO: Maybe move this to rockets_entitites.c
+void
+entity_add_flags(Entity* entity, uint32_t flags)
+{
+    entity->flags |= flags;
+}
+
+bool
+entity_has_flags_set(Entity* entity, uint32_t flags)
+{
+    return entity->flags & flags;
+}
+
+/* Gamestate */
+
+Entity*
+push_entity(GameState* gamestate)
+{
+    Entity* new_entity;
+    if (gamestate->first_free_entity) {
+        new_entity = gamestate->first_free_entity;
+        gamestate->first_free_entity = new_entity->next_entity;
+    } else {
+        assert(gamestate->num_entities < ARRAY_COUNT(gamestate->entities));
+        new_entity = gamestate->entities + gamestate->num_entities++; 
+    }
+
+    // @TODO: Maybe clear the entity out.
+    return new_entity;
+}
+
+// @NOTE: gamestate stuff needs to go before rockets_levels because we call push_entity.
+#include "rockets_levels.c"
+
 /* Rendering */
 
 // @TODO: Pull out the GUI debug drawing stuff too.
@@ -415,38 +449,6 @@ nodestore_eval_thrusters(const NodeStore* ns, const Entity* ship)
     }
 
     return out_thrusters;
-}
-
-/* Entities */
-
-void
-entity_add_flags(Entity* entity, uint32_t flags)
-{
-    entity->flags |= flags;
-}
-
-bool
-entity_has_flags_set(Entity* entity, uint32_t flags)
-{
-    return entity->flags & flags;
-}
-
-/* Gamestate */
-
-Entity*
-push_entity(GameState* gamestate)
-{
-    Entity* new_entity;
-    if (gamestate->first_free_entity) {
-        new_entity = gamestate->first_free_entity;
-        gamestate->first_free_entity = new_entity->next_entity;
-    } else {
-        assert(gamestate->num_entities < ARRAY_COUNT(gamestate->entities));
-        new_entity = gamestate->entities + gamestate->num_entities++; 
-    }
-
-    // @TODO: Maybe clear the entity out.
-    return new_entity;
 }
 
 /* GUI stuff */
@@ -926,52 +928,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
 void
 setup_level(GameState* state) {
-    // @NOTE: zero entities out.
-    memset(state->entities, 0, sizeof(Entity) * ARRAY_COUNT(state->entities));
-    state->num_entities = 0;
-    state->first_free_entity = NULL;
-
-    Entity* ship = push_entity(state);
-    ship->type = EntityType_SHIP;
-    ship->position = v2(300, 99);
-    ship->rotation = 0;
-
-    entity_add_flags(ship, EntityFlag_COLLIDES);
-
-    /* CollisionRect* s1 = &ship->collision_pieces[ship->num_collision_pieces++]; */
-    /* s1->offset = v2(-10, -15); */
-    /* s1->size = v2(20, 40); */
-    CollisionRect* s2 = &ship->collision_pieces[ship->num_collision_pieces++];
-    s2->offset = v2(-20, -25);
-    s2->size = v2(15, 30);
-    /* CollisionRect* s3 = &ship->collision_pieces[ship->num_collision_pieces++]; */
-    /* s3->offset = v2(5, -25); */
-    /* s3->size = v2(15, 30); */
-
-    Entity* goal = push_entity(state);
-    goal->type = EntityType_GOAL;
-    goal->position = v2(500, 600);
-    goal->rotation = 0;
-
-    entity_add_flags(goal, EntityFlag_COLLIDES);
-
-    CollisionRect* g = &goal->collision_pieces[goal->num_collision_pieces++];
-    g->offset = v2(-10, -10);
-    g->size = v2(20, 20);
-
-    state->current_level = 1;
-
-    Entity* test_block = push_entity(state);
-    test_block->type = EntityType_BOUNDRY;
-    test_block->position = v2(300, 300);
-    test_block->rotation = 0;
-
-    entity_add_flags(test_block, EntityFlag_COLLIDES);
-
-    /* CollisionRect* r = &test_block->collision_pieces[test_block->num_collision_pieces++]; */
-    /* r->offset = v2(30, 0); */
-    /* r->size = v2(50, 50); */
-
+    load_level(state, 1);
     state->status = RUNNING;
 }
 
@@ -1273,7 +1230,7 @@ game_update_and_render(void* gamestate,
     }
     nvgRestore(vg);
 
-    debug_print_records();
+    /* debug_print_records(); */
 }
 
 const gg_Game gg_game_api = {
