@@ -928,7 +928,7 @@ gui_nodes(GUIState* gui, NodeStore* ns)
 
 void
 setup_level(GameState* state) {
-    load_level(state, 1);
+    load_level(state, state->current_level);
     state->status = RUNNING;
 }
 
@@ -946,7 +946,7 @@ game_setup(void* game_state, NVGcontext* vg)
                              "SourceSansPro-Regular.ttf");
     // Assert that the font got loaded.
     assert(font >= 0);
-
+    state->current_level = 1;
     setup_level(state);
 
     return state;
@@ -958,7 +958,7 @@ game_update_and_render(void* gamestate,
                        NVGcontext* vg,
                        gg_Input input,
                        float dt)
-{
+{   
     debug_setup_records();
     debug_setup_drawing();
 
@@ -1005,7 +1005,21 @@ game_update_and_render(void* gamestate,
     }
 
     char* reset = "Reset";
-    if (gui_button_with_text(state->gui, 660, 2.5, 10, 5, reset)) {
+    if (gui_button_with_text(state->gui, 660, 2.5, 10, 10, reset)) {
+        setup_level(state);
+    }
+        
+    char* previous = "Previous Level";
+    if (gui_button_with_text(state->gui, 1230, 2.5, 10, 5, previous)) {
+        state->current_level--;
+        CLAMP(state->current_level, 0, num_levels);
+        setup_level(state);
+    }
+
+    char* next = "Next Level";
+    if (gui_button_with_text(state->gui, 1250, 2.5, 10, 10, next)) {
+        state->current_level++;
+        CLAMP(state->current_level, 0, num_levels);
         setup_level(state);
     }
 
@@ -1028,6 +1042,7 @@ game_update_and_render(void* gamestate,
                 entity->thrusters = new_thrusters;
                 ship_move(entity, dt);
 
+                // this doesn't work anymore because collision detection stop it from getting here.
                 // @HARDCODE: Fix with collision detection.
                 // Goal is at (500, 600)
                 if (bounds_contains(500 - 10,
@@ -1100,8 +1115,6 @@ game_update_and_render(void* gamestate,
                         int time_block = BEGIN_TIME_BLOCK();
                         CollisionRect collision_entity_piece = collision_entity->collision_pieces[cep];
                         
-
-                        // wudabout the entity_piece.offset
                         
                         // Check if they collide.
                         float area_width = collision_entity_piece.width + entity_piece.width;
@@ -1229,6 +1242,12 @@ game_update_and_render(void* gamestate,
         
     }
     nvgRestore(vg);
+
+    // Debug draw the mouse location.
+    nvgBeginPath(vg);
+    nvgCircle(vg, input.mouse_x, input.mouse_y, 3);
+    nvgFillColor(vg, nvgRGBf(1,1,1));
+    nvgFill(vg);
 
     /* debug_print_records(); */
 }

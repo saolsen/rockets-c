@@ -24,6 +24,7 @@ void load_level(GameState* state, int level_number)
 
             entity_add_flags(ship, EntityFlag_COLLIDES);
 
+            // @NOTE: ship is 40 x 50
             CollisionRect* s1 = &ship->collision_pieces[ship->num_collision_pieces++];
             s1->offset = v2(-10, -15);
             s1->size = v2(20, 40);
@@ -47,6 +48,19 @@ void load_level(GameState* state, int level_number)
             g->offset = v2(-10, -10);
             g->size = v2(20, 20);
         } break;
+
+        case(ES_OBSTICLE): {
+            Entity* obsticle = push_entity(state);
+            obsticle->type = EntityType_BOUNDRY;
+            obsticle->position = entity.position;
+            obsticle->rotation = 0;
+
+            entity_add_flags(obsticle, EntityFlag_COLLIDES);
+
+            CollisionRect* o = &obsticle->collision_pieces[obsticle->num_collision_pieces++];
+            o->offset = v2(-entity.size.x/2, -entity.size.y/2);
+            o->size = entity.size;
+        }
         }
     }
 }

@@ -3,10 +3,14 @@
   * The collision detection stuff isn't working properly.
 
   @TODO: next steps.
+  * Make a level system where you can pick the level and you can change the level.
+  * Use collisions for gameplay stuff like hitting the goal to win a level or dying.
+  * Add boundries to the level.
   * Better debug setup. Logging, performance counters, easier debug visualizations.
     (watch casey on this stuff today)
   * Debug the collision detection code.
-  * Use collisions for gameplay stuff.
+  * Make levels.
+
   * Start really making some levels and play with the game mechanics. Any platform work before having
     a viable game and levels is just wasted.
 
@@ -49,6 +53,8 @@
     of debug utils and the drawing stuff abstracted so I can ditch nanovg later.
     Real renderer is probably going to be a lot more complex. I want a nice looking game.
     For now this vector stuff works fine.
+    Sort of want my own renderer and then I can implement it for metal or opengl or whatever but
+    is a ton more work.
 
   Porting
   * Once I really have a game it would be great to get it running on a lot of platforms.
@@ -58,8 +64,6 @@
   
   I'll keep saying and believing this. HMH is the absolute best thing I've ever watched.
   Just keep watching it!
-    
-
  */
 #ifndef _game_h
 #define _game_h
@@ -72,58 +76,8 @@
 #include "rockets_nodes.h"
 #include "rockets_entities.h"
 #include "rockets_levels.h"
+#include "rockets_gui.h"
 
-// GUI stuff
-// @TODO: rockets_gui
-
-typedef struct {
-    Node* node;
-    BoundingBox bb;
-    V2 draw_position;
-    int input_index;
-    Node* input_to;
-} NodeBounds;
-
-typedef enum { NE_NAH } NodeEventType;
-
-typedef struct {
-    NodeEventType type;
-} NodeEvent;
-
-typedef enum {GUI_NAH,
-              GUI_DRAGGING_NODE,
-              GUI_DRAGGING_INPUT,
-              GUI_DRAGGING_OUTPUT,
-              GUI_DRAGGING_SLIDER} GUI_State;
-
-typedef enum {DT_NAH,
-              DT_BODY,
-              DT_OUTPUT,
-              DT_INPUT,
-              DT_SLIDER} DragTarget_Type;
-
-typedef struct {
-    DragTarget_Type type;
-    int from_id;
-    int from_input_num;
-    V2 from_position; // can calculate from from_id but meh...
-    V2 position;
-    int value;
-} DragTarget;
-
-typedef struct {
-    NVGcontext* vg;
-    gg_Input input;
-    GUI_State state;
-    DragTarget drag_target;
-} GUIState;
-
-typedef enum { BS_NAH, BS_HOVER, BS_CLICK } ButtonState;
-
-typedef struct entity_pointer_ {
-    Entity* entity;
-    struct entity_pointer_* next_entity;
-} EntityPointer;
 
 typedef enum {RUNNING, PAUSED, WON, DIED} LevelStatus;
 

@@ -17,8 +17,8 @@ bounds_contains(float top_leftx, float top_lefty,
                 float bottom_rightx, float bottom_righty,
                 float x, float y)
 {
-    return (x > top_leftx && x < bottom_rightx &&
-            y > top_lefty && y < bottom_righty);
+    return (x >= top_leftx && x <= bottom_rightx &&
+            y >= top_lefty && y <= bottom_righty);
 }
 
 // Vectors
