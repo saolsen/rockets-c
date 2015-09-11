@@ -14,11 +14,11 @@ game_setup(void* game_state, NVGcontext* vg)
     // Assert that the font got loaded.
     assert(font >= 0);
 
-    state->ship_position.x = 13;
-    state->ship_position.y = 3;
-    state->ship_position.facing = UP;
+    // state->ship_position.x = 13;
+    // state->ship_position.y = 3;
+    // state->ship_position.facing = UP;
 
-    state->tick = 0;
+    // state->tick = 0;
 
     return state;
 }
@@ -174,7 +174,7 @@ game_update_and_render(void* gamestate,
 
     /* draw_base_grid(vg, grid); */
     draw_hex_grid(vg, grid);
-
+#if 0
     /* int x, y; */
     /* if (grid_get_tile_for_screen_coordinates(&x, &y, grid, input.mouse_x, input.mouse_y)) { */
     /*     char buf[32] = {'\0'}; */
@@ -333,6 +333,7 @@ game_update_and_render(void* gamestate,
     /*     nvgStroke(vg); */
     /*     nvgRestore(vg); */
     /* } */
+#endif
 }
 
 const gg_Game gg_game_api = {

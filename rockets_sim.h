@@ -14,15 +14,22 @@ typedef enum {
     UP_RIGHT = 5
 } Direction;
 
+
+
 typedef struct {
-    int x, y;
+    int x, y; // probably gonna be x,y,z
     Direction facing;
 } Position;
 
-// Positive rotation is counter clockwise.
-typedef struct {
-    int x, y, rotation;
-} Offset;
+
+
+
+
+
+
+
+
+
 
 typedef enum {
     BP    = (1 << 0), // 1
@@ -31,6 +38,18 @@ typedef enum {
     SS    = (1 << 3), // 8
     BOOST = (1 << 4), // 16
 } Thruster;
+
+// Need another table for cubic offsets.
+// What's easiest, axial coordinates?
+// This is hard.
+
+// HOW ABOUT THIS FOR SOME NODES SIGNALS/
+// Sensors sense a section of the map, like forward sensor and forward left sensor
+// then in nodes you can do some set differences on them! Unions and differences.
+// then you get a number for the distance?
+
+// Cubic coordinates are needed probably.
+
 
 /*
   There are a lot of movement cases. Here is a rough drawing of them.
@@ -56,6 +75,12 @@ typedef enum {
 
 // These only work for an odd tile.
 // 1, 2, 4, 7, 8, 11, 13, 14,
+
+// Positive rotation is counter clockwise.
+typedef struct {
+    int x, y, rotation;
+} Offset;
+
 #define OFFSET_TABLE_SIZE 32
 Offset offset_table[OFFSET_TABLE_SIZE] = {
     {0,0,0},   // 0:

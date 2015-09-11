@@ -1,9 +1,19 @@
 /*
   @TODO:
-  * Get grid drawing.
-  * Get math for grid-screen translations working.
-  * Visualize the different ways the rocket moves based on what thrusters are on to make sure
-    it's right.
+  * @NEXT
+    - Do screen / grid translations in a rendering namespace.
+    - Convert rocket movement code to be gridV based.
+    - start hacking on rules
+  
+  * Get movement code to use a better coordinate system.
+  * Get some nodes stuff hooked up.
+  * Try out a flying sauser ship see how much easier that is.
+
+
+
+  I think the nodes could have sensors that check "sectors" like the up sector and the up_left
+  sector and then I can have some node combinations that do set difference or union stuff.
+
  */
 #ifndef _game_h
 #define _game_h
@@ -13,7 +23,7 @@
 #include "rockets_platform.h"
 #include "rockets_math.h"
 #include "rockets_grid.h"
-#include "rockets_sim.h"
+/* #include "rockets_sim.h" */
 
 //#include "rockets_debug.h"
 //#include "rockets_nodes.h"
@@ -47,7 +57,7 @@
 
 typedef struct {
     int tick;
-    Position ship_position;
+    /* Position ship_position; */
     uint32_t ship_thrusters;
 } GameState;
 

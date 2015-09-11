@@ -130,6 +130,7 @@ debug_print_records()
 // @TODO: Metadata, and maybe a better macro way to do this.
 // Want a way to browse these things by their metadata and turn on / off debug drawings.
 // need some UI integration. Like "show collisions" "show collision area for these two entities"
+
 typedef enum {DebugObject_NAH,
               DebugObject_V2,
               DebugObject_BOX,
