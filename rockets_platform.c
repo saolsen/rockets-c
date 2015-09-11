@@ -168,20 +168,20 @@ int main(int argc, char* argv[])
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK,
-            SDL_GL_CONTEXT_PROFILE_CORE);
+                        SDL_GL_CONTEXT_PROFILE_CORE);
 
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
 
     // @TODO: Have window name come from config object.
     SDL_Window *window = SDL_CreateWindow("rockets",
-            SDL_WINDOWPOS_CENTERED,
-            SDL_WINDOWPOS_CENTERED,
-            SCREEN_WIDTH,
-            SCREEN_HEIGHT,
-            SDL_WINDOW_OPENGL |
-                    SDL_WINDOW_RESIZABLE |
-                    SDL_WINDOW_ALLOW_HIGHDPI);
+                                          SDL_WINDOWPOS_CENTERED,
+                                          SDL_WINDOWPOS_CENTERED,
+                                          SCREEN_WIDTH,
+                                          SCREEN_HEIGHT,
+                                          SDL_WINDOW_OPENGL |
+                                          SDL_WINDOW_RESIZABLE |
+                                          SDL_WINDOW_ALLOW_HIGHDPI);
 
     int w, h;
     SDL_GL_GetDrawableSize(window, &w, &h);
@@ -194,7 +194,7 @@ int main(int argc, char* argv[])
     SDL_GLContext context = SDL_GL_CreateContext(window);
 
     // Use Vsync
-    if (SDL_GL_SetSwapInterval( 1 ) < 0) {
+    if (SDL_GL_SetSwapInterval(1) < 0) {
         log_info( "Warning: Unable to set VSync! SDL Error: %s", SDL_GetError());
     }
 
@@ -214,9 +214,18 @@ int main(int argc, char* argv[])
     gg_Input input = {};
 
     bool running = true;
+    int update_time = 0;
+    int frame_time = 0;
+
     uint64_t last_counter = SDL_GetPerformanceCounter();
+    int last_start_time = SDL_GetTicks();
+    
 
     while (running) {
+        int start_time = SDL_GetTicks();
+        frame_time = start_time - last_start_time;
+        last_start_time = start_time;
+        
         // Reload Library
         game_reload(&current_game, game_library);
 
@@ -263,20 +272,30 @@ int main(int argc, char* argv[])
                                             target_seconds_per_frame);
 
         /* end frame */
-        // @TODO: Can draw any admin console stuff here too like error
-        // messages on lib reloads or fps or whatever.
+        update_time = SDL_GetTicks() - start_time;
+
+        char stats[128];
+        snprintf(stats, 128,
+                 "game: %ims, frame: %ims, fps: %.0f",
+                 update_time, frame_time, 1.0/(frame_time * 0.001));
+        nvgSave(vg);
+        nvgFontSize(vg, 24);
+        nvgFillColor(vg, nvgRGBf(1,1,1));
+        nvgText(vg, 5, (h/2)-10, stats, NULL);
+        nvgRestore(vg);
+
         nvgEndFrame(vg);
 
-        /* update the screen */
-        // @TODO: I think this waits for vsync but maybe see if I should
-        // also delay myself until vsync.
+        // Try to delay and see if that helps battery.
+        // @TODO: Somehow figure this out for real.
+        int time_till_vsync = target_seconds_per_frame*1000.0 - (SDL_GetTicks() - start_time);
+        if (time_till_vsync > 3) {
+            SDL_Delay(time_till_vsync - 2);
+        }
+        
         SDL_GL_SwapWindow(window);
 
         uint64_t end_counter = SDL_GetPerformanceCounter();
-        /* float full_frame_seconds_elapsed = */
-        /*    sdl_get_seconds_elapsed(last_counter, end_counter); */
-        /* log_info("%f", full_frame_seconds_elapsed); */
-
         last_counter = end_counter;
 
     }

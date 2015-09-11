@@ -52,28 +52,27 @@ typedef enum {
   that cancel eachother out.
  */
 
-// @TODO: Look into using cubic coordinates for movement because that's suppossed to simplify this stuff.
+// @TODO: Look into using cubic coordinates for movement because that's suppossed to simplify this stuff. This doesn't work with rotations either.
 
-// all those b1 need to be back 1 if the ship is on an even tile_x
-// 
-
+// These only work for an odd tile.
+// 1, 2, 4, 7, 8, 11, 13, 14,
 #define OFFSET_TABLE_SIZE 32
 Offset offset_table[OFFSET_TABLE_SIZE] = {
     {0,0,0},   // 0:
-    {1,-1,-1}, // 1: BP
-    {-1,-1,1}, // 2: BS
+    {1,0,-1},  // 1: BP
+    {-1,0,1},  // 2: BS
     {0,0,0},   // 3: BP & BS
-    {1,0,1},   // 4: SP
+    {1,1,1},   // 4: SP
     {2,0,0},   // 5: BP & SP
     {0,0,2},   // 6: BS & SP
-    {1,0,1},   // 7: BP & BS & SP
-    {-1,0,-1}, // 8: SS
+    {1,1,1},   // 7: BP & BS & SP
+    {-1,1,-1}, // 8: SS
     {0,0,-2},  // 9: BP & SS
     {-2,0,0},  // 10: BS & SS
-    {-1,0,-1}, // 11: BP & BS & SS
+    {-1,1,-1}, // 11: BP & BS & SS
     {0,0,0},   // 12: SP & SS
-    {1,-1,-1}, // 13: BP & SP & SS
-    {-1,-1,1}, // 14: BS & SP & SS
+    {1,0,-1},  // 13: BP & SP & SS
+    {-1,0,1},  // 14: BS & SP & SS
     {0,0,0},   // 15: BP & BS & SP & SS
     {0,2,0},   // 16: BOOST
     {1,2,-1},  // 17: BP & BOOST   // back 1

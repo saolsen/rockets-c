@@ -46,6 +46,7 @@
 /* Entity* push_entity(GameState* gamestate); */
 
 typedef struct {
+    int tick;
     Position ship_position;
     uint32_t ship_thrusters;
 } GameState;

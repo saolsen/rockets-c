@@ -1,3 +1,18 @@
+
+// @TODO: Add a function pointer to GameState for the final call (currently print_debug_records)
+//        so that we can call it from the platform layer instead of having the game call it so
+//        we can have debug stuff timed before and after my game update stuff.
+// Not sure how that interacts with __COUNTER__
+// I think it actually works fine because we should really include rockets.c in this file and
+// compile the whole thing as one executable, we can still reload the dll tho for debuging and
+// updating the game, I don't know how that will interact with the debug buffer yet.
+// Maybe I need another array for this file?
+// Maybe I can't use the macros in platform but I can still send some data to the buffer or have
+// another struct of platform debug info.
+// nah, just some extra data in memory. Also can keep a rolling buffer in memory and add to it
+// every frame with what we recorded.
+
+
 #ifndef _rockets_debug_h
 #define _rockets_debug_h
 
