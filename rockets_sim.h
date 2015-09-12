@@ -1,140 +1,69 @@
 #ifndef _rockets_sim_h
 #define _rockets_sim_h
 /*
-  This is the new rockets simulation that uses a discrete tilemap instead of continuous space.
-  It is going to take awhile to port the whole game over so I'll be working in here for a while.
- */
+  @TODO: This would be so nice to be able to calculate from the original grid movement primitives
+  at compile time but c won't let you do that. Maybe consider writing another small program that outputs
+  this table.
+*/
 
-typedef enum {
-    UP = 0,
-    UP_LEFT = 1,
-    DOWN_LEFT = 2,
-    DOWN = 3,
-    DOWN_RIGHT = 4,
-    UP_RIGHT = 5
-} Direction;
-
-
-
-typedef struct {
-    int x, y; // probably gonna be x,y,z
-    Direction facing;
-} Position;
-
-
-
-
-
-
-
-
-
-
-
-/* typedef enum { */
-/*     BP    = (1 << 0), // 1 */
-/*     BS    = (1 << 1), // 2 */
-/*     SP    = (1 << 2), // 4 */
-/*     SS    = (1 << 3), // 8 */
-/*     BOOST = (1 << 4), // 16 */
-/* } Thruster; */
-
-// Need another table for cubic offsets.
-// What's easiest, axial coordinates?
-// This is hard.
-
-// HOW ABOUT THIS FOR SOME NODES SIGNALS/
-// Sensors sense a section of the map, like forward sensor and forward left sensor
-// then in nodes you can do some set differences on them! Unions and differences.
-// then you get a number for the distance?
-
-// Cubic coordinates are needed probably.
-
-
-/*
-  There are a lot of movement cases. Here is a rough drawing of them.
-
-  bp  | |  bs
-  sp | | | ss
-     boost
-
-  a {-1, 2, 1}, BS & BOOST, SP & BOOST
-  b {1, 2, -1}, BP & BOOST, SS & BOOST
-
-  |  |a |16|b |  |
-  |26|  |  |  |d |
-  |10|8 |0 |4 |5 |
-  |  |2 |  |1 |  |
-  |  |  |  |  |  |
-
-  Lots of the combinations are equivalent and that happens any time you have two thrusters on
-  that cancel eachother out.
- */
-
-// @TODO: Look into using cubic coordinates for movement because that's suppossed to simplify this stuff. This doesn't work with rotations either.
-
-// These only work for an odd tile.
-// 1, 2, 4, 7, 8, 11, 13, 14,
+// More "primitives" because I can't calculate them at compile time.
+#define GRID_RIGHT_2           (GridV){ 2,-1,-1}
+#define GRID_LEFT_2            (GridV){-2, 1, 1}
+#define GRID_UP_2              (GridV){ 0, 2,-2}
+#define GRID_UP_RIGHT_UP       (GridV){ 1, 1,-2}
+#define GRID_UP_LEFT_UP        (GridV){-1, 2,-1}
+#define GRID_RIGHT_UP_RIGHT_UP (GridV){ 2, 0,-2}
+#define GRID_LEFT_UP_LEFT_UP   (GridV){-2, 2, 0}
 
 // Positive rotation is counter clockwise.
 typedef struct {
-    int x, y, rotation;
-} Offset;
+    GridV translation;
+    int rotation;
+} MoveOffset;
 
+// Movements of the ship based on which thrusters are on.
 #define OFFSET_TABLE_SIZE 32
-Offset offset_table[OFFSET_TABLE_SIZE] = {
-    {0,0,0},   // 0:
-    {1,0,-1},  // 1: BP
-    {-1,0,1},  // 2: BS
-    {0,0,0},   // 3: BP & BS
-    {1,1,1},   // 4: SP
-    {2,0,0},   // 5: BP & SP
-    {0,0,2},   // 6: BS & SP
-    {1,1,1},   // 7: BP & BS & SP
-    {-1,1,-1}, // 8: SS
-    {0,0,-2},  // 9: BP & SS
-    {-2,0,0},  // 10: BS & SS
-    {-1,1,-1}, // 11: BP & BS & SS
-    {0,0,0},   // 12: SP & SS
-    {1,0,-1},  // 13: BP & SP & SS
-    {-1,0,1},  // 14: BS & SP & SS
-    {0,0,0},   // 15: BP & BS & SP & SS
-    {0,2,0},   // 16: BOOST
-    {1,2,-1},  // 17: BP & BOOST   // back 1
-    {-1,2,1},  // 18: BS & BOOST   // back 1
-    {0,2,0},   // 19: BP & BS & BOOST
-    {-1,2,1},  // 20: SP & BOOST   // back 2
-    {2,1,-1},  // 21: BP & SP & BOOST
-    {-1,2,2},  // 22: BS & SP & BOOST @TODO: This tight turn correct? Does it feel weird? // b 1
-    {-1,2,1},  // 23: BP & BS & SP & BOOST //b1
-    {1,2,-1},  // 24: SS & BOOST //b1
-    {1,2,-2},  // 25: BP & SS & BOOST @TODO: see 22 //b1
-    {-2,1,1},  // 26: BS & SS & BOOST 
-    {1,2,-1},  // 27: BP & BS & SS & BOOST //b1
-    {0,2,0},   // 28: SP & SS & BOOST
-    {1,2,-1},  // 29: BP & SP & SS & BOOST //b1
-    {-1,2,1},  // 30: BS & SP & SS & BOOST //b1
-    {0,2,0},   // 31: BP & BS & SP & SS & BOOST
+MoveOffset offset_table[OFFSET_TABLE_SIZE] = {
+//  Translation        rotation
+    {GRID_ZERO,               0}, // 0:  No Thrusters.
+    {GRID_RIGHT_DOWN,        -1}, // 1:  BP
+    {GRID_LEFT_DOWN,          1}, // 2:  BS
+    {GRID_ZERO,               0}, // 3:  BP & BS
+    {GRID_RIGHT_UP,           1}, // 4:  SP
+    {GRID_RIGHT_2,            0}, // 5:  BP & SP
+    {GRID_ZERO,               0}, // 6:  BS & SP
+    {GRID_RIGHT_UP,           1}, // 7:  BP & BS & SP
+    {GRID_LEFT_UP,           -1}, // 8:  SS
+    {GRID_ZERO,              -2}, // 9:  BP & SS
+    {GRID_LEFT_2,             0}, // 10: BS & SS
+    {GRID_LEFT_UP,           -1}, // 11: BP & BS & SS
+    {GRID_ZERO,               0}, // 12: SP & SS
+    {GRID_RIGHT_DOWN,        -1}, // 13: BP & SP & SS
+    {GRID_LEFT_DOWN,          1}, // 14: BS & SP & SS
+    {GRID_ZERO,               0}, // 15: BP & BS & SP & SS
+    {GRID_UP_2,               0}, // 16: BOOST
+    {GRID_UP_RIGHT_UP,       -1}, // 17: BP & BOOST
+    {GRID_UP_LEFT_UP,         1}, // 18: BS & BOOST
+    {GRID_UP_2,               0}, // 19: BP & BS & BOOST
+    {GRID_UP_LEFT_UP,         1}, // 20: SP & BOOST
+    {GRID_RIGHT_UP_RIGHT_UP, -1}, // 21: BP & SP & BOOST
+    {GRID_UP_LEFT_UP,         2}, // 22: BS & SP & BOOST
+    {GRID_UP_LEFT_UP,         1}, // 23: BP & BS & SP & BOOST
+    {GRID_UP_RIGHT_UP,       -1}, // 24: SS & BOOST
+    {GRID_UP_RIGHT_UP,       -2}, // 25: BP & SS & BOOST
+    {GRID_LEFT_UP_LEFT_UP,    1}, // 26: BS & SS & BOOST
+    {GRID_UP_RIGHT_UP,       -1}, // 27: BP & BS & SS & BOOST
+    {GRID_UP_2,               0}, // 28: SP & SS & BOOST
+    {GRID_UP_RIGHT_UP,       -1}, // 29: BP & SP & SS & BOOST
+    {GRID_UP_LEFT_UP,         1}, // 30: BS & SP & SS & BOOST
+    {GRID_UP_2,               0}, // 31: BP & BS & SP & SS & BOOST
 };
 
+typedef struct {
+    GridV tile;
+    Direction facing;
+} Position;
 
-
-
-// @TODO: handle moving when rotated.
-Position
-next_ship_position(Position position, uint32_t thrusters)
-{
-    assert(thrusters < OFFSET_TABLE_SIZE);
-    
-    Offset offset = offset_table[thrusters];
-    position.x += offset.x;
-    position.y += offset.y;
-    position.facing = rotate_direction(position.facing, offset.rotation);
-    
-    return position;
-}
-
-// @TODO: Way to test this is just show the ship on a grid and make an x based on the position
-// of the next location. Have a little rocket toggle. Lets me write the visualization part too.
+Position next_ship_position(Position position, uint32_t thrusters);
 
 #endif

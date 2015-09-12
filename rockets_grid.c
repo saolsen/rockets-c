@@ -1,6 +1,18 @@
 // @TODO: drop this include because it's a unity build.
 #include "rockets.h"
 
+Direction
+rotate_direction(Direction direction, int rotation)
+{
+    int dir = (int)direction;
+    dir += rotation;
+    dir = dir % 6;
+    if (dir < 0) {
+        dir += 6;
+    }
+    return (Direction)dir;
+}
+
 
 GridV
 gridV(int x, int y, int z)
@@ -56,6 +68,7 @@ gridV_scale(GridV v, float n)
 
 // Rotate a grid vector counter clockwise around the hexagon. Rotation must be an int (1-5).
 // @TODO: This is super hacky, there's probably a real math way to do it.
+// @BUG: I think this is where the bug is and it's messing up my math.
 GridV
 gridV_rotate(GridV v, int rotation)
 {
@@ -67,16 +80,16 @@ gridV_rotate(GridV v, int rotation)
 
     GridV new_v;
     if (gridV_eq(v, GRID_UP)) {
-        new_v = GRID_UP_LEFT;
-    } else if (gridV_eq(v, GRID_UP_LEFT)) {
-        new_v = GRID_DOWN_LEFT;
-    } else if (gridV_eq(v, GRID_DOWN_LEFT)) {
+        new_v = GRID_LEFT_UP;
+    } else if (gridV_eq(v, GRID_LEFT_UP)) {
+        new_v = GRID_LEFT_DOWN;
+    } else if (gridV_eq(v, GRID_LEFT_DOWN)) {
         new_v = GRID_DOWN;
     } else if (gridV_eq(v, GRID_DOWN)) {
-        new_v = GRID_DOWN_RIGHT;
-    } else if (gridV_eq(v, GRID_DOWN_RIGHT)) {
-        new_v = GRID_UP_RIGHT;
-    } else if (gridV_eq(v, GRID_UP_RIGHT)) {
+        new_v = GRID_RIGHT_DOWN;
+    } else if (gridV_eq(v, GRID_RIGHT_DOWN)) {
+        new_v = GRID_RIGHT_UP;
+    } else if (gridV_eq(v, GRID_RIGHT_UP)) {
         new_v = GRID_UP;
     }
 
@@ -91,20 +104,20 @@ gridV_for_direction(Direction direction)
     case(UP):
         return GRID_UP;
         break;
-    case(UP_LEFT):
-        return GRID_UP_LEFT;
+    case(LEFT_UP):
+        return GRID_LEFT_UP;
         break;
-    case(DOWN_LEFT):
-        return GRID_DOWN_LEFT;
+    case(LEFT_DOWN):
+        return GRID_LEFT_DOWN;
         break;
     case(DOWN):
         return GRID_DOWN;
         break;
-    case(DOWN_RIGHT):
-        return GRID_DOWN_RIGHT;
+    case(RIGHT_DOWN):
+        return GRID_RIGHT_DOWN;
         break;
-    case(UP_RIGHT):
-        return GRID_UP_RIGHT;
+    case(RIGHT_UP):
+        return GRID_RIGHT_UP;
         break;
     }
 }
@@ -116,7 +129,7 @@ gridV_for_direction(Direction direction)
 V2 gridV_to_pixel(HexagonGrid grid, GridV v)
 {
     // Only do the math for valid points.
-    assert(v.x + v.y + v.z == 0);
+    /* assert(v.x + v.y + v.z == 0); */
 
     // @TODO: make sure the point is on the grid.
 

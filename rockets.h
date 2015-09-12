@@ -22,7 +22,7 @@
 #include "rockets_platform.h"
 #include "rockets_math.h"
 #include "rockets_grid.h"
-/* #include "rockets_sim.h" */
+#include "rockets_sim.h"
 /* #include "rockets_math.h" */
 //#include "rockets_debug.h"
 //#include "rockets_nodes.h"
@@ -73,8 +73,9 @@ typedef struct {
     int tick;
 
     // Ship stuff.
-    GridV ship_position;
-    Direction ship_facing;
+    /* GridV ship_position; */
+    Position ship_position;
+    /* Direction ship_facing; */
     uint32_t ship_thrusters;
 } GameState;
 

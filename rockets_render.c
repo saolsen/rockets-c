@@ -98,10 +98,10 @@ draw_hex_grid(NVGcontext* vg, HexagonGrid grid)
 }
 
 void
-draw_ship(NVGcontext* vg, HexagonGrid grid, GridV position, Direction facing, uint32_t thrusters)
+draw_ship(NVGcontext* vg, HexagonGrid grid, Position position, uint32_t thrusters)
 {
     // Get screen loation.
-    V2 pos = gridV_to_pixel(grid, position);
+    V2 pos = gridV_to_pixel(grid, position.tile);
     
     // Draw Rocket
     nvgSave(vg);
@@ -109,7 +109,7 @@ draw_ship(NVGcontext* vg, HexagonGrid grid, GridV position, Direction facing, ui
 
     // @TODO: Rotation. Should be 60 degrees, counter clockwise per Direction.
     float PI_OVER_3 = -1.04719755;
-    float rotation = facing * PI_OVER_3;
+    float rotation = position.facing * PI_OVER_3;
 
     nvgRotate(vg, rotation); // rotation in radians
     

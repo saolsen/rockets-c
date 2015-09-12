@@ -1,6 +1,7 @@
 #include "rockets.h"
 
 #include "rockets_grid.c"
+#include "rockets_sim.c"
 #include "rockets_render.c"
 
 static void*
@@ -19,8 +20,8 @@ game_setup(void* game_state, NVGcontext* vg)
 
     state->tick = 0;
 
-    state->ship_position = gridV(13, -1, -12);
-    state->ship_facing = UP;
+    state->ship_position.tile = gridV(13, -1, -12);
+    state->ship_position.facing = UP;
 
     return state;
 }
@@ -42,16 +43,43 @@ game_update_and_render(void* gamestate,
                         .origin_x = hexagon_grid_origin_x,
                         .origin_y = hexagon_grid_origin_y,
                         .hexagon_size = 30};
-    
+
+    bool tickframe = false;
+    if (state->tick++ % 60 == 0) {
+        state->ship_thrusters++;
+        tickframe = true;
+
+        if (state->ship_thrusters == 32) {
+            state->ship_thrusters = 0;
+        }    
+    }
 
     draw_base_grid(vg, grid);
     draw_hex_grid(vg, grid);
-    draw_ship(vg, grid, state->ship_position, state->ship_facing, state->ship_thrusters);
+    draw_ship(vg, grid, state->ship_position, state->ship_thrusters);
 
-    V2 pos = gridV_to_pixel(grid, gridV(2,-1,-1));
+    Position next_position = next_ship_position(state->ship_position, state->ship_thrusters);
+
+    if (tickframe) {
+        log_info("Last Position: (%i,%i,%i)", state->ship_position.tile.x, state->ship_position.tile.y, state->ship_position.tile.z);
+        
+        
+        log_info("Next Position: (%i,%i,%i)", next_position.tile.x, next_position.tile.y, next_position.tile.z);
+    }
+    
+    V2 center = gridV_to_pixel(grid, next_position.tile);
+
     nvgSave(vg);
+    nvgTranslate(vg, center.x, center.y);
+    float PI_OVER_3 = 1.0471975512;
+    nvgRotate(vg, next_position.facing * PI_OVER_3);
+
     nvgBeginPath(vg);
-    nvgCircle(vg, pos.x, pos.y, 3);
+    nvgMoveTo(vg, 0, 20);
+    nvgLineTo(vg, 0, -20);
+    nvgLineTo(vg, 5, -15);
+    nvgLineTo(vg, -5, -15);
+    nvgLineTo(vg, 0, -20);
     nvgStrokeColor(vg, nvgRGBf(1,1,1));
     nvgStroke(vg);
     nvgRestore(vg);

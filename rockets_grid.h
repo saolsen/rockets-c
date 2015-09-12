@@ -3,12 +3,14 @@
 
 typedef enum {
     UP = 0,
-    UP_LEFT = 1,
-    DOWN_LEFT = 2,
+    LEFT_UP = 1,
+    LEFT_DOWN = 2,
     DOWN = 3,
-    DOWN_RIGHT = 4,
-    UP_RIGHT = 5
+    RIGHT_DOWN = 4,
+    RIGHT_UP = 5
 } Direction;
+
+Direction rotate_direction(Direction direction, int rotation);
 
 // Type to represent a vector on the grid in cubic coordinates. Could be a position or a
 // direction.
@@ -16,16 +18,15 @@ typedef struct {
     int x, y, z;
 } GridV;
 
+#define GRID_ZERO       (GridV){ 0, 0, 0}
+#define GRID_UP         (GridV){ 0, 1,-1}
+#define GRID_LEFT_UP    (GridV){-1, 1, 0}
+#define GRID_LEFT_DOWN  (GridV){-1, 0, 1}
+#define GRID_DOWN       (GridV){ 0,-1, 1}
+#define GRID_RIGHT_DOWN (GridV){ 1,-1, 0}
+#define GRID_RIGHT_UP   (GridV){ 1, 0,-1}
+
 GridV gridV(int x, int y, int z);
-
-#define GRID_ZERO       gridV(0,0,0)
-#define GRID_UP         gridV(0,1,-1)
-#define GRID_UP_LEFT    gridV(-1,1,0)
-#define GRID_DOWN_LEFT  gridV(-1,0,1)
-#define GRID_DOWN       gridV(0,-1,1)
-#define GRID_DOWN_RIGHT gridV(1,-1,0)
-#define GRID_UP_RIGHT   gridV(1,0,-1)
-
 int gridV_eq(GridV a, GridV b);
 int gridV_distance(GridV a, GridV b);
 int gridV_magnitude(GridV v);
@@ -44,15 +45,4 @@ typedef struct {
 V2 gridV_to_pixel(HexagonGrid grid, GridV v);
 
 // @NOTE: Here if needed. Delete if not.
-/* Direction */
-/* rotate_direction(Direction direction, int rotation) */
-/* { */
-/*     int dir = (int)direction; */
-/*     dir += rotation; */
-/*     dir = dir % 6; */
-/*     if (dir < 0) { */
-/*         dir += 6; */
-/*     } */
-/*     return (Direction)dir; */
-/* } */
 #endif
