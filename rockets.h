@@ -15,8 +15,8 @@
   sector and then I can have some node combinations that do set difference or union stuff.
 
  */
-#ifndef _game_h
-#define _game_h
+#ifndef _rockets_h
+#define _rockets_h
 
 #define ARRAY_COUNT(x) (sizeof(x) / sizeof(x[0]))
 
@@ -24,7 +24,7 @@
 #include "rockets_math.h"
 #include "rockets_grid.h"
 /* #include "rockets_sim.h" */
-
+/* #include "rockets_math.h" */
 //#include "rockets_debug.h"
 //#include "rockets_nodes.h"
 //#include "rockets_entities.h"
@@ -55,9 +55,27 @@
 /* bool entity_has_flags_set(Entity* entity, uint32_t flags); */
 /* Entity* push_entity(GameState* gamestate); */
 
+// @TODO: move back to rockets_sim
+typedef enum {
+    BP    = (1 << 0), // 1
+    BS    = (1 << 1), // 2
+    SP    = (1 << 2), // 4
+    SS    = (1 << 3), // 8
+    BOOST = (1 << 4), // 16
+} Thruster;
+
+bool
+thrusters_on(uint32_t ship_thrusters, uint32_t check_thrusters)
+{
+    return ship_thrusters & check_thrusters;
+}
+
 typedef struct {
     int tick;
-    /* Position ship_position; */
+
+    // Ship stuff.
+    GridV ship_position;
+    Direction ship_facing;
     uint32_t ship_thrusters;
 } GameState;
 

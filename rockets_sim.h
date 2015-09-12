@@ -31,13 +31,13 @@ typedef struct {
 
 
 
-typedef enum {
-    BP    = (1 << 0), // 1
-    BS    = (1 << 1), // 2
-    SP    = (1 << 2), // 4
-    SS    = (1 << 3), // 8
-    BOOST = (1 << 4), // 16
-} Thruster;
+/* typedef enum { */
+/*     BP    = (1 << 0), // 1 */
+/*     BS    = (1 << 1), // 2 */
+/*     SP    = (1 << 2), // 4 */
+/*     SS    = (1 << 3), // 8 */
+/*     BOOST = (1 << 4), // 16 */
+/* } Thruster; */
 
 // Need another table for cubic offsets.
 // What's easiest, axial coordinates?
@@ -117,17 +117,7 @@ Offset offset_table[OFFSET_TABLE_SIZE] = {
     {0,2,0},   // 31: BP & BS & SP & SS & BOOST
 };
 
-Direction
-rotate_direction(Direction direction, int rotation)
-{
-    int dir = (int)direction;
-    dir += rotation;
-    dir = dir % 6;
-    if (dir < 0) {
-        dir += 6;
-    }
-    return (Direction)dir;
-}
+
 
 
 // @TODO: handle moving when rotated.

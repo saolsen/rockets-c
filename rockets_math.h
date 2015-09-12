@@ -7,7 +7,7 @@
 #define CLAMP(x,xmin,xmax)  ((x) < (xmin) ? (xmin) : (x) > (xmax) ? (xmax) : (x))
 
 float
-deg_to_rad(const float deg)
+deg_to_rad(float deg)
 {
     return deg * M_PI / 180.0;
 }
@@ -35,7 +35,7 @@ v2(float x, float y)
 
 
 V2
-v2_plus(const V2 i, const V2 j)
+v2_plus(V2 i, V2 j)
 {
     return v2(i.x + j.x,
               i.y + j.y);
@@ -43,7 +43,7 @@ v2_plus(const V2 i, const V2 j)
 
 
 V2
-v2_minus(const V2 i, const V2 j)
+v2_minus(V2 i, V2 j)
 {
     return v2(i.x - j.x,
               i.y - j.y);
@@ -51,7 +51,7 @@ v2_minus(const V2 i, const V2 j)
 
 
 V2
-v2_scale(const V2 v, const float f)
+v2_scale(V2 v, float f)
 {
     return v2(v.x * f,
               v.y * f);
@@ -59,7 +59,7 @@ v2_scale(const V2 v, const float f)
 
 
 V2
-v2_rotate(const V2 v, const float radians)
+v2_rotate(V2 v, float radians)
 {
     float nx = v.x * cos(radians) - v.y * sin(radians);
     float ny = v.x * sin(radians) + v.y * cos(radians);

@@ -1,11 +1,5 @@
-// Gonna need to make a level editor because it's pretty much impossible to get
-// your head around these coordinates.
-
 #ifndef _rockets_grid_h
 #define _rockets_grid_h
-
-// @TODO: remove?
-#include <stdbool.h>
 
 typedef enum {
     UP = 0,
@@ -33,9 +27,9 @@ GridV gridV(int x, int y, int z);
 #define GRID_UP_RIGHT   gridV(1,0,-1)
 
 int gridV_eq(GridV a, GridV b);
-GridV gridV_plus(GridV a, GridV b);
 int gridV_distance(GridV a, GridV b);
 int gridV_magnitude(GridV v);
+GridV gridV_plus(GridV a, GridV b);
 GridV gridV_scale(GridV v, float n);
 GridV gridV_rotate(GridV v, int rotation);
 GridV gridV_for_direction(Direction direction);
@@ -46,4 +40,19 @@ typedef struct {
     int hexagon_size;         // Size of heach hexagon (in pixels for now)
 } HexagonGrid;
 
+// Math for translating between grid and screen space.
+V2 gridV_to_pixel(HexagonGrid grid, GridV v);
+
+// @NOTE: Here if needed. Delete if not.
+/* Direction */
+/* rotate_direction(Direction direction, int rotation) */
+/* { */
+/*     int dir = (int)direction; */
+/*     dir += rotation; */
+/*     dir = dir % 6; */
+/*     if (dir < 0) { */
+/*         dir += 6; */
+/*     } */
+/*     return (Direction)dir; */
+/* } */
 #endif
