@@ -19,7 +19,7 @@ game_setup(void* game_state, NVGcontext* vg)
 
     state->tick = 0;
 
-    state->ship_position = GRID_UP;//gridV(13, 5, -5);
+    state->ship_position = gridV(13, -1, -12);
     state->ship_facing = UP;
 
     return state;
@@ -28,10 +28,6 @@ game_setup(void* game_state, NVGcontext* vg)
 // Hexagon Math!
 #define hexagon_grid_origin_x 20
 #define hexagon_grid_origin_y 675
-
-// @TODO: probably goes in the rockets_sim stuff.
-
-
 
 static void
 game_update_and_render(void* gamestate,
@@ -52,7 +48,7 @@ game_update_and_render(void* gamestate,
     draw_hex_grid(vg, grid);
     draw_ship(vg, grid, state->ship_position, state->ship_facing, state->ship_thrusters);
 
-    V2 pos = gridV_to_pixel(grid, gridV(2,0,-2));
+    V2 pos = gridV_to_pixel(grid, gridV(2,-1,-1));
     nvgSave(vg);
     nvgBeginPath(vg);
     nvgCircle(vg, pos.x, pos.y, 3);

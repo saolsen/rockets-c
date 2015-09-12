@@ -44,7 +44,7 @@ gridV_magnitude(GridV v)
 
 // @NOTE: This takes a float so you can do stuff like 0.5;
 // You'll still get back ints so don't mess yourself up.
-// @TODO: Could make a gridV_divide instead or something.
+// @TODO: Could make this gridV_divide and take an int instead.
 GridV
 gridV_scale(GridV v, float n)
 {
@@ -113,26 +113,24 @@ gridV_for_direction(Direction direction)
 // @OPTOMIZE: If we gotta do this for tons of entities it would be good to pack all their positions
 //            together. Depends on if this is the most common operation or not.
 //            Watch that mike actin talk again.
-
-// @BUG: This isn't correct.
 V2 gridV_to_pixel(HexagonGrid grid, GridV v)
 {
     // Only do the math for valid points.
     assert(v.x + v.y + v.z == 0);
 
     // @TODO: make sure the point is on the grid.
-    
-    // Return where on the screan the center of v is.
-    // figure out the multiplicators for x y and z to x y.
-    // figure out the distance between centers.
-    // figure out the offset to the first center.
+
     float tile_width = grid.hexagon_size * 2;
     float tile_height = sqrt(3)/2 * tile_width;
+    
+    V2 x_scale = v2(tile_width/2.0, 0);
+    V2 y_scale = v2(-tile_width/4.0, -tile_height/2.0);
+    V2 z_scale = v2(-tile_width/4.0, tile_height/2.0);
 
-    // @BUG: This is wrong.
     V2 screen_coordinates;
-    screen_coordinates.x = v.x * tile_width * 3.0/4.0;
-    screen_coordinates.y = (v.z - v.y) * tile_height/2.0;
+    screen_coordinates = v2_plus(screen_coordinates, v2_scale(x_scale, v.x));
+    screen_coordinates = v2_plus(screen_coordinates, v2_scale(y_scale, v.y));
+    screen_coordinates = v2_plus(screen_coordinates, v2_scale(z_scale, v.z));
 
     V2 origin;
     origin.x = grid.origin_x + tile_width/2.0;
@@ -142,16 +140,3 @@ V2 gridV_to_pixel(HexagonGrid grid, GridV v)
     
     return screen_coordinates;
 }
-
-
-
-#if 0
-// Test this shit outside of the game for a sec.
-#include <stdlib.h>
-#include <stdio.h>
-#include "rockets.h"
-
-int main() {
-    printf("Hello from rockets_grid\n");
-}
-#endif

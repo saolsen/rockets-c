@@ -1,11 +1,10 @@
 /*
   @TODO:
   * @NEXT
-    - Do screen / grid translations in a rendering namespace.
+    - Do screen / grid translations.
     - Convert rocket movement code to be gridV based.
-    - start hacking on rules
+    - Start hacking on rules
   
-  * Get movement code to use a better coordinate system.
   * Get some nodes stuff hooked up.
   * Try out a flying sauser ship see how much easier that is.
 
