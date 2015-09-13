@@ -34,6 +34,7 @@ GridV gridV_plus(GridV a, GridV b);
 GridV gridV_scale(GridV v, float n);
 GridV gridV_rotate(GridV v, int rotation);
 GridV gridV_for_direction(Direction direction);
+GridV round_to_gridV(float x, float y, float z);
 
 typedef struct {
     int rows, columns;        // Width in tiles
@@ -43,6 +44,7 @@ typedef struct {
 
 // Math for translating between grid and screen space.
 V2 gridV_to_pixel(HexagonGrid grid, GridV v);
+GridV pixel_to_gridV(HexagonGrid grid, V2 pixel);
 
 // @NOTE: Here if needed. Delete if not.
 #endif

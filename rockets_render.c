@@ -51,6 +51,31 @@ draw_base_grid(NVGcontext* vg, HexagonGrid grid)
 }
 
 void
+draw_hex(NVGcontext* vg, HexagonGrid grid, GridV tile, NVGcolor color)
+{
+    float width = grid.hexagon_size * 2;
+    float height = sqrt(3)/2 * width;
+
+    V2 hex_center = gridV_to_pixel(grid, tile);
+
+    nvgSave(vg);
+    nvgStrokeColor(vg, color);
+    
+    nvgBeginPath(vg);
+    nvgMoveTo(vg, hex_center.x - width/2, hex_center.y);
+    nvgLineTo(vg, hex_center.x - width/4, hex_center.y + height/2);
+    nvgLineTo(vg, hex_center.x + width/4, hex_center.y + height/2);
+    nvgLineTo(vg, hex_center.x + width/2, hex_center.y);
+    nvgLineTo(vg, hex_center.x + width/4, hex_center.y - height/2);
+    nvgLineTo(vg, hex_center.x - width/4, hex_center.y - height/2);
+    nvgLineTo(vg, hex_center.x - width/2, hex_center.y);
+    nvgStroke(vg);
+
+    nvgRestore(vg);
+}
+
+// @TODO: Have this use GridV, or just inline this in the grid drawing stuff.
+void
 draw_hex_tile(NVGcontext* vg, HexagonGrid grid, int x, int y)
 {
     assert(x >= 0);
