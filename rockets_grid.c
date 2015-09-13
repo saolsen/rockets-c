@@ -6,10 +6,7 @@ rotate_direction(Direction direction, int rotation)
 {
     int dir = (int)direction;
     dir += rotation;
-    dir = dir % 6;
-    if (dir < 0) {
-        dir += 6;
-    }
+    dir = (dir + 6) % 6;
     return (Direction)dir;
 }
 
@@ -66,40 +63,21 @@ gridV_scale(GridV v, float n)
     return v;
 }
 
-// Rotate a grid vector counter clockwise around the hexagon. Rotation must be an int (1-5).
-// @TODO: This is super hacky, there's probably a real math way to do it.
-// @BUG: I think this is where the bug is and it's messing up my math.
+// Rotate a grid vector counter clockwise around the hexagon.
 GridV
 gridV_rotate(GridV v, int rotation)
 {
-    assert(rotation >= 0);
-    assert(rotation <= 5);
-
-    log_info("rotate: %i", rotation);
-    log_info("v: (%i,%i,%i)", v.x, v.y, v.z);
-    int mag = gridV_magnitude(v); // @BUG IN MAG
-    log_info("mag: %i", mag);
-    v = gridV_scale(v, 1.0/(float)mag);  // @BUG IN SCALE
-    log_info("unit: (%i,%i,%i)", v.x, v.y, v.z);
-
-    // BUGS IN THIS! WHAT IS EVEN GOING ON!
+    // Only rotating left for now.
+    int left_rotation = (rotation + 6) % 6;
     
-    GridV new_v;
-    if (gridV_eq(v, GRID_UP)) {
-        new_v = GRID_LEFT_UP;
-    } else if (gridV_eq(v, GRID_LEFT_UP)) {
-        new_v = GRID_LEFT_DOWN;
-    } else if (gridV_eq(v, GRID_LEFT_DOWN)) {
-        new_v = GRID_DOWN;
-    } else if (gridV_eq(v, GRID_DOWN)) {
-        new_v = GRID_RIGHT_DOWN;
-    } else if (gridV_eq(v, GRID_RIGHT_DOWN)) {
-        new_v = GRID_RIGHT_UP;
-    } else if (gridV_eq(v, GRID_RIGHT_UP)) {
-        new_v = GRID_UP;
+    // A left rotation is
+    //[ x,y,z] to [-y, -z, -x]
+    for (int i = 0; i < left_rotation; i++) {
+        GridV new_v = gridV(-v.y, -v.z, -v.x);
+        v = new_v;
     }
 
-    return gridV_scale(new_v, mag);
+    return v;
 }
 
 // Get the unit (1 space) grid vector for a given direction.
@@ -135,18 +113,18 @@ gridV_for_direction(Direction direction)
 V2 gridV_to_pixel(HexagonGrid grid, GridV v)
 {
     // Only do the math for valid points.
-    /* assert(v.x + v.y + v.z == 0); */
+    assert(v.x + v.y + v.z == 0);
 
     // @TODO: make sure the point is on the grid.
 
     float tile_width = grid.hexagon_size * 2;
-    float tile_height = sqrt(3)/2 * tile_width;
+    float tile_height = sqrt(3)/2.0 * tile_width;
     
     V2 x_scale = v2(tile_width/2.0, 0);
     V2 y_scale = v2(-tile_width/4.0, -tile_height/2.0);
     V2 z_scale = v2(-tile_width/4.0, tile_height/2.0);
 
-    V2 screen_coordinates;
+    V2 screen_coordinates = v2(0,0);
     screen_coordinates = v2_plus(screen_coordinates, v2_scale(x_scale, v.x));
     screen_coordinates = v2_plus(screen_coordinates, v2_scale(y_scale, v.y));
     screen_coordinates = v2_plus(screen_coordinates, v2_scale(z_scale, v.z));

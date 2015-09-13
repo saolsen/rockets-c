@@ -21,7 +21,7 @@ game_setup(void* game_state, NVGcontext* vg)
     state->tick = 0;
 
     state->ship_position.tile = gridV(13, -1, -12);
-    state->ship_position.facing = UP;
+    state->ship_position.facing = RIGHT_UP;
 
     return state;
 }
@@ -51,7 +51,7 @@ game_update_and_render(void* gamestate,
 
         if (state->ship_thrusters == 32) {
             state->ship_thrusters = 0;
-        }    
+        }
     }
 
     draw_base_grid(vg, grid);
@@ -59,19 +59,19 @@ game_update_and_render(void* gamestate,
     draw_ship(vg, grid, state->ship_position, state->ship_thrusters);
 
     Position next_position = next_ship_position(state->ship_position, state->ship_thrusters);
+    V2 center = gridV_to_pixel(grid, next_position.tile);
 
     if (tickframe) {
-        log_info("Last Position: (%i,%i,%i)", state->ship_position.tile.x, state->ship_position.tile.y, state->ship_position.tile.z);
-        
-        
-        log_info("Next Position: (%i,%i,%i)", next_position.tile.x, next_position.tile.y, next_position.tile.z);
+        log_info("Last Position: (%i,%i,%i), %i", state->ship_position.tile.x, state->ship_position.tile.y, state->ship_position.tile.z, state->ship_position.facing);
+        log_info("Next Position: (%i,%i,%i), %i", next_position.tile.x, next_position.tile.y, next_position.tile.z, next_position.facing);
+
+        log_info("Center: (%f, %f)", center.x, center.y);
     }
-    
-    V2 center = gridV_to_pixel(grid, next_position.tile);
 
     nvgSave(vg);
     nvgTranslate(vg, center.x, center.y);
-    float PI_OVER_3 = 1.0471975512;
+
+    float PI_OVER_3 = -1.0471975512;
     nvgRotate(vg, next_position.facing * PI_OVER_3);
 
     nvgBeginPath(vg);
@@ -82,6 +82,7 @@ game_update_and_render(void* gamestate,
     nvgLineTo(vg, 0, -20);
     nvgStrokeColor(vg, nvgRGBf(1,1,1));
     nvgStroke(vg);
+    
     nvgRestore(vg);
     
 #if 0

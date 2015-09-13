@@ -31,7 +31,7 @@ MoveOffset offset_table[OFFSET_TABLE_SIZE] = {
     {GRID_ZERO,               0}, // 3:  BP & BS
     {GRID_RIGHT_UP,           1}, // 4:  SP
     {GRID_RIGHT_2,            0}, // 5:  BP & SP
-    {GRID_ZERO,               0}, // 6:  BS & SP
+    {GRID_ZERO,               2}, // 6:  BS & SP
     {GRID_RIGHT_UP,           1}, // 7:  BP & BS & SP
     {GRID_LEFT_UP,           -1}, // 8:  SS
     {GRID_ZERO,              -2}, // 9:  BP & SS
