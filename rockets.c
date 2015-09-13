@@ -95,7 +95,6 @@ game_update_and_render(void* gamestate,
 
     GridV mouse_over = pixel_to_gridV(grid, v2(input.mouse_x, input.mouse_y));
 
-
     char spot[128];
     snprintf(spot, 128,
              "(%i,%i,%i)",
@@ -107,6 +106,14 @@ game_update_and_render(void* gamestate,
     nvgRestore(vg);
 
     draw_hex(vg, grid, mouse_over, nvgRGBf(1,0,0));
+
+    // show mouse
+    nvgSave(vg);
+    nvgBeginPath(vg);
+    nvgCircle(vg, input.mouse_x, input.mouse_y, 3);
+    nvgStrokeColor(vg, nvgRGBf(0,1,0));
+    nvgStroke(vg);
+    nvgRestore(vg);
     
     
 }

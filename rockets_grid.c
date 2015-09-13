@@ -123,6 +123,7 @@ gridV_for_direction(Direction direction)
 /*         rz = -rx-ry */
 
 /*     return Cube(rx, ry, rz) */
+// @TODO: Is the bug in here?
 GridV round_to_gridV(float x, float y, float z)
 {
     int rx = round(x);
@@ -145,82 +146,79 @@ GridV round_to_gridV(float x, float y, float z)
     return gridV(rx, ry, rz);
 }
 
-// @TODO: This can be a matrix multiplication if I had matrixes.
+// @TODO: This can be a matrix multiplication if I had matrixes. Figure out what the most common
+//        way to do matrix stuff in c is, and make sure it's something that can be SIMDized.
 // @OPTOMIZE: If we gotta do this for tons of entities it would be good to pack all their positions
 //            together. Depends on if this is the most common operation or not.
 //            Watch that mike actin talk again.
 /*
-  [x, y, z] * [ x_x x_y ] = [x, y]
-              [ y_x y_y ]
-              [ z_x z_y ]
-
+  Transform from grid space to screen space.
+  size * [ x_x y_x z_x ] X [x]  = [x]
+         [ x_y y_y z_y ]   [y]    [y]
+                           [z]
  */
 V2 gridV_to_pixel(HexagonGrid grid, GridV v)
 {
     // Only do the math for valid points.
     assert(v.x + v.y + v.z == 0);
 
-    float tile_width = grid.hexagon_size * 2;
-    float tile_height = sqrt(3)/2.0 * tile_width;
+    float height_mul = sqrt(3);
+    float width_mul = 2;
 
-    
+    float size = grid.hexagon_size;
 
-    float x_x = tile_width/2.0;
+    float x_x = width_mul/2.0;
     float x_y = 0;
-    float y_x = -tile_width/4.0;
-    float y_y = -tile_height/2.0;
-    float z_x = -tile_width/4.0;
-    float z_y = tile_height/2.0;
-    
-    V2 x_scale = v2(x_x, x_y);
-    V2 y_scale = v2(y_x, y_y);
-    V2 z_scale = v2(z_x, z_y);
+    float y_x = -width_mul/4.0;
+    float y_y = -height_mul/2.0;
+    float z_x = -width_mul/4.0;
+    float z_y = height_mul/2.0;
 
-    V2 screen_coordinates = v2(0,0);
-    screen_coordinates = v2_plus(screen_coordinates, v2_scale(x_scale, v.x));
-    screen_coordinates = v2_plus(screen_coordinates, v2_scale(y_scale, v.y));
-    screen_coordinates = v2_plus(screen_coordinates, v2_scale(z_scale, v.z));
+    float screen_x = (x_x * v.x + y_x * v.y + z_x * v.z) * size;
+    float screen_y = (x_y * v.x + y_y * v.y + z_y * v.z) * size;
 
     V2 origin;
-    origin.x = grid.origin_x + tile_width/2.0;
-    origin.y = grid.origin_y - tile_height/2.0;
+    origin.x = grid.origin_x + width_mul*size/2.0;
+    origin.y = grid.origin_y - height_mul*size/2.0;
 
+    V2 screen_coordinates = v2(screen_x, screen_y);
     screen_coordinates = v2_plus(screen_coordinates, origin);
     
     return screen_coordinates;
 }
 
-// @BUG: This isn't working
+// @BUG: This isn't working, the scale seems wrong which doesn't make sense to me.
 /*
-  [x, y] * [ x_x y_x z_x ] = [x, y, z]
-           [ x_y y_y z_y ]
-
-
+  Transform from screen space to grid space. Inverse of grid to screen.
+  [ x_x x_y ] X [x] / size = [x]
+  [ y_x y_y ]   [y]          [y]
+  [ z_x z_y ]                [z]
  */
 GridV pixel_to_gridV(HexagonGrid grid, V2 pixel)
 {
-    float tile_width = grid.hexagon_size * 2;
-    float tile_height = sqrt(3)/2.0 * tile_width;
+    float height_mul = sqrt(3);
+    float width_mul = 2;
+
+    float size = grid.hexagon_size;
     
     V2 origin;
-    origin.x = grid.origin_x + tile_width/2.0;
-    origin.y = grid.origin_y - tile_height/2.0;
+    origin.x = grid.origin_x + width_mul*size/2.0;
+    origin.y = grid.origin_y - height_mul*size/2.0;
 
-    pixel.x = pixel.x - origin.x;
-    pixel.y = -pixel.y + origin.y; // is this right?
+    pixel = v2_minus(pixel, origin);
 
-    float x_x = tile_width/2.0;
+    float x_x = width_mul/2.0;
     float x_y = 0;
-    float y_x = -tile_width/4.0;
-    float y_y = -tile_height/2.0;
-    float z_x = -tile_width/4.0;
-    float z_y = tile_height/2.0;
+    float y_x = -width_mul/4.0;
+    float y_y = -height_mul/2.0;
+    float z_x = -width_mul/4.0;
+    float z_y = height_mul/2.0;
     
-    float grid_x = pixel.x * x_x + pixel.y * x_y;
-    float grid_y = pixel.x * y_x + pixel.y * y_y;
-    float grid_z = pixel.x * z_x + pixel.y * z_y;
+    float grid_x = (pixel.x * x_x + pixel.y * x_y) / size;
+    float grid_y = (pixel.x * y_x + pixel.y * y_y) / size;
+    float grid_z = (pixel.x * z_x + pixel.y * z_y) / size;
 
-    /* log_info("(%f,%f,%f)", grid_x, grid_y, grid_z); */
+    log_info("(%f,%f,%f)", grid_x, grid_y, grid_z);
 
     return round_to_gridV(grid_x, grid_y, grid_z);
 }
