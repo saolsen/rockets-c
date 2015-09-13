@@ -106,24 +106,7 @@ gridV_for_direction(Direction direction)
     }
 }
 
-/* function cube_round(h): */
-/*     var rx = round(h.x) */
-/*     var ry = round(h.y) */
-/*     var rz = round(h.z) */
 
-/*     var x_diff = abs(rx - h.x) */
-/*     var y_diff = abs(ry - h.y) */
-/*     var z_diff = abs(rz - h.z) */
-
-/*     if x_diff > y_diff and x_diff > z_diff: */
-/*         rx = -ry-rz */
-/*     else if y_diff > z_diff: */
-/*         ry = -rx-rz */
-/*     else: */
-/*         rz = -rx-ry */
-
-/*     return Cube(rx, ry, rz) */
-// @TODO: Is the bug in here?
 GridV round_to_gridV(float x, float y, float z)
 {
     int rx = round(x);
@@ -151,35 +134,20 @@ GridV round_to_gridV(float x, float y, float z)
 // @OPTOMIZE: If we gotta do this for tons of entities it would be good to pack all their positions
 //            together. Depends on if this is the most common operation or not.
 //            Watch that mike actin talk again.
-/*
-  Transform from grid space to screen space.
-  size * [ x_x y_x z_x ] X [x]  = [x]
-         [ x_y y_y z_y ]   [y]    [y]
-                           [z]
- */
 V2 gridV_to_pixel(HexagonGrid grid, GridV v)
 {
     // Only do the math for valid points.
     assert(v.x + v.y + v.z == 0);
 
-    float height_mul = sqrt(3);
-    float width_mul = 2;
-
-    float size = grid.hexagon_size;
-
-    float x_x = width_mul/2.0;
-    float x_y = 0;
-    float y_x = -width_mul/4.0;
-    float y_y = -height_mul/2.0;
-    float z_x = -width_mul/4.0;
-    float z_y = height_mul/2.0;
-
-    float screen_x = (x_x * v.x + y_x * v.y + z_x * v.z) * size;
-    float screen_y = (x_y * v.x + y_y * v.y + z_y * v.z) * size;
+    float q = v.x;
+    float r = v.z;
 
     V2 origin;
-    origin.x = grid.origin_x + width_mul*size/2.0;
-    origin.y = grid.origin_y - height_mul*size/2.0;
+    origin.x = grid.origin_x + 2*grid.hexagon_size/2.0;
+    origin.y = grid.origin_y - sqrt(3)*grid.hexagon_size/2.0;
+
+    float screen_x = q * 3.0/2.0 * grid.hexagon_size;
+    float screen_y = (r + q/2.0) * sqrt(3) * grid.hexagon_size;
 
     V2 screen_coordinates = v2(screen_x, screen_y);
     screen_coordinates = v2_plus(screen_coordinates, origin);
@@ -187,38 +155,22 @@ V2 gridV_to_pixel(HexagonGrid grid, GridV v)
     return screen_coordinates;
 }
 
-// @BUG: This isn't working, the scale seems wrong which doesn't make sense to me.
-/*
-  Transform from screen space to grid space. Inverse of grid to screen.
-  [ x_x x_y ] X [x] / size = [x]
-  [ y_x y_y ]   [y]          [y]
-  [ z_x z_y ]                [z]
- */
+// @OPTOMIZE: Again if I'm doing lots of these I should pack them and have this function take
+//            an array so I'm not calculating all the extra stuff in the inner loop.
 GridV pixel_to_gridV(HexagonGrid grid, V2 pixel)
-{
-    float height_mul = sqrt(3);
-    float width_mul = 2;
-
-    float size = grid.hexagon_size;
-    
+{   
     V2 origin;
-    origin.x = grid.origin_x + width_mul*size/2.0;
-    origin.y = grid.origin_y - height_mul*size/2.0;
+    origin.x = grid.origin_x + 2*grid.hexagon_size/2.0;
+    origin.y = grid.origin_y - sqrt(3)*grid.hexagon_size/2.0;
 
     pixel = v2_minus(pixel, origin);
 
-    float x_x = width_mul/2.0;
-    float x_y = 0;
-    float y_x = -width_mul/4.0;
-    float y_y = -height_mul/2.0;
-    float z_x = -width_mul/4.0;
-    float z_y = height_mul/2.0;
-    
-    float grid_x = (pixel.x * x_x + pixel.y * x_y) / size;
-    float grid_y = (pixel.x * y_x + pixel.y * y_y) / size;
-    float grid_z = (pixel.x * z_x + pixel.y * z_y) / size;
+    float q = pixel.x * 2.0/3.0 / grid.hexagon_size;
+    float r = (-pixel.x / 3.0 + sqrt(3)/3.0 * pixel.y) / grid.hexagon_size;
 
-    log_info("(%f,%f,%f)", grid_x, grid_y, grid_z);
+    float grid_x = q;
+    float grid_z = r;
+    float grid_y = -grid_x-grid_z;
 
     return round_to_gridV(grid_x, grid_y, grid_z);
 }
