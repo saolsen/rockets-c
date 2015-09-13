@@ -43,7 +43,7 @@ gridV_plus(GridV a, GridV b)
 int
 gridV_distance(GridV a, GridV b)
 {
-    return abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z);
+    return (abs(a.x - b.x) + abs(a.y - b.y) + abs(a.z - b.z)) / 2;
 }
 
 
@@ -74,10 +74,16 @@ gridV_rotate(GridV v, int rotation)
 {
     assert(rotation >= 0);
     assert(rotation <= 5);
-    
-    int mag = gridV_magnitude(v);
-    v = gridV_scale(v, 1.0/(float)mag);
 
+    log_info("rotate: %i", rotation);
+    log_info("v: (%i,%i,%i)", v.x, v.y, v.z);
+    int mag = gridV_magnitude(v); // @BUG IN MAG
+    log_info("mag: %i", mag);
+    v = gridV_scale(v, 1.0/(float)mag);  // @BUG IN SCALE
+    log_info("unit: (%i,%i,%i)", v.x, v.y, v.z);
+
+    // BUGS IN THIS! WHAT IS EVEN GOING ON!
+    
     GridV new_v;
     if (gridV_eq(v, GRID_UP)) {
         new_v = GRID_LEFT_UP;
