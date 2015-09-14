@@ -2,6 +2,7 @@
 
 #include "rockets_grid.c"
 #include "rockets_sim.c"
+#include "rockets_gui.c"
 #include "rockets_render.c"
 
 static void*
@@ -23,6 +24,8 @@ game_setup(void* game_state, NVGcontext* vg)
     state->ship_position.tile = gridV(13, -1, -12);
     state->ship_position.facing = RIGHT_UP;
 
+    current_gui_state = &(state->gui_state);
+
     return state;
 }
 
@@ -37,6 +40,11 @@ game_update_and_render(void* gamestate,
                        float dt)
 {
     GameState* state = (GameState*)gamestate;
+
+    current_vg = vg;
+
+    // @HARDCODE: screen size
+    gui_init(input, 1280, 720, dt);
     
     HexagonGrid grid = {.rows = 12,
                         .columns = 27,
@@ -44,78 +52,33 @@ game_update_and_render(void* gamestate,
                         .origin_y = hexagon_grid_origin_y,
                         .hexagon_size = 30};
 
-    bool tickframe = false;
     if (state->tick++ % 60 == 0) {
         state->ship_thrusters++;
-        tickframe = true;
 
         if (state->ship_thrusters == 32) {
             state->ship_thrusters = 0;
         }
     }
 
-    draw_base_grid(vg, grid);
-    draw_hex_grid(vg, grid);
-    draw_ship(vg, grid, state->ship_position, state->ship_thrusters);
+    draw_base_grid(grid);
+    draw_hex_grid(grid);
+    draw_ship(grid, state->ship_position, state->ship_thrusters);
 
     Position next_position = next_ship_position(state->ship_position, state->ship_thrusters);
     V2 center = gridV_to_pixel(grid, next_position.tile);
-
-    if (tickframe) {
-        /* log_info("Last Position: (%i,%i,%i), %i", */
-        /*          state->ship_position.tile.x, */
-        /*          state->ship_position.tile.y, */
-        /*          state->ship_position.tile.z, */
-        /*          state->ship_position.facing); */
-        /* log_info("Next Position: (%i,%i,%i), %i", */
-        /*          next_position.tile.x, */
-        /*          next_position.tile.y, */
-        /*          next_position.tile.z, */
-        /*          next_position.facing); */
-
-        /* log_info("Center: (%f, %f)", center.x, center.y); */
-    }
-
-    nvgSave(vg);
-    nvgTranslate(vg, center.x, center.y);
-
-    float PI_OVER_3 = -1.0471975512;
-    nvgRotate(vg, next_position.facing * PI_OVER_3);
-
-    nvgBeginPath(vg);
-    nvgMoveTo(vg, 0, 20);
-    nvgLineTo(vg, 0, -20);
-    nvgLineTo(vg, 5, -15);
-    nvgLineTo(vg, -5, -15);
-    nvgLineTo(vg, 0, -20);
-    nvgStrokeColor(vg, nvgRGBf(1,1,1));
-    nvgStroke(vg);
-    
-    nvgRestore(vg);
+    draw_grid_arrow(center, next_position.facing);
 
     GridV mouse_over = pixel_to_gridV(grid, v2(input.mouse_x, input.mouse_y));
+    draw_formatted_text(v2(5,15), 24, WHITE,
+                        "(%i,%i,%i)",
+                        mouse_over.x, mouse_over.y, mouse_over.z);
 
-    char spot[128];
-    snprintf(spot, 128,
-             "(%i,%i,%i)",
-             mouse_over.x, mouse_over.y, mouse_over.z);
-    nvgSave(vg);
-    nvgFontSize(vg, 24);
-    nvgFillColor(vg, nvgRGBf(1,1,1));
-    nvgText(vg, 5, 15, spot, NULL);
-    nvgRestore(vg);
-
-    draw_hex(vg, grid, mouse_over, nvgRGBf(1,0,0));
+    draw_hex(grid, mouse_over, nvgRGBf(1,0,0));
 
     // show mouse
-    nvgSave(vg);
-    nvgBeginPath(vg);
-    nvgCircle(vg, input.mouse_x, input.mouse_y, 3);
-    nvgStrokeColor(vg, nvgRGBf(0,1,0));
-    nvgStroke(vg);
-    nvgRestore(vg);
-    
-    
+    draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN);
+
+    gui_render(vg);
 }
 
 const gg_Game gg_game_api = {

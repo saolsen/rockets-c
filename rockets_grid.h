@@ -46,5 +46,4 @@ typedef struct {
 V2 gridV_to_pixel(HexagonGrid grid, GridV v);
 GridV pixel_to_gridV(HexagonGrid grid, V2 pixel);
 
-// @NOTE: Here if needed. Delete if not.
 #endif

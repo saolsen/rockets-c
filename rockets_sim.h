@@ -1,10 +1,5 @@
 #ifndef _rockets_sim_h
 #define _rockets_sim_h
-/*
-  @TODO: This would be so nice to be able to calculate from the original grid movement primitives
-  at compile time but c won't let you do that. Maybe consider writing another small program that outputs
-  this table.
-*/
 
 // More "primitives" because I can't calculate them at compile time.
 #define GRID_RIGHT_2           (GridV){ 2,-1,-1}
@@ -15,7 +10,7 @@
 #define GRID_RIGHT_UP_RIGHT_UP (GridV){ 2, 0,-2}
 #define GRID_LEFT_UP_LEFT_UP   (GridV){-2, 2, 0}
 
-// Positive rotation is counter clockwise.
+// Positive rotation is counter clockwise. This is consistent with Direction.
 typedef struct {
     GridV translation;
     int rotation;
@@ -25,7 +20,7 @@ typedef struct {
 #define OFFSET_TABLE_SIZE 32
 MoveOffset offset_table[OFFSET_TABLE_SIZE] = {
 //  Translation        rotation
-    {GRID_ZERO,               0}, // 0:  No Thrusters.
+    {GRID_ZERO,               0}, // 0:  None
     {GRID_RIGHT_DOWN,        -1}, // 1:  BP
     {GRID_LEFT_DOWN,          1}, // 2:  BS
     {GRID_ZERO,               0}, // 3:  BP & BS

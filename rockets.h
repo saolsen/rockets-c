@@ -1,18 +1,16 @@
 /*
   @TODO:
   * @NEXT
-    - Do screen / grid translations.
-    - Convert rocket movement code to be gridV based.
-    - Start hacking on rules
+    - Finish up the work in rockets_render to use Color
+    - Start hacking on rules / nodes.
+    - Make GUI not suck this time.
+    - Set the debug stuff back up.
   
   * Get some nodes stuff hooked up.
   * Try out a flying sauser ship see how much easier that is.
 
-
-
   I think the nodes could have sensors that check "sectors" like the up sector and the up_left
   sector and then I can have some node combinations that do set difference or union stuff.
-
  */
 #ifndef _rockets_h
 #define _rockets_h
@@ -23,6 +21,9 @@
 #include "rockets_math.h"
 #include "rockets_grid.h"
 #include "rockets_sim.h"
+#include "rockets_render.h"
+#include "rockets_gui.h"
+
 /* #include "rockets_math.h" */
 //#include "rockets_debug.h"
 //#include "rockets_nodes.h"
@@ -70,6 +71,8 @@ thrusters_on(uint32_t ship_thrusters, uint32_t check_thrusters)
 }
 
 typedef struct {
+    GUIState gui_state;
+    
     int tick;
 
     // Ship stuff.
