@@ -62,18 +62,18 @@ game_update_and_render(void* gamestate,
 
     draw_base_grid(grid);
     draw_hex_grid(grid);
-    draw_ship(grid, state->ship_position, state->ship_thrusters);
+    draw_ship(grid, state->ship_position, state->ship_thrusters, RED, YELLOW);
 
     Position next_position = next_ship_position(state->ship_position, state->ship_thrusters);
     V2 center = gridV_to_pixel(grid, next_position.tile);
-    draw_grid_arrow(center, next_position.facing);
+    draw_grid_arrow(center, next_position.facing, WHITE);
 
     GridV mouse_over = pixel_to_gridV(grid, v2(input.mouse_x, input.mouse_y));
     draw_formatted_text(v2(5,15), 24, WHITE,
                         "(%i,%i,%i)",
                         mouse_over.x, mouse_over.y, mouse_over.z);
 
-    draw_hex(grid, mouse_over, nvgRGBf(1,0,0));
+    draw_hex(grid, mouse_over, CYAN);
 
     // show mouse
     draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN);

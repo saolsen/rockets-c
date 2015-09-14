@@ -3,6 +3,36 @@
 // @NOTE: Draws the grid that the hexagon grid goes on top of.
 // Used for debugging.
 
+NVGcolor
+get_color(Color color) {
+    switch(color) {
+    case(WHITE):
+        return nvgRGBf(1,1,1);
+        break;
+    case(RED):
+        return nvgRGBf(1,0,0);
+        break;
+    case(GREEN):
+        return nvgRGBf(0,1,0);
+        break;
+    case(BLUE):
+        return nvgRGBf(0,0,1);
+    case(YELLOW):
+        return nvgRGBf(1,1,0);
+        break;
+    case(CYAN):
+        return nvgRGBf(0,1,1);
+        break;
+    case(MAGENTA):
+        return nvgRGBf(1,0,1);
+        break;
+    case(BLACK):
+        return nvgRGBf(0,0,0);
+        break;
+    }
+}
+
+
 void
 draw_base_grid(HexagonGrid grid)
 {
@@ -39,7 +69,7 @@ draw_base_grid(HexagonGrid grid)
 
 // @TODO: take a Color instead of an NVGcolor
 void
-draw_hex(HexagonGrid grid, GridV tile, NVGcolor color)
+draw_hex(HexagonGrid grid, GridV tile, Color color)
 {
     float width = grid.hexagon_size * 2;
     float height = sqrt(3)/2 * width;
@@ -47,7 +77,7 @@ draw_hex(HexagonGrid grid, GridV tile, NVGcolor color)
     V2 hex_center = gridV_to_pixel(grid, tile);
 
     nvgSave(current_vg);
-    nvgStrokeColor(current_vg, color);
+    nvgStrokeColor(current_vg, get_color(color));
     
     nvgBeginPath(current_vg);
     nvgMoveTo(current_vg, hex_center.x - width/2, hex_center.y);
@@ -111,8 +141,9 @@ draw_hex_grid(HexagonGrid grid)
 }
 
 void
-draw_ship(HexagonGrid grid, Position position, uint32_t thrusters)
-{
+draw_ship(HexagonGrid grid, Position position, uint32_t thrusters,
+          Color body_color, Color thruster_color)
+{   
     // Get screen loation.
     V2 pos = gridV_to_pixel(grid, position.tile);
     
@@ -126,8 +157,8 @@ draw_ship(HexagonGrid grid, Position position, uint32_t thrusters)
 
     nvgRotate(current_vg, rotation); // rotation in radians
     
-    nvgFillColor(current_vg, nvgRGBf(1,0,0));
-    nvgStrokeColor(current_vg, nvgRGBf(0,1,0));
+    nvgFillColor(current_vg, get_color(body_color));
+    /* nvgStrokeColor(current_vg, nvgRGBf(0,1,0)); */
 
     // body
     nvgBeginPath(current_vg);
@@ -146,7 +177,7 @@ draw_ship(HexagonGrid grid, Position position, uint32_t thrusters)
     nvgCircle(current_vg, 0, 0, 3);
     nvgStroke(current_vg);
     
-    nvgFillColor(current_vg, nvgRGBf(1, 1, 0));
+    nvgFillColor(current_vg, get_color(thruster_color));
 
     // thrusters
     if (thrusters_on(thrusters, BP)) {
@@ -185,7 +216,7 @@ draw_ship(HexagonGrid grid, Position position, uint32_t thrusters)
     nvgRestore(current_vg);
 }
 
-void draw_grid_arrow(V2 center, Direction pointing)
+void draw_grid_arrow(V2 center, Direction pointing, Color color)
 {
     nvgSave(current_vg);
     nvgTranslate(current_vg, center.x, center.y);
@@ -199,7 +230,7 @@ void draw_grid_arrow(V2 center, Direction pointing)
     nvgLineTo(current_vg, 5, -15);
     nvgLineTo(current_vg, -5, -15);
     nvgLineTo(current_vg, 0, -20);
-    nvgStrokeColor(current_vg, nvgRGBf(1,1,1));
+    nvgStrokeColor(current_vg, get_color(color));
     nvgStroke(current_vg);
     
     nvgRestore(current_vg);
@@ -211,7 +242,7 @@ void draw_circle(V2 center, float r, Color color)
     nvgSave(current_vg);
     nvgBeginPath(current_vg);
     nvgCircle(current_vg, center.x, center.y, r);
-    nvgStrokeColor(current_vg, nvgRGBf(0,1,0));
+    nvgStrokeColor(current_vg, get_color(color));
     nvgStroke(current_vg);
     nvgRestore(current_vg);
 }
@@ -227,7 +258,7 @@ draw_formatted_text(V2 position, int size, Color color, const char* format, ...)
 
     nvgSave(current_vg);
     nvgFontSize(current_vg, size);
-    nvgFillColor(current_vg, nvgRGBf(1,1,1));
+    nvgFillColor(current_vg, get_color(color));
     nvgText(current_vg, position.x, position.y, buffer, NULL);
     nvgRestore(current_vg);
 }
