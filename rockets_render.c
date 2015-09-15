@@ -32,7 +32,6 @@ get_color(Color color) {
     }
 }
 
-
 void
 draw_base_grid(HexagonGrid grid)
 {
@@ -92,51 +91,74 @@ draw_hex(HexagonGrid grid, GridV tile, Color color)
     nvgRestore(current_vg);
 }
 
-// @TODO: Have this use GridV, or just inline this in the grid drawing stuff.
-void
-draw_hex_tile(HexagonGrid grid, int x, int y)
-{
-    assert(x >= 0);
-    assert(y >= 0);
-    assert(x < grid.columns);
-    assert(y < grid.rows);
-
-    float width = grid.hexagon_size * 2;
-    float height = sqrt(3)/2 * width;
-
-    float center_x = (grid.origin_x + grid.hexagon_size) + (grid.hexagon_size * 1.5 * x);
-    float center_y = (grid.origin_y - height/2) - (height * y);
-    
-    if (x % 2 == 1) {
-        center_y -= height/2;
-    }
-
-    nvgBeginPath(current_vg);
-    /* nvgCircle(vg, center_x, center_y, 3); */
-    nvgMoveTo(current_vg, center_x - width/2, center_y);
-    nvgLineTo(current_vg, center_x - width/4, center_y + height/2);
-    nvgLineTo(current_vg, center_x + width/4, center_y + height/2);
-    nvgLineTo(current_vg, center_x + width/2, center_y);
-    nvgLineTo(current_vg, center_x + width/4, center_y - height/2);
-    nvgLineTo(current_vg, center_x - width/4, center_y - height/2);
-    nvgLineTo(current_vg, center_x - width/2, center_y);
-    nvgStroke(current_vg);
-}
-
-// @OPTOMIZE: Stuff like this where you draw the whole vector grid each frame are not
-// ideal.
+// @TODO: This is kind of a mess.
+// @OPTOMIZE: Drawing this every frame is kind of expensive, maybe draw to a texture once.
 void
 draw_hex_grid(HexagonGrid grid)
 {
-    // @OPTOMIZE: This is super wastefull because it draws each line twice.
+    float width = grid.hexagon_size * 2;
+    float height = sqrt(3)/2 * width;
+    
     nvgSave(current_vg);
     nvgStrokeColor(current_vg, nvgRGBf(0.75,0.75,0.75));
-    // starts at 1 over height.
-    for (int row = 0; row < grid.rows; row++) {
-        for (int column = 0; column < grid.columns; column++) {
-            draw_hex_tile(grid, column, row);
+
+    nvgTranslate(current_vg, grid.origin_x, grid.origin_y);
+
+    // Draw Vertical Lines
+    for (int column = 0; column <= grid.columns; column++) {
+        float column_x = column * width*3/4;
+    
+        nvgBeginPath(current_vg);
+        int column_segments = (grid.rows * 2);
+        if (column != 0 &&
+            (column != grid.columns || (grid.columns % 2 == 0))) {
+            column_segments++;
         }
+        
+        bool left_leaning = (column % 2 == 0);
+
+        if (left_leaning) {
+            nvgMoveTo(current_vg, column_x + width/4, 0);
+        } else {
+            nvgMoveTo(current_vg, column_x, 0);
+        }
+
+
+        // @OPTOMIZE: This is pretty awful for performance, rethink all this drawing.
+        bool first = true;
+        for (int segment = 1; segment <= column_segments; segment++) {
+            if (left_leaning) {
+                if (first && column == grid.columns && column % 2 == 0) {
+                    nvgMoveTo(current_vg, column_x, segment * -height/2);
+                    first = false;
+                } else {
+                    nvgLineTo(current_vg, column_x, segment * -height/2);
+                }
+            } else {
+                nvgLineTo(current_vg, column_x + width/4, segment * -height/2);
+            }
+            left_leaning = !left_leaning;
+        }
+        nvgStroke(current_vg);
     }
+
+    // Draw Horisontal Lines
+    float column_x = width/4;
+    for (int column = 0; column < grid.columns; column++) {        
+        for (int row = 0; row <= grid.rows; row++) {
+            float row_y = -height * row;
+            if (column % 2 == 1) {
+                row_y -= height/2;
+            }
+            
+            nvgBeginPath(current_vg);
+            nvgMoveTo(current_vg, column_x, row_y);
+            nvgLineTo(current_vg, column_x + width/2, row_y);
+            nvgStroke(current_vg);
+        }
+        column_x += width * 3/4;
+    }
+    
     nvgRestore(current_vg);
 }
 

@@ -24,8 +24,6 @@ game_setup(void* game_state, NVGcontext* vg)
     state->ship_position.tile = gridV(13, -1, -12);
     state->ship_position.facing = RIGHT_UP;
 
-    current_gui_state = &(state->gui_state);
-
     return state;
 }
 
@@ -41,13 +39,14 @@ game_update_and_render(void* gamestate,
 {
     GameState* state = (GameState*)gamestate;
 
+    current_gui_state = &(state->gui_state);
     current_vg = vg;
 
     // @HARDCODE: screen size
     gui_init(input, 1280, 720, dt);
     
     HexagonGrid grid = {.rows = 12,
-                        .columns = 27,
+                        .columns = 26,
                         .origin_x = hexagon_grid_origin_x,
                         .origin_y = hexagon_grid_origin_y,
                         .hexagon_size = 30};
