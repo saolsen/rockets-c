@@ -21,14 +21,13 @@ game_setup(void* game_state, NVGcontext* vg)
 
     state->tick = 0;
 
-    state->ship_position.tile = gridV(13, -1, -12);
-    state->ship_position.facing = RIGHT_UP;
+    state->ship_position.tile = gridV(6, 2, -8);
+    state->ship_position.facing = UP;
 
     return state;
 }
 
-// Hexagon Math!
-#define hexagon_grid_origin_x 20
+#define hexagon_grid_origin_x 650
 #define hexagon_grid_origin_y 675
 
 static void
@@ -39,14 +38,20 @@ game_update_and_render(void* gamestate,
 {
     GameState* state = (GameState*)gamestate;
 
-    current_gui_state = &(state->gui_state);
+    // @HARDCODE: screen size
+    gui_init(&(state->gui_state), input, 1280, 720, dt);
+    // @TODO: Have an init_renderer call.
     current_vg = vg;
 
-    // @HARDCODE: screen size
-    gui_init(input, 1280, 720, dt);
+    // test gui
+    if(gui_button_with_text(10, 10, 50, 10, "Hello World!")) {
+        draw_circle(v2(60, 10), 5, RED);
+    } else {
+        draw_circle(v2(60, 10), 5, BLUE);
+    }
     
     HexagonGrid grid = {.rows = 12,
-                        .columns = 26,
+                        .columns = 13,
                         .origin_x = hexagon_grid_origin_x,
                         .origin_y = hexagon_grid_origin_y,
                         .hexagon_size = 30};
@@ -68,14 +73,15 @@ game_update_and_render(void* gamestate,
     draw_grid_arrow(center, next_position.facing, WHITE);
 
     GridV mouse_over = pixel_to_gridV(grid, v2(input.mouse_x, input.mouse_y));
-    draw_formatted_text(v2(5,15), 24, WHITE,
+    draw_formatted_text(v2(hexagon_grid_origin_x+5,
+                           hexagon_grid_origin_y+15), 24, WHITE,
                         "(%i,%i,%i)",
                         mouse_over.x, mouse_over.y, mouse_over.z);
 
-    draw_hex(grid, mouse_over, CYAN);
+    /* draw_hex(grid, mouse_over, CYAN); */
 
     // show mouse
-    draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN);
+    /* draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN); */
 
     gui_render(vg);
 }
