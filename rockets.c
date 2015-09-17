@@ -2,8 +2,9 @@
 
 #include "rockets_grid.c"
 #include "rockets_sim.c"
-#include "rockets_gui.c"
 #include "rockets_render.c"
+#include "rockets_gui.c"
+#include "rockets_nodes.c"
 
 static void*
 game_setup(void* game_state, NVGcontext* vg)
@@ -77,6 +78,39 @@ game_update_and_render(void* gamestate,
                            hexagon_grid_origin_y+15), 24, WHITE,
                         "(%i,%i,%i)",
                         mouse_over.x, mouse_over.y, mouse_over.z);
+
+    V2 pos;
+    if (gui_drag_off_button(&pos, 1, 1, 10, 10, GUI_ICON_SENSOR)) {
+        // create new sensor node at pos;
+        /* Node* new_node = nodestore_push_node(&state->node_store, SENSOR); */
+        log_info("Create Sensor node at: (%f,%f)", pos.x, pos.y);
+        /* new_node->position = pos; */
+    }
+
+    if (gui_drag_off_button(&pos, 1, 1, 10, 10, GUI_ICON_PREDICATE)) {
+        // create new predicate node at pos;
+        log_info("Create Predicate node at: (%f,%f)", pos.x, pos.y);
+        /* Node* new_node = nodestore_push_node(&state->node_store, PREDICATE); */
+        /* new_node->position = pos; */
+    }
+
+    if (gui_drag_off_button(&pos, 1, 1, 10, 10, GUI_ICON_GATE)) {
+        // create new gate node at pos;
+        log_info("Create Gate node at: (%f,%f)", pos.x, pos.y);
+        /* Node* new_node = nodestore_push_node(&state->node_store, GATE); */
+        /* new_node->position = pos; */
+    }
+
+    if (gui_drag_off_button(&pos, 1, 1, 10, 10, GUI_ICON_THRUSTER)) {
+        // create new thruster node at pos;
+        log_info("Create Thruster node at: (%f,%f)", pos.x, pos.y);
+        /* Node* new_node = nodestore_push_node(&state->node_store, THRUSTER); */
+        /* new_node->position = pos; */
+    }
+
+    /* if (gui_drag_from_panal(0, 0, 10, 10, ICON_SIGNAL)) { */
+    /*     nodestore_push_node(&state->node_store, SENSOR); */
+    /* } */
 
     /* draw_hex(grid, mouse_over, CYAN); */
 
