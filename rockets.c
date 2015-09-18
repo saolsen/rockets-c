@@ -6,11 +6,27 @@
 #include "rockets_gui.c"
 #include "rockets_nodes.c"
 
+#define KILOBYTES(value) ((value)*1024LL)
+#define MEGABYTES(value) (KILOBYTES(value)*1024LL)
+const size_t gamestate_size = sizeof(GameState) + MEGABYTES(10);
+
 static void*
 game_setup(void* game_state, NVGcontext* vg)
 {
     log_info("Setting up game");
     GameState* state = (GameState*)game_state;
+
+    arena_initialize(&state->persistent_store,
+                     (uint8_t*)game_state + sizeof(GameState),
+                     gamestate_size - sizeof(GameState));
+
+    state->gui_state = gui_allocate(&state->persistent_store, KILOBYTES(100));
+
+    state->tick = 0;
+
+    state->ship_position.tile = gridV(6, 2, -8);
+    state->ship_position.facing = UP;
+
 
     // @TODO: If you have more than one font you need to store a
     // reference to this.
@@ -19,12 +35,7 @@ game_setup(void* game_state, NVGcontext* vg)
                              "SourceSansPro-Regular.ttf");
     // Assert that the font got loaded.
     assert(font >= 0);
-
-    state->tick = 0;
-
-    state->ship_position.tile = gridV(6, 2, -8);
-    state->ship_position.facing = UP;
-
+    
     return state;
 }
 
@@ -39,13 +50,12 @@ game_update_and_render(void* gamestate,
 {
     GameState* state = (GameState*)gamestate;
 
-    // @HARDCODE: screen size
-    gui_init(&(state->gui_state), input, 1280, 720, dt);
     // @TODO: Have an init_renderer call.
     current_vg = vg;
+    gui_frame(state->gui_state, input, 1280, 720, dt);
 
     // test gui
-    if(gui_button_with_text(10, 10, 50, 10, "Hello World!")) {
+    if(gui_button_with_text(state->gui_state, 10, 10, 50, 10, "Hello World!")) {
         draw_circle(v2(60, 10), 5, RED);
     } else {
         draw_circle(v2(60, 10), 5, BLUE);
@@ -80,28 +90,28 @@ game_update_and_render(void* gamestate,
                         mouse_over.x, mouse_over.y, mouse_over.z);
 
     V2 pos;
-    if (gui_drag_off_button(&pos, 1, 1, 10, 10, GUI_ICON_SENSOR)) {
+    if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_SENSOR)) {
         // create new sensor node at pos;
         /* Node* new_node = nodestore_push_node(&state->node_store, SENSOR); */
         log_info("Create Sensor node at: (%f,%f)", pos.x, pos.y);
         /* new_node->position = pos; */
     }
 
-    if (gui_drag_off_button(&pos, 1, 1, 10, 10, GUI_ICON_PREDICATE)) {
+    if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_PREDICATE)) {
         // create new predicate node at pos;
         log_info("Create Predicate node at: (%f,%f)", pos.x, pos.y);
         /* Node* new_node = nodestore_push_node(&state->node_store, PREDICATE); */
         /* new_node->position = pos; */
     }
 
-    if (gui_drag_off_button(&pos, 1, 1, 10, 10, GUI_ICON_GATE)) {
+    if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_GATE)) {
         // create new gate node at pos;
         log_info("Create Gate node at: (%f,%f)", pos.x, pos.y);
         /* Node* new_node = nodestore_push_node(&state->node_store, GATE); */
         /* new_node->position = pos; */
     }
 
-    if (gui_drag_off_button(&pos, 1, 1, 10, 10, GUI_ICON_THRUSTER)) {
+    if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_THRUSTER)) {
         // create new thruster node at pos;
         log_info("Create Thruster node at: (%f,%f)", pos.x, pos.y);
         /* Node* new_node = nodestore_push_node(&state->node_store, THRUSTER); */
@@ -117,11 +127,11 @@ game_update_and_render(void* gamestate,
     // show mouse
     /* draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN); */
 
-    gui_render(vg);
+    gui_render(state->gui_state, vg);
 }
 
 const gg_Game gg_game_api = {
-    .gamestate_size = sizeof(GameState),
+    .gamestate_size = gamestate_size,
     .init = game_setup,
     .update_and_render = game_update_and_render
 };

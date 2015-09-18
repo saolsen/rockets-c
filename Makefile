@@ -12,7 +12,7 @@ NANOVG_LD= -Lnanovg/build -lnanovg
 CFLAGS= $(NANOVG_I) -std=c11 -g -Wall -O0 -fPIC `pkg-config --cflags sdl2`
 LDFLAGS= $(NANOVG_LD) $(OPENGL_LIB) `pkg-config --libs sdl2`
 
-all: libgame.dylib rockets
+all: libgame.dylib rockets tags
 
 libgame.dylib: rockets.c rockets.h rockets_platform.h rockets_*.h rockets_*.c
 	clang -dynamiclib -undefined dynamic_lookup $(CFLAGS) -o libgame.dylib rockets.c
@@ -27,5 +27,5 @@ clean:
 check-syntax:
 	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
 
-tags:
+tags: rockets*.c rockets*.h
 	etags ./*.c ./*.h nanovg/src/nanovg.h

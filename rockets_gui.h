@@ -51,64 +51,36 @@ typedef struct {
     float x, y, w, h;
 } GUIRect;
 
-// Input checking helpers.
-bool gui_rect_did_click(gg_Input input, GUIRect rect);
-
 typedef enum {
-    GUI_COMMAND_RECT
+    GUICommandType_GUICommandRect,
 } GUICommandType;
 
 typedef struct {
     GUICommandType type; // Command Type
-    size_t next;         // Base pointer(byte) offset to next command.
-    //@TODO: Should that just be a pointer? Isn't that nicer to work with?
-} GUICommand;
+    /* size_t next;         // Base pointer(byte) offset to next command. */
+} GUICommandHeader;
 
 typedef struct {
-    GUICommand header;
     GUIRect rect;
 } GUICommandRect;
-
-typedef struct {
-    // GUI Memory
-    uint8_t memory[128]; // @TODO: Could pull from a transient memory arena at init.
-    uint8_t* base;
-    size_t size;
-    size_t used;
-} GUICommandBuffer;
-
-void gui_command_buffer_init(GUICommandBuffer* command_buffer);
-uint8_t* gui_command_buffer_push_object(GUICommandBuffer* command_buffer, size_t size);
-#define GUI_COMMAND_PUSH(command_buffer, type)                          \
-    (type*)gui_command_buffer_push_object(command_buffer, sizeof(type))
-void gui_command_buffer_push_rect(GUICommandBuffer* command_buffer, GUIRect rect);
 
 typedef struct {
     // Frame Information
     gg_Input input;
     float screen_height, screen_width, dt;
-
+    
     // Command Buffer
-    GUICommandBuffer command_buffer;
+    uint8_t* command_buffer_base;
+    size_t command_buffer_size;
+    size_t command_buffer_used;
+    
 } GUIState;
-
-GUIState* current_gui_state = NULL;
 
 // Public API.
 // Initialization.
-void
-gui_init(GUIState* gui_state, gg_Input input, float screen_height, float screen_width, float dt);
-
 typedef enum {GUI_ICON_SENSOR,
               GUI_ICON_PREDICATE,
               GUI_ICON_GATE,
               GUI_ICON_THRUSTER} GUI_ICON;
-
-void
-gui_render(NVGcontext* vg);
-
-// GUI functions
-bool gui_button_with_text(float x, float y, float width, float height, char* txt);
-bool gui_drag_off_button(V2* out_pos, float x, float y, float width, float height, GUI_ICON icon);
 
 #endif

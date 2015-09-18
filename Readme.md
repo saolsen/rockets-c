@@ -69,3 +69,5 @@ the c version, currently only works on osx
 
 * [9/17/15]     Really need to get going on the nodes and the rules and the gameplay again. Gotta get back to a playable demo so I can see if it's fun. I started by doing some work to get the nodestore back online. I think the structure of the nodes is going to be slightly different this time. Need to figure out this radar/sensor idea. I started working out the gui stuff for it but ran into a bug with my gui pushbuffer that I think is because I'm not handling alignment when pushing structs so I need to figure that out. This is my first real memory error bug.
 
+* [9/17/15]     Oh man! That bug was hard so I went back and rewatched all the stuff on how casey initializes and uses the memory for his game. I'm now doing something in a similar way where I have a large arena up front. I then use that arena to initialize the command buffer for the gui system which then manages it's block itself. This is pretty nice now. I got rid of the global gui_state pointer too and am going to get rid of the one in the renderer. I should just be explicit.
+

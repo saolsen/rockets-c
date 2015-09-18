@@ -27,7 +27,8 @@
   I basically have an arena for the gui code, if I also end up with a pushbuffer for rendering
   then I should probably do it.
   
-  
+  So I definately don't want to inline those huge arrays into my gamestate because then the
+  gamestate doesn't fit in a cache line. I need to use pointers to sections of the arena.
   
  */
 #ifndef _rockets_h
@@ -90,7 +91,9 @@ thrusters_on(uint32_t ship_thrusters, uint32_t check_thrusters)
 }
 
 typedef struct {
-    GUIState gui_state;
+    MemoryArena persistent_store;
+
+    GUIState* gui_state;
     /* NodeStore node_store; */
     
     int tick;

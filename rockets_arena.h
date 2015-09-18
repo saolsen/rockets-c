@@ -29,9 +29,32 @@ typedef struct {
     size_t used;
 } MemoryArena;
 
-// @TODO: Casey has alignment as a default arg = 4. I can't do that in c.
-void arena_initialize(MemoryArena* arena, void* memory, size_t size);
-uint8_t* arena_push_size(MemoryArena* arena, size_t size);
-#define PUSH_STRUCT(arena, type, ...) (type*)arena_push_size(arena, sizeof(type))
+void arena_initialize(MemoryArena* arena, void* memory, size_t size)
+{
+    arena->base = memory;
+    arena->size = size;
+    arena->used = 0;
+}
+
+// @TODO: Figure out how to handle alignment.
+void* arena_push_size(MemoryArena* arena, size_t size)
+{
+    arena->used += size;
+    assert(arena->used < arena->size);
+
+    uint8_t* new_object = arena->base;
+    arena->base += size;
+    // @TODO: Handle alignment
+
+    return new_object;
+}
+
+#define arena_push_struct(arena, type) (type*)arena_push_size(arena, sizeof(type))
+
+
+/* // @TODO: Casey has alignment as a default arg = 4. I can't do that in c. */
+/* void arena_initialize(MemoryArena* arena, void* memory, size_t size); */
+/* uint8_t* arena_push_size(MemoryArena* arena, size_t size); */
+/* #define PUSH_STRUCT(arena, type, ...) (type*)arena_push_size(arena, sizeof(type)) */
 
 #endif

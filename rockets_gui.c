@@ -11,65 +11,70 @@ gui_rect_did_click(gg_Input input, GUIRect rect)
             input.mouse_y <= rect.y + rect.h);
 }
 
-
-// @TODO: This could pull from an arena instead of allocating itself.
-void
-gui_command_buffer_init(GUICommandBuffer* command_buffer)
-{
-    command_buffer->base = command_buffer->memory;
-    command_buffer->size = ARRAY_COUNT(command_buffer->memory);
-    command_buffer->used = 0;
-}
-
-
+#define GUICommandBufferPush(gui_state, type) (type*)gui_command_buffer_push_(gui_state, sizeof(type), GUICommandType_##type)
 uint8_t*
-gui_command_buffer_push_object(GUICommandBuffer* command_buffer, size_t size)
+gui_command_buffer_push_(GUIState* gui_state, size_t size, GUICommandType type)
 {
-    uint8_t* command_object = command_buffer->base + command_buffer->used;
-    command_buffer->used += size;
-    // @TODO: Add correct alignment offset here.
+    size += sizeof(GUICommandHeader);
+
+    assert(gui_state->command_buffer_used + size <= gui_state->command_buffer_size);
+
+    GUICommandHeader *header = (GUICommandHeader*)(gui_state->command_buffer_base +
+                                                   gui_state->command_buffer_used);
+    header->type = type;
+
+    uint8_t* command_object = (uint8_t*)header + sizeof(*header);
+
+    gui_state->command_buffer_used += size;
+    /* header->next = gui_state->command_buffer_used; */
+
     return command_object;
 }
 
 
-void
-gui_command_buffer_push_rect(GUICommandBuffer* command_buffer, GUIRect rect)
+GUICommandRect*
+gui_command_buffer_push_rect(GUIState* gui_state, GUIRect rect)
 {
-    GUICommandRect* command_rect = GUI_COMMAND_PUSH(command_buffer, GUICommandRect);
-
-    command_rect->header.type = GUI_COMMAND_RECT;
-    command_rect->header.next = command_buffer->used;
+    GUICommandRect* command_rect = GUICommandBufferPush(gui_state, GUICommandRect);
 
     command_rect->rect = rect;
-}
 
+    return command_rect;
+}
 
 // User Functions
-void
-gui_init(GUIState* gui_state, gg_Input input, float screen_width, float screen_height, float dt)
+GUIState*
+gui_allocate(MemoryArena* arena, size_t size)
 {
-    assert(gui_state);
-    current_gui_state = gui_state;
+    GUIState* gui_state = arena_push_struct(arena, GUIState);
+    gui_state->command_buffer_base = (uint8_t*)arena_push_size(arena, size);
+    gui_state->command_buffer_size = size;
+    gui_state->command_buffer_used = 0;
+    return gui_state;
+}
 
-    gui_command_buffer_init(&gui_state->command_buffer);
-    current_gui_state->input = input;
-    current_gui_state->screen_width = screen_width;
-    current_gui_state->screen_height = screen_height;
-    current_gui_state->dt = dt;
+void
+gui_frame(GUIState* gui_state, gg_Input input, float screen_width, float screen_height, float dt)
+{
+    gui_state->input = input;
+    gui_state->screen_width = screen_width;
+    gui_state->screen_height = screen_height;
+    gui_state->dt = dt;
 }
 
 
 void
-gui_render(NVGcontext* vg)
+gui_render(GUIState* gui_state, NVGcontext* vg)
 {
-    assert(current_gui_state);
-    
-    for (int i = 0; i != current_gui_state->command_buffer.used;) {
-        GUICommand* command = (GUICommand*)current_gui_state->command_buffer.base + i;
+    for (size_t i = 0; i != gui_state->command_buffer_used;) {
+        GUICommandHeader* command = (GUICommandHeader*)gui_state->command_buffer_base + i;
+        i += sizeof(GUICommandHeader);
 
         switch(command->type) {
-        case(GUI_COMMAND_RECT): {
-            GUIRect rect = ((GUICommandRect*)command)->rect;
+        case(GUICommandType_GUICommandRect): {
+            GUICommandRect* command_rect  = (GUICommandRect*)((uint8_t*)command +
+                                                              sizeof(GUICommandHeader));
+            GUIRect rect = command_rect->rect;
 
             nvgSave(vg);
             nvgFillColor(vg, nvgRGBf(1,1,1));
@@ -77,27 +82,28 @@ gui_render(NVGcontext* vg)
             nvgRect(vg, rect.x, rect.y, rect.w, rect.h);
             nvgFill(vg);
             nvgRestore(vg);
+
+            i += sizeof(GUICommandRect);
             
         } break;
         };
 
-        i = command->next;
+
     }
 }
 
 
 // @TODO: Enable an icon instead of text.
 bool
-gui_button_with_text(float x, float y, float width, float height, char* txt)
+gui_button_with_text(GUIState* gui_state, float x, float y, float width, float height, char* txt)
 {
-    assert(current_gui_state);
     GUIRect rect = {.x = x, .y = y, .w = width, .h = height};
 
     // Push rect for drawing.
-    gui_command_buffer_push_rect(&current_gui_state->command_buffer, rect);
+    gui_command_buffer_push_rect(gui_state, rect);
 
     // Check for click.
-    return gui_rect_did_click(current_gui_state->input, rect);
+    return gui_rect_did_click(gui_state->input, rect);
     
     return true;
 }
@@ -118,12 +124,11 @@ gui_button_with_text(float x, float y, float width, float height, char* txt)
 
 // @TODO: Need to store some *dragging from* information in the guistate to match this later.
 bool
-gui_drag_off_button(V2* out_pos, float x, float y, float width, float height, GUI_ICON icon)
+gui_drag_off_button(GUIState* gui_state, V2* out_pos, float x, float y, float width, float height, GUI_ICON icon)
 {
-    assert(current_gui_state);
     GUIRect rect = {.x = x, .y = y, .w = width, .h = height};
 
-    gui_command_buffer_push_rect(&current_gui_state->command_buffer, rect);
+    gui_command_buffer_push_rect(gui_state, rect);
 
     // If dragging and dragging started from in this rect and no other hot dragging object
     // and dragged to an area outside this button then return true;
