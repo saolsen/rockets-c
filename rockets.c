@@ -54,13 +54,6 @@ game_update_and_render(void* gamestate,
     // @TODO: Have an init_renderer call.
     current_vg = vg;
     gui_frame(state->gui_state, input, 1280, 720, dt);
-
-    /* // test gui */
-    /* if(gui_button_with_text(state->gui_state, 10, 10, 50, 10, "Hello World!")) { */
-    /*     draw_circle(v2(60, 10), 5, RED); */
-    /* } else { */
-    /*     draw_circle(v2(60, 10), 5, BLUE); */
-    /* } */
     
     HexagonGrid grid = {.rows = 12,
                         .columns = 13,
@@ -90,34 +83,55 @@ game_update_and_render(void* gamestate,
                         "(%i,%i,%i)",
                         mouse_over.x, mouse_over.y, mouse_over.z);
 
-    V2 pos;
-    if (gui_drag_off_button(state->gui_state, &pos, 10, 10, 10, 10, GUI_ICON_SENSOR)) {
+    V2 pos = v2(35, 25);
+    if (gui_button(state->gui_state, 10, 25, 20, 20, WHITE, GUI_ICON_SENSOR)) {
         // create new sensor node at pos;
         Node* new_node = nodestore_push_node(state->node_store, SENSOR);
-        log_info("Create Sensor node at: (%f,%f)", pos.x, pos.y);
+        log_info("Create Sensor node");
         new_node->position = pos;
     }
 
-    if (gui_drag_off_button(state->gui_state, &pos, 10, 25, 10, 10, GUI_ICON_PREDICATE)) {
+    if (gui_button(state->gui_state, 10, 50, 20, 20, WHITE, GUI_ICON_PREDICATE)) {
         // create new predicate node at pos;
-        log_info("Create Predicate node at: (%f,%f)", pos.x, pos.y);
+        log_info("Create Predicate");
         Node* new_node = nodestore_push_node(state->node_store, PREDICATE);
         new_node->position = pos;
     }
 
-    if (gui_drag_off_button(state->gui_state, &pos, 10, 40, 10, 10, GUI_ICON_GATE)) {
+    if (gui_button(state->gui_state, 10, 75, 20, 20, WHITE, GUI_ICON_GATE)) {
         // create new gate node at pos;
-        log_info("Create Gate node at: (%f,%f)", pos.x, pos.y);
+        log_info("Create Gate node");
         Node* new_node = nodestore_push_node(state->node_store, GATE);
         new_node->position = pos;
     }
 
-    if (gui_drag_off_button(state->gui_state, &pos, 10, 55, 10, 10, GUI_ICON_THRUSTER)) {
+    if (gui_button(state->gui_state, 10, 100, 20, 20, WHITE, GUI_ICON_THRUSTER)) {
         // create new thruster node at pos;
-        log_info("Create Thruster node at: (%f,%f)", pos.x, pos.y);
+        log_info("Create Thruster node");
         Node* new_node = nodestore_push_node(state->node_store, THRUSTER);
         new_node->position = pos;
     }
+
+    gui_drag_panal_bounds(state->gui_state, 0, 0, hexagon_grid_origin_x, hexagon_grid_origin_y);
+    for (int i = 0;
+         i < state->node_store->node_buffer_used;
+         i++) {
+        Node* node = state->node_store->node_buffer_base + i;
+        if (node->id == 0) continue;
+
+        gui_dragable_rect(state->gui_state, &node->position, &node->id, 20, 20);
+
+        // buttons
+
+
+        // background
+
+        
+        // drag rect
+        
+    }
+         
+    
 
     /* if (gui_drag_from_panal(0, 0, 10, 10, ICON_SIGNAL)) { */
     /*     nodestore_push_node(&state->node_store, SENSOR); */
@@ -126,7 +140,9 @@ game_update_and_render(void* gamestate,
     /* draw_hex(grid, mouse_over, CYAN); */
 
     // show mouse
-    /* draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN); */
+    draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN);
+    draw_formatted_text(v2(10,10), 12, WHITE,
+                        "Mouse Position. (%i, %i)", input.mouse_x, input.mouse_y);
 
     gui_render(state->gui_state, vg);
 }

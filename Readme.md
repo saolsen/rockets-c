@@ -72,3 +72,5 @@ the c version, currently only works on osx
 * [9/17/15]     Oh man! That bug was hard so I went back and rewatched all the stuff on how casey initializes and uses the memory for his game. I'm now doing something in a similar way where I have a large arena up front. I then use that arena to initialize the command buffer for the gui system which then manages it's block itself. This is pretty nice now. I got rid of the global gui_state pointer too and am going to get rid of the one in the renderer. I should just be explicit.
 
 * [9/18/15]     Started today by modifying the nodestore to use the arena too. I need to figure out how I'm going to actually determine how much memory these things get in the real game but for the prototyping it doesn't really matter.
+
+* [9/18/15]     I began working on the gui code for the nodes. I think this system is a lot cleaner. I'm still hacking out how it's going to work but it seems like the IMGUI approach is going to be a lot nicer than what I did in the first prototype.

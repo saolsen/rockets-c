@@ -14,12 +14,19 @@
   to be passed to a shader that draws the api.
 
   Try not to do *too* much of this until you have some real usage code.
-
   
   I don't know yet what to do about a node dragging panal. I have to decide where the dragging
   state gets stored. Maybe I just store the id of the node being dragged or something like that.
   Buttons are a pretty easy place to start.
+
+  
  */
+typedef enum {GUI_ICON_NONE,
+              GUI_ICON_SENSOR,
+              GUI_ICON_PREDICATE,
+              GUI_ICON_GATE,
+              GUI_ICON_THRUSTER} GUI_ICON;
+
 typedef struct {
     float x, y, w, h;
 } GUIRect;
@@ -31,11 +38,12 @@ typedef enum {
 
 typedef struct {
     GUICommandType type; // Command Type
-    /* size_t next;         // Base pointer(byte) offset to next command. */
 } GUICommandHeader;
 
 typedef struct {
+    GUI_ICON icon;
     GUIRect rect;
+    Color color;
 } GUICommandRect;
 
 typedef struct {
@@ -47,14 +55,21 @@ typedef struct {
     uint8_t* command_buffer_base;
     size_t command_buffer_size;
     size_t command_buffer_used;
+
+    // State (a lot of this could just go in input if I thought it out better)
+    float mouse_down_x;
+    float mouse_down_y;
+    bool mouse_is_down;
+
+    GUIRect drag_panal_rect;
+    void* dragging_id;
+    GUIRect dragging_rect;
+
     
 } GUIState;
 
 // Public API.
 // Initialization.
-typedef enum {GUI_ICON_SENSOR,
-              GUI_ICON_PREDICATE,
-              GUI_ICON_GATE,
-              GUI_ICON_THRUSTER} GUI_ICON;
+
 
 #endif

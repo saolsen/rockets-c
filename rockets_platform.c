@@ -100,6 +100,8 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
             /* input_state->click = true; */
             input_state->start_dragging = true;
             input_state->is_dragging = true;
+
+            input_state->mouse_down = true;
             break;
 
         case SDL_MOUSEBUTTONUP:
@@ -110,6 +112,8 @@ gg_handle_event(SDL_Event *event, int *other_events_this_tick,
             input_state->holding = false;
             input_state->end_dragging = true;
             input_state->is_dragging = false;
+
+            input_state->mouse_up = true;
             break;
 
         case SDL_MOUSEMOTION:
@@ -237,6 +241,9 @@ int main(int argc, char* argv[])
         input.end_dragging = false;
         input.click = false;
         input.mouse_motion = false;
+
+        input.mouse_down = false;
+        input.mouse_up = false;
         
         while (SDL_PollEvent(&event)) {
             if (gg_handle_event(&event,

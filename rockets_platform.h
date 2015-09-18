@@ -34,6 +34,10 @@ typedef struct {
     int mouse_y;
     int mouse_xrel;
     int mouse_yrel;
+
+    bool mouse_down;
+    bool mouse_up;
+    
     bool mouse_motion;
     bool click;
     bool holding;
