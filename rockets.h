@@ -1,11 +1,6 @@
 /*
   @TODO:
   * @NEXT
-    - I have a bug in my gui pushbuffer. I need to handle alignment because not handling
-      alignment is crashing everything hard.
-
-    - If ya not ready to do the rules yet hack out the arena and use it.
-
     - I really need to stop procrastinating and work on the nodes and gameplay.
 
     - Start hacking on rules / nodes.
@@ -22,14 +17,6 @@
   - How to really reason about the data and operations. Data oriented design etc.
     have I just not come accross stuff where this is important? Is that just for like animation
     systems and stuff?
-
-  Maybe it would be useful to have a basic arena that I can reuse.
-  I basically have an arena for the gui code, if I also end up with a pushbuffer for rendering
-  then I should probably do it.
-  
-  So I definately don't want to inline those huge arrays into my gamestate because then the
-  gamestate doesn't fit in a cache line. I need to use pointers to sections of the arena.
-  
  */
 #ifndef _rockets_h
 #define _rockets_h
@@ -94,7 +81,7 @@ typedef struct {
     MemoryArena persistent_store;
 
     GUIState* gui_state;
-    /* NodeStore node_store; */
+    NodeStore* node_store;
     
     int tick;
 

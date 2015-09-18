@@ -87,9 +87,9 @@ gui_render(GUIState* gui_state, NVGcontext* vg)
             
         } break;
         };
-
-
     }
+
+    // @TODO: Record necessesary stuff for next frame and clear the buffer.
 }
 
 

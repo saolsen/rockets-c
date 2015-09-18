@@ -10,16 +10,22 @@ node_id_hash(NodeStore* ns, int id)
 }
 
 
-void
-nodestore_init(NodeStore* ns)
+NodeStore*
+nodestore_allocate(MemoryArena* arena)
 {
-    ns->count = 0;
+    NodeStore* ns = arena_push_struct(arena, NodeStore);
+    ns->node_buffer_base = arena_push_size(arena, sizeof(Node) * 512);
+    
+    ns->node_buffer_size = 512;
+    ns->node_buffer_used = 0;
     ns->last_used_id = 0;
     ns->first_free_node = NULL;
 
     for (int i=0; i<ARRAY_COUNT(ns->id_hash); i++) {
         ns->id_hash[i] = NULL;
     }
+
+    return ns;
 }
 
 
@@ -31,8 +37,8 @@ nodestore_push_node(NodeStore* ns, NodeType type)
         new_node = ns->first_free_node;
         ns->first_free_node = new_node->next_in_hash;
     } else {
-        assert(ns->count < ARRAY_COUNT(ns->node_buffer));
-        new_node = ns->node_buffer + ns->count++;
+        assert(ns->node_buffer_used < ns->node_buffer_size);
+        new_node = ns->node_buffer_base + ns->node_buffer_used++;
     }
 
     int id = ++ns->last_used_id;
@@ -113,9 +119,10 @@ nodestore_delete_node(NodeStore* ns, int id)
 
     // Zero out any pointers to id.
     // @TODO: Do this once we know the structure of the nodes.
-    for (int i=0; i<ns->count; i++) {
-        if (ns->node_buffer[i].id == 0) continue;
-        switch(ns->node_buffer[i].type) {
+    for (int i=0; i<ns->node_buffer_used; i++) {
+        Node* node = ns->node_buffer_base + i;
+        if (node->id == 0) continue;
+        switch(node->type) {
         case(SENSOR): {
         
         

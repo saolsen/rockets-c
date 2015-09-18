@@ -36,9 +36,11 @@ typedef struct node {
 } Node;
 
 typedef struct {
-    int count;
     int last_used_id;
-    Node node_buffer[512]; // @TODO: Could pull a platform dependent size from an arena.
+    
+    int node_buffer_size;
+    Node* node_buffer_base;
+    int node_buffer_used;
     Node* first_free_node;
 
     // @NOTE: Must be power of 2 for bad hash function.

@@ -20,6 +20,7 @@ game_setup(void* game_state, NVGcontext* vg)
                      (uint8_t*)game_state + sizeof(GameState),
                      gamestate_size - sizeof(GameState));
 
+    state->node_store = nodestore_allocate(&state->persistent_store);
     state->gui_state = gui_allocate(&state->persistent_store, KILOBYTES(100));
 
     state->tick = 0;
@@ -92,30 +93,30 @@ game_update_and_render(void* gamestate,
     V2 pos;
     if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_SENSOR)) {
         // create new sensor node at pos;
-        /* Node* new_node = nodestore_push_node(&state->node_store, SENSOR); */
+        Node* new_node = nodestore_push_node(state->node_store, SENSOR);
         log_info("Create Sensor node at: (%f,%f)", pos.x, pos.y);
-        /* new_node->position = pos; */
+        new_node->position = pos;
     }
 
     if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_PREDICATE)) {
         // create new predicate node at pos;
         log_info("Create Predicate node at: (%f,%f)", pos.x, pos.y);
-        /* Node* new_node = nodestore_push_node(&state->node_store, PREDICATE); */
-        /* new_node->position = pos; */
+        Node* new_node = nodestore_push_node(state->node_store, PREDICATE);
+        new_node->position = pos;
     }
 
     if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_GATE)) {
         // create new gate node at pos;
         log_info("Create Gate node at: (%f,%f)", pos.x, pos.y);
-        /* Node* new_node = nodestore_push_node(&state->node_store, GATE); */
-        /* new_node->position = pos; */
+        Node* new_node = nodestore_push_node(state->node_store, GATE);
+        new_node->position = pos;
     }
 
     if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_THRUSTER)) {
         // create new thruster node at pos;
         log_info("Create Thruster node at: (%f,%f)", pos.x, pos.y);
-        /* Node* new_node = nodestore_push_node(&state->node_store, THRUSTER); */
-        /* new_node->position = pos; */
+        Node* new_node = nodestore_push_node(state->node_store, THRUSTER);
+        new_node->position = pos;
     }
 
     /* if (gui_drag_from_panal(0, 0, 10, 10, ICON_SIGNAL)) { */
