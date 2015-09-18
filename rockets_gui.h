@@ -25,6 +25,7 @@ typedef struct {
 } GUIRect;
 
 typedef enum {
+    GUICommandType_NOPE,
     GUICommandType_GUICommandRect,
 } GUICommandType;
 

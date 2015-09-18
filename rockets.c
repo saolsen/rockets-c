@@ -55,12 +55,12 @@ game_update_and_render(void* gamestate,
     current_vg = vg;
     gui_frame(state->gui_state, input, 1280, 720, dt);
 
-    // test gui
-    if(gui_button_with_text(state->gui_state, 10, 10, 50, 10, "Hello World!")) {
-        draw_circle(v2(60, 10), 5, RED);
-    } else {
-        draw_circle(v2(60, 10), 5, BLUE);
-    }
+    /* // test gui */
+    /* if(gui_button_with_text(state->gui_state, 10, 10, 50, 10, "Hello World!")) { */
+    /*     draw_circle(v2(60, 10), 5, RED); */
+    /* } else { */
+    /*     draw_circle(v2(60, 10), 5, BLUE); */
+    /* } */
     
     HexagonGrid grid = {.rows = 12,
                         .columns = 13,
@@ -91,28 +91,28 @@ game_update_and_render(void* gamestate,
                         mouse_over.x, mouse_over.y, mouse_over.z);
 
     V2 pos;
-    if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_SENSOR)) {
+    if (gui_drag_off_button(state->gui_state, &pos, 10, 10, 10, 10, GUI_ICON_SENSOR)) {
         // create new sensor node at pos;
         Node* new_node = nodestore_push_node(state->node_store, SENSOR);
         log_info("Create Sensor node at: (%f,%f)", pos.x, pos.y);
         new_node->position = pos;
     }
 
-    if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_PREDICATE)) {
+    if (gui_drag_off_button(state->gui_state, &pos, 10, 25, 10, 10, GUI_ICON_PREDICATE)) {
         // create new predicate node at pos;
         log_info("Create Predicate node at: (%f,%f)", pos.x, pos.y);
         Node* new_node = nodestore_push_node(state->node_store, PREDICATE);
         new_node->position = pos;
     }
 
-    if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_GATE)) {
+    if (gui_drag_off_button(state->gui_state, &pos, 10, 40, 10, 10, GUI_ICON_GATE)) {
         // create new gate node at pos;
         log_info("Create Gate node at: (%f,%f)", pos.x, pos.y);
         Node* new_node = nodestore_push_node(state->node_store, GATE);
         new_node->position = pos;
     }
 
-    if (gui_drag_off_button(state->gui_state, &pos, 1, 1, 10, 10, GUI_ICON_THRUSTER)) {
+    if (gui_drag_off_button(state->gui_state, &pos, 10, 55, 10, 10, GUI_ICON_THRUSTER)) {
         // create new thruster node at pos;
         log_info("Create Thruster node at: (%f,%f)", pos.x, pos.y);
         Node* new_node = nodestore_push_node(state->node_store, THRUSTER);

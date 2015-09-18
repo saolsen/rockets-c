@@ -15,18 +15,16 @@ gui_rect_did_click(gg_Input input, GUIRect rect)
 uint8_t*
 gui_command_buffer_push_(GUIState* gui_state, size_t size, GUICommandType type)
 {
-    size += sizeof(GUICommandHeader);
-
     assert(gui_state->command_buffer_used + size <= gui_state->command_buffer_size);
 
     GUICommandHeader *header = (GUICommandHeader*)(gui_state->command_buffer_base +
                                                    gui_state->command_buffer_used);
+
+    size += sizeof(*header);
     header->type = type;
 
     uint8_t* command_object = (uint8_t*)header + sizeof(*header);
-
     gui_state->command_buffer_used += size;
-    /* header->next = gui_state->command_buffer_used; */
 
     return command_object;
 }
@@ -34,7 +32,7 @@ gui_command_buffer_push_(GUIState* gui_state, size_t size, GUICommandType type)
 
 GUICommandRect*
 gui_command_buffer_push_rect(GUIState* gui_state, GUIRect rect)
-{
+{   
     GUICommandRect* command_rect = GUICommandBufferPush(gui_state, GUICommandRect);
 
     command_rect->rect = rect;
@@ -66,30 +64,39 @@ gui_frame(GUIState* gui_state, gg_Input input, float screen_width, float screen_
 void
 gui_render(GUIState* gui_state, NVGcontext* vg)
 {
-    for (size_t i = 0; i != gui_state->command_buffer_used;) {
-        GUICommandHeader* command = (GUICommandHeader*)gui_state->command_buffer_base + i;
-        i += sizeof(GUICommandHeader);
+    int num = 0;
+    for (size_t offset = 0;
+         offset != gui_state->command_buffer_used;) {
+        GUICommandHeader* header = (GUICommandHeader*)(gui_state->command_buffer_base + offset);
+        offset += sizeof(*header);
 
-        switch(command->type) {
+        uint8_t* command = (uint8_t*)header + sizeof(*header);
+
+        switch(header->type) {
+        case(GUICommandType_NOPE): {
+            // Something going wrong bruh.
+        };
+            
         case(GUICommandType_GUICommandRect): {
-            GUICommandRect* command_rect  = (GUICommandRect*)((uint8_t*)command +
-                                                              sizeof(GUICommandHeader));
+            GUICommandRect* command_rect  = (GUICommandRect*)command;
             GUIRect rect = command_rect->rect;
 
             nvgSave(vg);
             nvgFillColor(vg, nvgRGBf(1,1,1));
             nvgBeginPath(vg);
-            nvgRect(vg, rect.x, rect.y, rect.w, rect.h);
+            nvgRect(vg, command_rect->rect.x, rect.y, rect.w, rect.h);
             nvgFill(vg);
             nvgRestore(vg);
 
-            i += sizeof(GUICommandRect);
+            offset += sizeof(*command_rect);
             
         } break;
         };
+        num++;
     }
 
-    // @TODO: Record necessesary stuff for next frame and clear the buffer.
+    // @TODO: Record necessesary stuff for next frame.
+    gui_state->command_buffer_used = 0;
 }
 
 

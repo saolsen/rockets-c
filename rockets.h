@@ -17,6 +17,14 @@
   - How to really reason about the data and operations. Data oriented design etc.
     have I just not come accross stuff where this is important? Is that just for like animation
     systems and stuff?
+
+  I need to try and standardize my naming conventions.
+  * used and size, vs size and max size vs num and max_num
+  * naming enums, namespacing.
+  
+  maybe use size and used for raw memory buffers
+  and use num and max_num for typed arrays
+
  */
 #ifndef _rockets_h
 #define _rockets_h
