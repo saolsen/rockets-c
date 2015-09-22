@@ -26,9 +26,11 @@ gui_command_buffer_push_rect(GUIState* gui_state, GUIRect rect, Color color, GUI
 
     command_rect->rect = rect;
     command_rect->icon = icon;
+    command_rect->color = color;
 
     return command_rect;
 }
+
 
 // User Functions
 GUIState*
@@ -39,9 +41,19 @@ gui_allocate(MemoryArena* arena, size_t size)
     gui_state->command_buffer_size = size;
     gui_state->command_buffer_used = 0;
 
-    gui_state->mouse_is_down = false;
-
+    gui_state->drag_state = DRAGGING_NOTHING;
     gui_state->dragging_id = NULL;
+    gui_state->dragging_avoid_id = NULL;
+
+    gui_state->dragging_source_group = -1;
+
+    gui_state->drag_target_result_for = NULL;
+    gui_state->drag_target_result_id = NULL;
+
+    gui_state->drag_target_buffer_base =
+        (GUIDragTarget*)arena_push_size(arena, sizeof(GUIDragTarget) * 128);
+    gui_state->drag_target_buffer_size = 128;
+    gui_state->drag_target_buffer_used = 0;
     
     return gui_state;
 }
@@ -84,10 +96,10 @@ gui_render(GUIState* gui_state, NVGcontext* vg)
             GUIRect rect = command_rect->rect;
 
             nvgSave(vg);
-            nvgFillColor(vg, nvgRGBf(1,1,1));
+            nvgStrokeColor(vg, get_color(command_rect->color));
             nvgBeginPath(vg);
             nvgRect(vg, command_rect->rect.x, rect.y, rect.w, rect.h);
-            nvgFill(vg);
+            nvgStroke(vg);
             nvgRestore(vg);
 
             offset += sizeof(*command_rect);
@@ -97,12 +109,46 @@ gui_render(GUIState* gui_state, NVGcontext* vg)
         num++;
     }
 
-    // @TODO: Record necessesary stuff for next frame.
-    gui_state->command_buffer_used = 0;
+    // @TODO: make work.
+    if (gui_state->input.end_dragging) {
 
-    if (gui_state->input.mouse_up) {
-        gui_state->mouse_is_down = false;
+        switch(gui_state->drag_state) {
+        case(DRAGGING_NOTHING): {
+            // nothing to do
+        } break;
+        case(DRAGGING_PANAL): {
+            gui_state->drag_state = DRAGGING_NOTHING;
+            gui_state->dragging_id = NULL;
+        } break;
+        case(DRAGGING_SOURCE): {
+
+            for (int i = 0; i < gui_state->drag_target_buffer_used; i++) {
+                GUIDragTarget* drag_target = gui_state->drag_target_buffer_base + i;
+                // @TODO: Make sure I can't drag into my own node.
+                if (drag_target->id != gui_state->dragging_avoid_id &&
+                    drag_target->drag_target_group == gui_state->dragging_source_group &&
+                    gui_state->input.mouse_x >= drag_target->rect.x &&
+                    gui_state->input.mouse_x <= drag_target->rect.x + drag_target->rect.w &&
+                    gui_state->input.mouse_y >= drag_target->rect.y &&
+                    gui_state->input.mouse_y <= drag_target->rect.y + drag_target->rect.h) {
+
+                    log_info("Got em");
+                    gui_state->drag_target_result_for = gui_state->dragging_id;
+                    gui_state->drag_target_result_id = drag_target->id;
+                    
+                    break;
+                }
+            }
+
+            
+        } break;
+        };
+
+        gui_state->drag_state = DRAGGING_NOTHING;
     }
+
+    gui_state->command_buffer_used = 0;
+    gui_state->drag_target_buffer_used = 0;
 }
 
 // @TODO: Handle clicks better, longer clicks and drag off then back on etc.
@@ -141,7 +187,7 @@ gui_button(GUIState* gui_state, float x, float y, float width, float height,
 void
 gui_drag_panal_bounds(GUIState* gui_state, float x, float y, float width, float height)
 {
-    gui_state->drag_panal_rect = (GUIRect){.x = x, .y = y, .w = width, .h = height};
+    gui_state->drag_panal_bounds = (GUIRect){.x = x, .y = y, .w = width, .h = height};
 }
 
 
@@ -150,69 +196,91 @@ void
 gui_dragable_rect(GUIState* gui_state, V2* pos, void* id, float width, float height)
 {
     // @TODO: make sure it's in the bounds.
-    if (gui_state->input.start_dragging) {
-        log_info("Start Dragging");
+    if (gui_state->input.start_dragging &&
+        gui_state->drag_state == DRAGGING_NOTHING) {
 
+        // Check is mouse is over panal.
         if (gui_state->input.mouse_x >= pos->x &&
             gui_state->input.mouse_x <= pos->x + width &&
             gui_state->input.mouse_y >= pos->y &&
             gui_state->input.mouse_y <= pos->y + height) {
+
             gui_state->dragging_id = id;
-            // @TODO: Do I not need this?
-            gui_state->dragging_rect =
-                (GUIRect){.x = pos->x, .y = pos->y, .w = width, .h = height};
-            log_info("Start Dragging");
+            gui_state->drag_state = DRAGGING_PANAL;
         }
 
-    } else if (gui_state->input.end_dragging) {
-        gui_state->dragging_id = NULL;
-        log_info("End Dragging");
-
     } else if (gui_state->input.is_dragging &&
-               gui_state->input.mouse_motion &&
-               gui_state->dragging_id == id) {
+               gui_state->drag_state == DRAGGING_PANAL &&
+               gui_state->dragging_id == id &&
+               gui_state->input.mouse_motion) {
+        
         pos->x += gui_state->input.mouse_xrel;
         pos->y += gui_state->input.mouse_yrel;
-        log_info("Is Dragging");
+
     }
 
     GUIRect rect = (GUIRect){.x = pos->x, .y = pos->y, .w = width, .h = height};
     gui_command_buffer_push_rect(gui_state, rect, BLUE, GUI_ICON_NONE);
 }
 
-// pass an id, store id and last dragable rect bounds, and currently dragging rect
 
-// What of this is rendering and what of this is gui?
-// rectangle
-// text
+// Returns true if the mouse is currently over the rect.
+bool
+gui_mouseover_rect(GUIState* gui_state, V2 pos, float width, float height)
+{
+    return (gui_state->input.mouse_x >= pos.x &&
+            gui_state->input.mouse_x <= pos.x + width &&
+            gui_state->input.mouse_y >= pos.y &&
+            gui_state->input.mouse_y <= pos.y + height);
+}
 
-// Dragable rect.
 
+void
+gui_drag_target(GUIState* gui_state, void* id, int drag_target_group,
+                float x, float y, float width, float height)
+{
+    // Record all the drag targets, (these are gonna have to persist a frame.)
+    assert(gui_state->drag_target_buffer_used < gui_state->drag_target_buffer_size);
+    GUIDragTarget* drag_target =
+        gui_state->drag_target_buffer_base + gui_state->drag_target_buffer_used++;
 
-/*
-  One thing I really need to figure out for imgui stuff is what a good interface to work with
-  dragable stuff is going to be.
- */
+    drag_target->rect = (GUIRect){.x = x, .y = y, .w = width, .h = height};
+    drag_target->drag_target_group = drag_target_group;
+    drag_target->id = id;
+}
 
-// Position dragged to.
+// Returns the id of the drag target it was dragged into. Has 1 frame of lag.
+// @NOTE: To avoid one frame of lag could poll for the result after recording all
+//        drag targets.
+void*
+gui_drag_source(GUIState* gui_state, void* id, void* avoid_id, int drag_target_group, float x, float y, float width, float height)
+{
+    GUIRect rect = (GUIRect){.x = x, .y = y, .w = width, .h = height};
+    gui_command_buffer_push_rect(gui_state, rect, CYAN, GUI_ICON_NONE);
 
-// Begin drag pane.
-// Begin a node.
-// The void* id thing is clever.
-
-// A button that returns true when you click it and drag off. Used as a panel for creating nodes.
-// pos will be filled with the position that the mouse is at when it's dragged off.
-
-// @TODO: Need to store some *dragging from* information in the guistate to match this later.
-/* bool */
-/* gui_drag_off_button(GUIState* gui_state, V2* out_pos, float x, float y, float width, float height, GUI_ICON icon) */
-/* { */
-/*     GUIRect rect = {.x = x, .y = y, .w = width, .h = height}; */
-
-/*     gui_command_buffer_push_rect(gui_state, rect); */
-
-/*     // If dragging and dragging started from in this rect and no other hot dragging object */
-/*     // and dragged to an area outside this button then return true; */
+    if (gui_state->drag_target_result_for == id) {
+        void* result = gui_state->drag_target_result_id;
+        gui_state->drag_target_result_id = NULL;
+        gui_state->drag_target_result_for = NULL;
+        return result;
+    }
     
-/*     return false; */
-/* } */
+    // Figure out if we start dragging here.
+    if (gui_state->input.start_dragging &&
+        gui_state->drag_state != DRAGGING_SOURCE) {
+        if (gui_state->input.mouse_x >= x &&
+            gui_state->input.mouse_x <= x + width &&
+            gui_state->input.mouse_y >= y &&
+            gui_state->input.mouse_y <= y + height) {
+
+            gui_state->dragging_id = id;
+            gui_state->dragging_avoid_id = avoid_id;
+            gui_state->dragging_source_group = drag_target_group;
+            gui_state->drag_state = DRAGGING_SOURCE;
+        }
+    }
+
+    // @TODO: Push arrow drawing stuff.
+    // @TODO: Need to figure out how the dragging arrow is drawn.
+    return NULL;
+}

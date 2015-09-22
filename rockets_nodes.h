@@ -4,11 +4,17 @@
 typedef enum { SENSOR, PREDICATE, GATE, THRUSTER } NodeType;
 
 typedef struct {
-
+    Direction sensor_direction;
 } SensorNode;
 
-typedef struct {
+typedef enum { EQ, NEQ, LT, GT, LEQ, GEQ } Predicate;
 
+struct node;
+
+typedef struct {
+    Predicate predicate;
+    struct node* lhs;
+    struct node* rhs;
 } PredicateNode;
 
 typedef struct {

@@ -1,3 +1,5 @@
+// @TRANSIENT, maybe that's a good one?
+
 #include "rockets.h"
 
 #include "rockets_grid.c"
@@ -83,6 +85,8 @@ game_update_and_render(void* gamestate,
                         "(%i,%i,%i)",
                         mouse_over.x, mouse_over.y, mouse_over.z);
 
+    // GUI
+
     V2 pos = v2(35, 25);
     if (gui_button(state->gui_state, 10, 25, 20, 20, WHITE, GUI_ICON_SENSOR)) {
         // create new sensor node at pos;
@@ -113,22 +117,150 @@ game_update_and_render(void* gamestate,
     }
 
     gui_drag_panal_bounds(state->gui_state, 0, 0, hexagon_grid_origin_x, hexagon_grid_origin_y);
+
+    Node* node_mouse_is_over = NULL;
+
+    int numeric_node = 1;
+    int boolean_node = 2;
+    
     for (int i = 0;
          i < state->node_store->node_buffer_used;
          i++) {
         Node* node = state->node_store->node_buffer_base + i;
         if (node->id == 0) continue;
 
-        gui_dragable_rect(state->gui_state, &node->position, &node->id, 20, 20);
+        // Make node dragable.
+        gui_dragable_rect(state->gui_state, &node->position, &node->id, 100, 60);
 
-        // buttons
+        // Check if mouse is over Node.
+        bool mouse_over_node = gui_mouseover_rect(state->gui_state, node->position, 100, 60);
+        if (mouse_over_node) {
+            node_mouse_is_over = node;
+        }
 
+        // Delete Button
+        if(gui_button(state->gui_state,
+                      node->position.x, node->position.y,
+                      10, 10, RED, GUI_ICON_DESTROY)) {
+            nodestore_delete_node(state->node_store, node->id);
+        }
 
-        // background
+        switch(node->type) {
+        case(SENSOR): {
+            // Draw a little grid, have it be a button.
+            // On click, set which sensor it is.
+            HexagonGrid sensor_grid = {.rows = 1,
+                                       .columns = 1,
+                                       .origin_x = node->position.x + 18,
+                                       .origin_y = node->position.y + 40,
+                                       .hexagon_size = 8};
 
-        
-        // drag rect
-        
+            GridV directional_tiles[] = {
+                gridV(0,1,-1), // UP
+                gridV(-1,1,0), // LEFT_UP
+                gridV(-1,0,1), // LEFT_DOWN
+                gridV(0,-1,1), // DOWN
+                gridV(1,-1,0), // RIGHT_DOWN
+                gridV(1,0,-1), // RIGHT_UP
+            };
+            
+            // @DEBUG
+            /* draw_hex_grid(grid); */
+
+            // Mouse over
+            GridV mouse_over = pixel_to_gridV(sensor_grid, v2(input.mouse_x, input.mouse_y));
+            bool select_on_grid = false;
+            for (int i=0; i<ARRAY_COUNT(directional_tiles); i++) {
+                draw_hex(sensor_grid, directional_tiles[i], WHITE);
+                
+                if (i != node->sensor.sensor_direction &&
+                    directional_tiles[i].x == mouse_over.x &&
+                    directional_tiles[i].y == mouse_over.y &&
+                    directional_tiles[i].z == mouse_over.z) {
+                    select_on_grid = true;
+
+                    // button here
+                    if (gui_button(state->gui_state,
+                                   node->position.x + 5, node->position.y + 11,
+                                   42, 44, BLACK, GUI_ICON_NONE)) {
+                        node->sensor.sensor_direction = i;
+                    }
+                }
+            }
+
+            // Draw current direction.
+            draw_hex(sensor_grid, directional_tiles[node->sensor.sensor_direction], YELLOW);
+
+            // Draw possible selected direction.
+            if (select_on_grid) {
+                draw_hex(sensor_grid, mouse_over, MAGENTA);
+            }
+
+            // Ship, center.
+            draw_hex(sensor_grid, gridV(0,0,0), RED);
+
+            gui_drag_target(state->gui_state, node, numeric_node,
+                            node->position.x, node->position.y, 100, 60);
+
+            // On hover, show on the main map what tiles it's looking at and what number they are.
+
+            // On hover also show the other entities in the scene and where they are.
+
+            // Have an entity selector, a sensor node is specific to an entity?
+            
+            
+        } break;
+
+        case(PREDICATE): {
+            // Start really dumb simple.
+            char* pred;
+            switch(node->predicate.predicate) {
+            case(EQ):
+                pred = "==";
+                break;
+            case(NEQ):
+                pred = "<>";
+                break;
+            case(LT):
+                pred = "<";
+                break;
+            case(GT):
+                pred = ">";
+                break;
+            case(LEQ):
+                pred = "<=";
+                break;
+            case(GEQ):
+                pred = ">=";
+                break;
+            }
+
+            // @TODO: Center the text, this looks really bad.
+            draw_formatted_text(v2(node->position.x + 43, node->position.y+ 35), 24, WHITE, pred);
+
+            gui_drag_target(state->gui_state, node, boolean_node,
+                            node->position.x, node->position.y, 100, 60);
+
+            Node* left_connect_to_node = gui_drag_source(state->gui_state,
+                                                         &node->predicate.lhs,
+                                                         node,
+                                                         numeric_node,
+                                                         node->position.x + 10,
+                                                         node->position.y + 20,
+                                                         25,
+                                                         25);
+
+            Node* right_connect_to_node = gui_drag_source(state->gui_state,
+                                                          &node->predicate.rhs,
+                                                          node,
+                                                          numeric_node,
+                                                          node->position.x + 70,
+                                                          node->position.y + 20,
+                                                          25,
+                                                          25);
+
+        } break;
+        }   
     }
          
     
@@ -140,7 +272,7 @@ game_update_and_render(void* gamestate,
     /* draw_hex(grid, mouse_over, CYAN); */
 
     // show mouse
-    draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN);
+    /* draw_circle(v2(input.mouse_x, input.mouse_y), 3, GREEN); */
     draw_formatted_text(v2(10,10), 12, WHITE,
                         "Mouse Position. (%i, %i)", input.mouse_x, input.mouse_y);
 

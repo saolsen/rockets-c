@@ -25,6 +25,25 @@
   maybe use size and used for raw memory buffers
   and use num and max_num for typed arrays
 
+  If I wanted to show off rockets to jeremy at strange loop how far would I have to be?
+
+  - Nodes working again.
+  - Levels working.
+  - Simulation working (maybe some interpolated animation between states.)
+
+  - For dragging maybe I can have a drag target group id. Then I can say, this thing can be dragged
+    to any A target. If it's dragged to any A target, you return the target it's dragged to.
+
+  - Simulation should be easy enough to get working. I need to do icons for the buttons but then
+    they should be nice enough to use. Interpolation between states should be pretty easy.
+
+  - For levels I can leverage a lot of what I already had.
+
+  - Hardest part really is going to be figuring out how these sensor nodes are going to work.
+  
+  - Dunno if this is feasable. Maybe on the plane thursday I can do some hacking, or at work
+    this week. That seems like a lot to acomplish with stuff to do each night this week.
+
  */
 #ifndef _rockets_h
 #define _rockets_h

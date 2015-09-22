@@ -53,11 +53,11 @@ nodestore_push_node(NodeStore* ns, NodeType type)
 
     switch(type) {
     case(SENSOR): {
-        
+        new_node->sensor.sensor_direction = UP;
         
     } break;
     case(PREDICATE): {
-        
+        new_node->predicate.predicate = EQ;
         
     } break;
     case(GATE): {
