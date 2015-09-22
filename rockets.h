@@ -92,13 +92,6 @@
 
 
 // @TODO: move back to rockets_sim
-typedef enum {
-    BP    = (1 << 0), // 1
-    BS    = (1 << 1), // 2
-    SP    = (1 << 2), // 4
-    SS    = (1 << 3), // 8
-    BOOST = (1 << 4), // 16
-} Thruster;
 
 bool
 thrusters_on(uint32_t ship_thrusters, uint32_t check_thrusters)

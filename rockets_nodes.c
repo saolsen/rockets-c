@@ -53,6 +53,10 @@ nodestore_push_node(NodeStore* ns, NodeType type)
         new_node->sensor.sensor_direction = UP;
         
     } break;
+    case(CONSTANT): {
+        new_node->constant.value = 0;
+        
+    } break;
     case(PREDICATE): {
         new_node->predicate.predicate = EQ;
         new_node->predicate.lhs = NULL;
@@ -60,11 +64,14 @@ nodestore_push_node(NodeStore* ns, NodeType type)
         
     } break;
     case(GATE): {
-        
+        new_node->gate.gate= AND;
+        new_node->gate.lhs = NULL;
+        new_node->gate.rhs = NULL;
         
     } break;
     case(THRUSTER): {
-        
+        new_node->thruster.thruster = BP;
+        new_node->thruster.input = NULL;
         
     } break;
     }
@@ -130,6 +137,9 @@ nodestore_delete_node(NodeStore* ns, int id)
         
         
         } break;
+        case(CONSTANT): {
+
+        } break;
         case(PREDICATE): {
             if (node->predicate.lhs == removed_node) {
                 node->predicate.lhs = NULL;
@@ -140,11 +150,18 @@ nodestore_delete_node(NodeStore* ns, int id)
         
         } break;
         case(GATE): {
-        
+            if (node->gate.lhs == removed_node) {
+                node->gate.lhs = NULL;
+            }
+            if (node->gate.rhs == removed_node) {
+                node->gate.rhs = NULL;
+            }
         
         } break;
         case(THRUSTER): {
-        
+            if (node->thruster.input == removed_node) {
+                node->thruster.input = NULL;
+            }
         
         } break;
         }

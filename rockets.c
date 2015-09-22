@@ -95,19 +95,26 @@ game_update_and_render(void* gamestate,
 
     if (gui_button(state->gui_state, 10, 50, 20, 20, WHITE, GUI_ICON_PREDICATE)) {
         // create new predicate node at pos;
+        log_info("Create Constant");
+        Node* new_node = nodestore_push_node(state->node_store, CONSTANT);
+        new_node->position = pos;
+    }
+
+    if (gui_button(state->gui_state, 10, 75, 20, 20, WHITE, GUI_ICON_PREDICATE)) {
+        // create new predicate node at pos;
         log_info("Create Predicate");
         Node* new_node = nodestore_push_node(state->node_store, PREDICATE);
         new_node->position = pos;
     }
 
-    if (gui_button(state->gui_state, 10, 75, 20, 20, WHITE, GUI_ICON_GATE)) {
+    if (gui_button(state->gui_state, 10, 100, 20, 20, WHITE, GUI_ICON_GATE)) {
         // create new gate node at pos;
         log_info("Create Gate node");
         Node* new_node = nodestore_push_node(state->node_store, GATE);
         new_node->position = pos;
     }
 
-    if (gui_button(state->gui_state, 10, 100, 20, 20, WHITE, GUI_ICON_THRUSTER)) {
+    if (gui_button(state->gui_state, 10, 125, 20, 20, WHITE, GUI_ICON_THRUSTER)) {
         // create new thruster node at pos;
         log_info("Create Thruster node");
         Node* new_node = nodestore_push_node(state->node_store, THRUSTER);
@@ -121,9 +128,7 @@ game_update_and_render(void* gamestate,
     int numeric_node = 1;
     int boolean_node = 2;
     
-    for (int i = 0;
-         i < state->node_store->node_buffer_used;
-         i++) {
+    for (int i=0; i<state->node_store->node_buffer_used; i++) {
         Node* node = state->node_store->node_buffer_base + i;
         if (node->id == 0) continue;
 
@@ -232,6 +237,12 @@ game_update_and_render(void* gamestate,
                 break;
             }
 
+            if (gui_button(state->gui_state,
+                           node->position.x+47.5, node->position.y+45,
+                           10, 10, MAGENTA, GUI_ICON_DESTROY)) {
+                node->predicate.predicate = ((int)node->predicate.predicate+1) % 6;
+            }
+
             // @TODO: Center the text, this looks really bad.
             draw_formatted_text(v2(node->position.x + 43, node->position.y+ 35), 24, WHITE, pred);
 
@@ -291,7 +302,147 @@ game_update_and_render(void* gamestate,
                 }
             }
 
+            // Show the current values on the sides of the predicate.
+
         } break;
+            
+        case(CONSTANT): {
+            if (gui_button(state->gui_state,
+                           node->position.x+85, node->position.y+15,
+                           10, 10, MAGENTA, GUI_ICON_DESTROY)) {
+                node->constant.value++;
+            }
+
+            if (gui_button(state->gui_state,
+                           node->position.x+85, node->position.y+35,
+                           10, 10, MAGENTA, GUI_ICON_DESTROY)) {
+                node->constant.value--;
+            }
+            
+            draw_formatted_text(v2(node->position.x + 43, node->position.y+ 35), 24, WHITE,
+                                "%i", node->constant.value);
+            
+            gui_drag_target(state->gui_state, node, numeric_node,
+                            node->position.x, node->position.y, 100, 60);
+        } break;
+
+        case(GATE): {
+            // Start really dumb simple.
+            char* gate_words[] = {
+                "AND",
+                "OR",
+                "NOT"
+            };
+
+            if (gui_button(state->gui_state,
+                           node->position.x+47.5, node->position.y+45,
+                           10, 10, MAGENTA, GUI_ICON_DESTROY)) {
+                node->gate.gate = ((int)node->gate.gate+1) % 3;
+            }
+
+            // @TODO: Center the text, this looks really bad.
+            draw_formatted_text(v2(node->position.x + 37, node->position.y+ 35), 20, WHITE,
+                gate_words[node->gate.gate]);
+
+            gui_drag_target(state->gui_state, node, boolean_node,
+                            node->position.x, node->position.y, 100, 60);
+
+            if (node->gate.lhs) {
+                // draw it
+                draw_line(v2_plus(node->position, v2(25,0)),
+                          v2_plus(node->gate.lhs->position, v2(50,60)),
+                          CYAN);
+
+                if (gui_button(state->gui_state,
+                              node->position.x+5, node->position.y+20,
+                              10, 10, RED, GUI_ICON_DESTROY)) {
+                    node->gate.lhs = NULL;
+                }
+                
+            } else {
+                Node* left_connect_to_node = gui_drag_source(state->gui_state,
+                                                             &node->gate.lhs,
+                                                             node,
+                                                             boolean_node,
+                                                             node->position.x + 10,
+                                                             node->position.y + 20,
+                                                             25,
+                                                             25);
+                if (left_connect_to_node) {
+                    node->gate.lhs = left_connect_to_node;
+                }
+            }
+
+            if (node->gate.gate != NOT) { 
+                if (node->gate.rhs) {
+                    // draw it
+                    draw_line(v2_plus(node->position, v2(75,0)),
+                              v2_plus(node->gate.rhs->position, v2(50,60)),
+                              CYAN);
+
+                    if (gui_button(state->gui_state,
+                                   node->position.x+85, node->position.y+25,
+                                   10, 10, RED, GUI_ICON_DESTROY)) {
+                        node->gate.rhs = NULL;
+                    }
+                
+                
+                } else {
+                    Node* right_connect_to_node = gui_drag_source(state->gui_state,
+                                                                  &node->gate.rhs,
+                                                                  node,
+                                                                  boolean_node,
+                                                                  node->position.x + 70,
+                                                                  node->position.y + 20,
+                                                                  25,
+                                                                  25);
+                    if (right_connect_to_node) {
+                        node->gate.rhs = right_connect_to_node;
+                    }
+                }
+            }
+        } break;
+
+        case(THRUSTER): {
+            if (gui_button(state->gui_state,
+                           node->position.x+47.5, node->position.y+45,
+                           10, 10, MAGENTA, GUI_ICON_DESTROY)) {
+                node->gate.gate = ((int)node->thruster.thruster << 1) % 32;
+                if (node->gate.gate == 0) node->gate.gate++;
+            }
+
+            // @TODO: This means nothing, draw a rocket with selectors.
+            draw_formatted_text(v2(node->position.x + 37, node->position.y+ 35), 20, WHITE,
+                                "%i", node->thruster.thruster);
+
+            if (node->thruster.input) {
+                // draw it
+                draw_line(v2_plus(node->position, v2(50,0)),
+                          v2_plus(node->thruster.input->position, v2(50,60)),
+                          CYAN);
+
+                if (gui_button(state->gui_state,
+                               node->position.x+45, node->position.y+5,
+                               10, 10, RED, GUI_ICON_DESTROY)) {
+                    node->thruster.input = NULL;
+                }
+                
+                
+            } else {
+                Node* connect_to_node = gui_drag_source(state->gui_state,
+                                                        &node->thruster.input,
+                                                        node,
+                                                        boolean_node,
+                                                        node->position.x + 70,
+                                                        node->position.y + 20,
+                                                        25,
+                                                        25);
+                if (connect_to_node) {
+                    node->thruster.input = connect_to_node;
+                }
+            }
+        } break;
+            
         }   
     }
 
