@@ -24,8 +24,9 @@ clean:
 	rm -r rockets libgame.dylib*
 
 # @TODO: Make this work with my single compilation unit build and drop the unnecessary includes
-check-syntax:
-	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
+# check-syntax:
+# 	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
+check-syntax: all
 
 tags: rockets*.c rockets*.h
 	etags ./*.c ./*.h nanovg/src/nanovg.h

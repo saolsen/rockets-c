@@ -2,12 +2,12 @@
 #define _rockets_gui_h
 
 /*
-  Going to try to keep the gui stuff better contained this time. A couple goals I have.
-  1) Don't render until the end of the frame.
-
   Go look at IMGUI any time you get stuck. It seems like he did a very good job.
   Might even want to use that for any debug / level editor tools instead of doing it from
   scratch.
+
+  One thing that's really going to be important for a REAL ui is animated transitions between UI
+  states. I don't know how to do that yet. Will have to do some research.
 
   I'm going to use nanovg for rendering since that's what I'm using but It could also be cool to
   have this work with opengl directly. I think the other imgui libraries generate a vertex buffer

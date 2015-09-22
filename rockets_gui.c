@@ -1,5 +1,3 @@
-#include "rockets.h"
-
 #define GUICommandBufferPush(gui_state, type) (type*)gui_command_buffer_push_(gui_state, sizeof(type), GUICommandType_##type)
 uint8_t*
 gui_command_buffer_push_(GUIState* gui_state, size_t size, GUICommandType type)
@@ -109,7 +107,6 @@ gui_render(GUIState* gui_state, NVGcontext* vg)
         num++;
     }
 
-    // @TODO: make work.
     if (gui_state->input.end_dragging) {
 
         switch(gui_state->drag_state) {
@@ -124,7 +121,7 @@ gui_render(GUIState* gui_state, NVGcontext* vg)
 
             for (int i = 0; i < gui_state->drag_target_buffer_used; i++) {
                 GUIDragTarget* drag_target = gui_state->drag_target_buffer_base + i;
-                // @TODO: Make sure I can't drag into my own node.
+                
                 if (drag_target->id != gui_state->dragging_avoid_id &&
                     drag_target->drag_target_group == gui_state->dragging_source_group &&
                     gui_state->input.mouse_x >= drag_target->rect.x &&
@@ -132,14 +129,12 @@ gui_render(GUIState* gui_state, NVGcontext* vg)
                     gui_state->input.mouse_y >= drag_target->rect.y &&
                     gui_state->input.mouse_y <= drag_target->rect.y + drag_target->rect.h) {
 
-                    log_info("Got em");
                     gui_state->drag_target_result_for = gui_state->dragging_id;
                     gui_state->drag_target_result_id = drag_target->id;
                     
                     break;
                 }
             }
-
             
         } break;
         };

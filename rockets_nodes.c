@@ -1,6 +1,3 @@
-#include "rockets.h"
-
-
 uint32_t
 node_id_hash(NodeStore* ns, int id)
 {
@@ -58,6 +55,8 @@ nodestore_push_node(NodeStore* ns, NodeType type)
     } break;
     case(PREDICATE): {
         new_node->predicate.predicate = EQ;
+        new_node->predicate.lhs = NULL;
+        new_node->predicate.rhs = NULL;
         
     } break;
     case(GATE): {
@@ -103,12 +102,14 @@ nodestore_delete_node(NodeStore* ns, int id)
     assert(id > 0);
 
     // Delete node.
+    Node* removed_node = NULL;
+    
     uint32_t hash_bucket = node_id_hash(ns, id);
     for (Node** node = &ns->id_hash[hash_bucket];
          *node;
          node = &(*node)->next_in_hash) {
         if ((*node)->id == id) {
-            Node* removed_node = *node;
+            removed_node = *node;
             *node = (*node)->next_in_hash;
             removed_node->next_in_hash = ns->first_free_node;
             removed_node->id = 0;
@@ -116,6 +117,8 @@ nodestore_delete_node(NodeStore* ns, int id)
             break;
         }
     }
+
+    assert(removed_node);
 
     // Zero out any pointers to id.
     // @TODO: Do this once we know the structure of the nodes.
@@ -128,7 +131,12 @@ nodestore_delete_node(NodeStore* ns, int id)
         
         } break;
         case(PREDICATE): {
-        
+            if (node->predicate.lhs == removed_node) {
+                node->predicate.lhs = NULL;
+            }
+            if (node->predicate.rhs == removed_node) {
+                node->predicate.rhs = NULL;
+            }
         
         } break;
         case(GATE): {

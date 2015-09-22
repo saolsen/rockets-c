@@ -1,5 +1,3 @@
-// @TRANSIENT, maybe that's a good one?
-
 #include "rockets.h"
 
 #include "rockets_grid.c"
@@ -203,11 +201,10 @@ game_update_and_render(void* gamestate,
                             node->position.x, node->position.y, 100, 60);
 
             // On hover, show on the main map what tiles it's looking at and what number they are.
-
+            
             // On hover also show the other entities in the scene and where they are.
 
             // Have an entity selector, a sensor node is specific to an entity?
-            
             
         } break;
 
@@ -241,33 +238,62 @@ game_update_and_render(void* gamestate,
             gui_drag_target(state->gui_state, node, boolean_node,
                             node->position.x, node->position.y, 100, 60);
 
-            Node* left_connect_to_node = gui_drag_source(state->gui_state,
-                                                         &node->predicate.lhs,
-                                                         node,
-                                                         numeric_node,
-                                                         node->position.x + 10,
-                                                         node->position.y + 20,
-                                                         25,
-                                                         25);
+            if (node->predicate.lhs) {
+                // draw it
+                draw_line(v2_plus(node->position, v2(25,0)),
+                          v2_plus(node->predicate.lhs->position, v2(50,60)),
+                          CYAN);
 
-            Node* right_connect_to_node = gui_drag_source(state->gui_state,
-                                                          &node->predicate.rhs,
-                                                          node,
-                                                          numeric_node,
-                                                          node->position.x + 70,
-                                                          node->position.y + 20,
-                                                          25,
-                                                          25);
+                if (gui_button(state->gui_state,
+                              node->position.x+5, node->position.y+20,
+                              10, 10, RED, GUI_ICON_DESTROY)) {
+                    node->predicate.lhs = NULL;
+                }
+                
+            } else {
+                Node* left_connect_to_node = gui_drag_source(state->gui_state,
+                                                             &node->predicate.lhs,
+                                                             node,
+                                                             numeric_node,
+                                                             node->position.x + 10,
+                                                             node->position.y + 20,
+                                                             25,
+                                                             25);
+                if (left_connect_to_node) {
+                    node->predicate.lhs = left_connect_to_node;
+                }
+            }
+
+            if (node->predicate.rhs) {
+                // draw it
+                draw_line(v2_plus(node->position, v2(75,0)),
+                          v2_plus(node->predicate.rhs->position, v2(50,60)),
+                          CYAN);
+
+                if (gui_button(state->gui_state,
+                              node->position.x+85, node->position.y+25,
+                              10, 10, RED, GUI_ICON_DESTROY)) {
+                    node->predicate.rhs = NULL;
+                }
+                
+                
+            } else {
+                Node* right_connect_to_node = gui_drag_source(state->gui_state,
+                                                              &node->predicate.rhs,
+                                                              node,
+                                                              numeric_node,
+                                                              node->position.x + 70,
+                                                              node->position.y + 20,
+                                                              25,
+                                                              25);
+                if (right_connect_to_node) {
+                    node->predicate.rhs = right_connect_to_node;
+                }
+            }
 
         } break;
         }   
     }
-         
-    
-
-    /* if (gui_drag_from_panal(0, 0, 10, 10, ICON_SIGNAL)) { */
-    /*     nodestore_push_node(&state->node_store, SENSOR); */
-    /* } */
 
     /* draw_hex(grid, mouse_over, CYAN); */
 

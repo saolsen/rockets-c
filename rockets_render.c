@@ -1,4 +1,3 @@
-#include "rockets.h"
 #include "stdarg.h"
 // @NOTE: Draws the grid that the hexagon grid goes on top of.
 // Used for debugging.
@@ -282,5 +281,17 @@ draw_formatted_text(V2 position, int size, Color color, const char* format, ...)
     nvgFontSize(current_vg, size);
     nvgFillColor(current_vg, get_color(color));
     nvgText(current_vg, position.x, position.y, buffer, NULL);
+    nvgRestore(current_vg);
+}
+
+void
+draw_line(V2 pos1, V2 pos2, Color color)
+{   
+    nvgSave(current_vg);
+    nvgStrokeColor(current_vg, get_color(color));
+    nvgBeginPath(current_vg);
+    nvgMoveTo(current_vg, pos1.x, pos1.y);
+    nvgLineTo(current_vg, pos2.x, pos2.y);
+    nvgStroke(current_vg);
     nvgRestore(current_vg);
 }

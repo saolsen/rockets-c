@@ -1,5 +1,3 @@
-#include "rockets.h"
-
 Position
 next_ship_position(Position position, uint32_t thrusters)
 {

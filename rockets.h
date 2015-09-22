@@ -1,7 +1,10 @@
 /*
   @TODO:
-  * @NEXT
-    - I really need to stop procrastinating and work on the nodes and gameplay.
+  * @NEXT: Bezier curve drawing for dragging source and connected nodes.
+
+    - Finish node gui.
+    - Node eval.
+    - Levels.
 
     - Start hacking on rules / nodes.
     - Make GUI not suck this time.
@@ -63,7 +66,6 @@
 /* #include "rockets_entities.h" */
 /* #include "rockets_levels.h" */
 
-
 /* typedef enum {RUNNING, PAUSED, WON, DIED} LevelStatus; */
 
 /* const int MAX_OBSTICLES = 256; */
@@ -113,9 +115,7 @@ typedef struct {
     int tick;
 
     // Ship stuff.
-    /* GridV ship_position; */
     Position ship_position;
-    /* Direction ship_facing; */
     uint32_t ship_thrusters;
 } GameState;
 
