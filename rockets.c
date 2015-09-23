@@ -5,10 +5,35 @@
 #include "rockets_render.c"
 #include "rockets_gui.c"
 #include "rockets_nodes.c"
+#include "rockets_entities.c"
 
 #define KILOBYTES(value) ((value)*1024LL)
 #define MEGABYTES(value) (KILOBYTES(value)*1024LL)
 const size_t gamestate_size = sizeof(GameState) + MEGABYTES(10);
+
+void
+load_level(GameState* state, int level)
+{   
+    state->level_status = PAUSED;
+    state->current_level = level;
+
+    state->running_time = 0;
+    state->next_tick = 0;
+
+    // Reset entities
+    state->last_used_entity_id = 0;
+    state->num_entities = 0;
+    state->first_free_entity = NULL;
+
+    // @HARDCODE: Load some entities for level 1.
+    Entity* ship = push_entity(state, EntityType_SHIP);
+    ship->position.tile = gridV(6, -2, -4);
+    ship->next_position = ship->position;
+    
+    Entity* goal = push_entity(state, EntityType_GOAL);
+    goal->position.tile = gridV(6, 8, -14);
+    goal->next_position = goal->position;
+}
 
 static void*
 game_setup(void* game_state, NVGcontext* vg)
@@ -23,12 +48,20 @@ game_setup(void* game_state, NVGcontext* vg)
     state->node_store = nodestore_allocate(&state->persistent_store);
     state->gui_state = gui_allocate(&state->persistent_store, KILOBYTES(100));
 
-    state->tick = 0;
+    state->running_time = 0;
+    state->next_tick = 0;
 
-    state->ship_position.tile = gridV(6, 2, -8);
-    state->ship_position.facing = UP;
+    state->level_status = PAUSED;
+    state->current_level = 0;
 
+    state->last_used_entity_id = 0;
+    state->entities = arena_push_size(&state->persistent_store, sizeof(Entity) * 128);
+    state->num_entities = 0;
+    state->max_entities = 128;
+    state->first_free_entity = NULL;
 
+    load_level(state, 1);
+    
     // @TODO: If you have more than one font you need to store a
     // reference to this.
     int font = nvgCreateFont(vg,
@@ -60,22 +93,6 @@ game_update_and_render(void* gamestate,
                         .origin_x = hexagon_grid_origin_x,
                         .origin_y = hexagon_grid_origin_y,
                         .hexagon_size = 30};
-
-    if (state->tick++ % 60 == 0) {
-        state->ship_thrusters++;
-
-        if (state->ship_thrusters == 32) {
-            state->ship_thrusters = 0;
-        }
-    }
-
-    draw_base_grid(grid);
-    draw_hex_grid(grid);
-    draw_ship(grid, state->ship_position, state->ship_thrusters, RED, YELLOW);
-
-    Position next_position = next_ship_position(state->ship_position, state->ship_thrusters);
-    V2 center = gridV_to_pixel(grid, next_position.tile);
-    draw_grid_arrow(center, next_position.facing, WHITE);
 
     GridV mouse_over = pixel_to_gridV(grid, v2(input.mouse_x, input.mouse_y));
     draw_formatted_text(v2(hexagon_grid_origin_x+5,
@@ -201,6 +218,13 @@ game_update_and_render(void* gamestate,
 
             // Ship, center.
             draw_hex(sensor_grid, gridV(0,0,0), RED);
+
+            if (gui_button(state->gui_state,
+                           node->position.x+85, node->position.y+30,
+                           10, 10, MAGENTA, GUI_ICON_DESTROY)) {
+                //@TODO: Toggle which entity this node is about.
+               
+            }
 
             gui_drag_target(state->gui_state, node, numeric_node,
                             node->position.x, node->position.y, 100, 60);
@@ -444,6 +468,97 @@ game_update_and_render(void* gamestate,
         } break;
             
         }   
+    }
+
+    draw_base_grid(grid);
+    draw_hex_grid(grid);
+
+    // Simulation.
+    // Next positon, next position time, swap over.
+    // Start by just showing where ya going. Later animate that movement.
+
+    // play / pause, reset
+
+    char* status_names[] = {
+        "RUNNING",
+        "PAUSED",
+        "WON",
+        "DIED",
+    };
+
+    Color button_color = state->level_status == RUNNING ? RED : GREEN;
+    
+    if (gui_button(state->gui_state, 650, 4, 20, 20, button_color, GUI_ICON_NONE)) {
+        state->level_status = state->level_status == RUNNING ? PAUSED : RUNNING;
+    }
+
+    if (gui_button(state->gui_state, 775, 4, 20, 20, BLUE, GUI_ICON_NONE)) {
+        load_level(state, state->current_level);
+    }
+    
+    draw_formatted_text(v2(675, 20), 24, WHITE, status_names[state->level_status]);
+    draw_formatted_text(v2(800, 20), 24, WHITE, "RESET");
+
+    if (gui_button(state->gui_state, 1200, 4, 20, 20, MAGENTA, GUI_ICON_NONE)) {
+        state->current_level--;
+        load_level(state, state->current_level);
+    }
+
+    if (gui_button(state->gui_state, 1230, 4, 20, 20, MAGENTA, GUI_ICON_NONE)) {
+        state->current_level++;
+        load_level(state, state->current_level);
+    }
+
+    draw_formatted_text(v2(1175, 20), 24, WHITE, "%i", state->current_level);
+
+    if (state->level_status == RUNNING) {
+        state->running_time += dt;
+    }
+
+    float tick_length = 1.0;
+    bool tick_frame = false;
+    
+    // If enough time as passed 
+    if (state->running_time > state->next_tick) {
+        tick_frame = true;
+        state->next_tick += tick_length;
+        log_info("Tick");
+
+        // entities -> next position
+        // calc next positions
+
+        // calculate calculated_thrusters.
+        state->calculated_thrusters = BOOST | BP;
+    }
+
+    for (int i=0; i<state->num_entities; i++) {
+        Entity* entity = state->entities + i;
+        if (entity->id == 0) { continue; }
+
+        switch(entity->type) {
+        case(EntityType_SHIP): {
+            if (tick_frame) {
+                // Move to next position.
+                entity->position = entity->next_position;
+
+                // Set thrusters to calculated thrusters.
+                entity->thrusters = state->calculated_thrusters;
+
+                // Calculate next position.
+                entity->next_position = next_ship_position(entity->position, entity->thrusters);
+            }
+            
+            V2 center = gridV_to_pixel(grid, entity->next_position.tile);
+
+            draw_ship(grid, entity->position, entity->thrusters, RED, YELLOW);
+            draw_grid_arrow(center, entity->next_position.facing, WHITE);
+        } break;
+
+        case(EntityType_GOAL): {
+            draw_goal(grid, entity->position, YELLOW);
+        } break;
+        }
+
     }
 
     /* draw_hex(grid, mouse_over, CYAN); */

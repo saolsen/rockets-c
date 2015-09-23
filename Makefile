@@ -23,9 +23,10 @@ rockets: rockets_platform.c rockets_platform.h
 clean:
 	rm -r rockets libgame.dylib*
 
-# @TODO: Make this work with my single compilation unit build and drop the unnecessary includes
 # check-syntax:
 # 	clang -o /dev/null $(CFLAGS) -S ${CHK_SOURCES}
+
+# It would be better if this just built the two things but didn't output them.
 check-syntax: all
 
 tags: rockets*.c rockets*.h

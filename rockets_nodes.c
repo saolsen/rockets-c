@@ -47,10 +47,12 @@ nodestore_push_node(NodeStore* ns, NodeType type)
 
     new_node->id = id;
     new_node->type = type;
+    new_node->current_value = NAH;
 
     switch(type) {
     case(SENSOR): {
         new_node->sensor.sensor_direction = UP;
+        new_node->sensor.entity_id = 0;
         
     } break;
     case(CONSTANT): {
@@ -133,9 +135,8 @@ nodestore_delete_node(NodeStore* ns, int id)
         Node* node = ns->node_buffer_base + i;
         if (node->id == 0) continue;
         switch(node->type) {
-        case(SENSOR): {
-        
-        
+        case(SENSOR): {        
+            
         } break;
         case(CONSTANT): {
 

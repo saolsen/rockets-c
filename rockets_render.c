@@ -237,6 +237,25 @@ draw_ship(HexagonGrid grid, Position position, uint32_t thrusters,
     nvgRestore(current_vg);
 }
 
+void
+draw_goal(HexagonGrid grid, Position position, Color color)
+{   
+    // Get screen loation.
+    V2 pos = gridV_to_pixel(grid, position.tile);
+
+    nvgSave(current_vg);
+    nvgTranslate(current_vg, pos.x, pos.y);
+    nvgBeginPath(current_vg);
+
+    nvgCircle(current_vg, 0, 0, 30);
+
+    nvgFillColor(current_vg, get_color(color));
+    nvgFill(current_vg);
+    
+    nvgRestore(current_vg);
+    
+}
+
 void draw_grid_arrow(V2 center, Direction pointing, Color color)
 {
     nvgSave(current_vg);

@@ -6,6 +6,8 @@ struct node;
 
 typedef struct {
     Direction sensor_direction;
+    // I think sensor nodes are going to be entity specific.
+    int entity_id;
 } SensorNode;
 
 typedef struct {
@@ -20,7 +22,7 @@ typedef struct {
     struct node* rhs;
 } PredicateNode;
 
-typedef enum { AND=0, OR=1, NOT=2} Gate;
+typedef enum { AND=0, OR=1, NOT=2 } Gate;
 
 typedef struct {
     Gate gate;
@@ -41,6 +43,8 @@ typedef struct {
     struct node* input;
 } ThrusterNode;
 
+#define NAH -1
+
 // @NOTE: Using a union for this makes the memory management really easy with 1 freelist.
 typedef struct node {
     int id;
@@ -54,6 +58,8 @@ typedef struct node {
         GateNode gate;
         ThrusterNode thruster;
     };
+
+    int current_value; // yo if this is -1 then NAHHHHH
 
     struct node* next_in_hash;
 } Node;
