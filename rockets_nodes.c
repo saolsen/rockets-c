@@ -1,3 +1,6 @@
+// @BUG: There are some real bugs in node evaluation here. I don't have a debugger though so I should display
+//       the current value of the nodes below them.
+
 uint32_t
 node_id_hash(NodeStore* ns, int id)
 {
@@ -167,4 +170,184 @@ nodestore_delete_node(NodeStore* ns, int id)
         } break;
         }
     }
+}
+
+
+uint32_t
+nodestore_eval(GameState* state)
+{
+    // Evaluate nodes based on their next_position as that is the position they will be moved to this frame.
+    Node* top_q_begin = NULL;
+    Node* top_q_end = NULL;
+    
+    // Build up the num_dependencies on each node.
+    for (int i=0; i<state->node_store->node_buffer_used; i++) {
+        Node* node = state->node_store->node_buffer_base + i;
+        if (node->id == 0) continue;
+
+        // @TODO: Is this the best way to determine this is the first valid node?
+        if (!(top_q_begin && top_q_end)) {
+            top_q_begin = node;
+            top_q_end = node;
+
+        } else {
+            top_q_end->next_in_q = node;
+            top_q_end = node;
+        }
+        
+        node->next_in_q = NULL;
+        node->num_dependencies = 0;
+    }
+    
+    for (int i=0; i<state->node_store->node_buffer_used; i++) {
+        Node* node = state->node_store->node_buffer_base + i;
+        switch(node->type) {
+        case(SENSOR): {
+            // nah
+        } break;
+        case(CONSTANT): {
+            // nah
+        } break;
+        case(PREDICATE): {
+            if (node->predicate.lhs) {
+                node->predicate.lhs->num_dependencies++;
+            }
+            if (node->predicate.rhs) {
+                node->predicate.rhs->num_dependencies++;
+            }
+        } break;
+        case(GATE): {
+            if (node->gate.lhs) {
+                node->gate.lhs->num_dependencies++;
+            }
+            if (node->gate.rhs) {
+                node->gate.rhs->num_dependencies++;
+            }
+        } break;
+        case(THRUSTER): {
+            if (node->thruster.input) {
+                node->thruster.input->num_dependencies++;
+            }
+        } break;
+        };
+    }
+
+    uint32_t thrusters = 0;
+    
+    // Iterate topologically.
+    for (Node* node = top_q_begin;
+        node;
+        node = node->next_in_hash) {
+        if (node->num_dependencies != 0) {
+            // Put back on queue.
+            top_q_end->next_in_q = node;
+            node->next_in_q = NULL;
+            top_q_end = node;
+        } else {
+            // Evaluate.
+            switch(node->type) {
+            case(SENSOR): {
+                // @TODO: Calculate sensor value;
+                // This is still kinda sketch so lets just start with the goal.
+                
+                node->current_value = 1;
+                
+            } break;
+            case(CONSTANT): {
+                node->current_value = node->constant.value;
+                
+            } break;
+            case(PREDICATE): {
+                if (node->predicate.lhs && node->predicate.rhs) {
+                    switch(node->predicate.predicate) {
+                    case(EQ):
+                        node->current_value =
+                            node->predicate.lhs->current_value == node->predicate.rhs->current_value;
+                        break;
+                    case(NEQ):
+                        node->current_value =
+                            node->predicate.lhs->current_value != node->predicate.rhs->current_value;
+                        break;
+                    case(LT):
+                        node->current_value =
+                            node->predicate.lhs->current_value < node->predicate.rhs->current_value;
+                        break;
+                    case(GT):
+                        node->current_value =
+                            node->predicate.lhs->current_value > node->predicate.rhs->current_value;
+                        break;
+                    case(LEQ):
+                        node->current_value =
+                            node->predicate.lhs->current_value <= node->predicate.rhs->current_value;
+                        break;
+                    case(GEQ):
+                        node->current_value =
+                            node->predicate.lhs->current_value >= node->predicate.rhs->current_value;
+                        break;
+                    };
+                    
+                } else {
+                    node->current_value = false;
+                }
+
+                if (node->predicate.lhs) {
+                    node->predicate.lhs->num_dependencies--;
+                }
+                if (node->predicate.rhs) {
+                    node->predicate.rhs->num_dependencies--;
+                }
+                
+            } break;
+            case(GATE): {
+                bool both = node->gate.lhs && node->gate.rhs;                
+                switch(node->gate.gate) {
+                case(AND):
+                    if (both) {
+                        node->current_value = 
+                            node->gate.lhs->current_value && node->gate.rhs->current_value;
+                    } else {
+                        node->current_value = false;
+                    }
+                    break;
+                case(OR):
+                    if (both) {
+                        node->current_value = 
+                            node->gate.lhs->current_value || node->gate.rhs->current_value;
+                    } else {
+                        node->current_value = false;
+                    }
+                    break;
+                    
+                case(NOT):
+                    if (node->gate.lhs) {
+                        node->current_value = !node->gate.lhs->current_value;
+                    } else {
+                        node->current_value = false;
+                    }
+                    break;
+                };
+                
+                if (node->gate.lhs) {
+                    node->gate.lhs->num_dependencies--;
+                }
+                if (node->gate.rhs) {
+                    node->gate.rhs->num_dependencies--;
+                }
+                
+            } break;
+            case(THRUSTER): {
+                if (node->thruster.input) {
+                    if (node->thruster.input->current_value) {
+                        node->current_value = true;
+                        thrusters |= node->thruster.thruster;
+                    } else {
+                        node->current_value = false;
+                    }
+                    node->thruster.input->num_dependencies--;
+                }
+            } break;
+            };
+        }
+    }
+    return thrusters;
 }

@@ -159,11 +159,16 @@ game_update_and_render(void* gamestate,
         }
 
         // Delete Button
-        if(gui_button(state->gui_state,
-                      node->position.x, node->position.y,
-                      10, 10, RED, GUI_ICON_DESTROY)) {
+        if (gui_button(state->gui_state,
+                       node->position.x, node->position.y,
+                       10, 10, RED, GUI_ICON_DESTROY)) {
             nodestore_delete_node(state->node_store, node->id);
         }
+
+        // @DEBUG: Current Value
+        draw_formatted_text(v2_minus(node->position, v2(0, 10)),
+                            18, GREEN, "%i", node->current_value);
+        
 
         switch(node->type) {
         case(SENSOR): {
@@ -522,13 +527,7 @@ game_update_and_render(void* gamestate,
     if (state->running_time > state->next_tick) {
         tick_frame = true;
         state->next_tick += tick_length;
-        log_info("Tick");
-
-        // entities -> next position
-        // calc next positions
-
-        // calculate calculated_thrusters.
-        state->calculated_thrusters = BOOST | BP;
+        state->calculated_thrusters = nodestore_eval(state);
     }
 
     for (int i=0; i<state->num_entities; i++) {

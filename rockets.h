@@ -1,6 +1,5 @@
 /*
   @TODO:
-  * @NEXT: Bezier curve drawing for dragging source and connected nodes.
     - Node eval. 
     - Entity selection in sensor node.
     - levels.
@@ -16,6 +15,10 @@
   - Interpolated animation.
   - Icons for the buttons maybe.
   - Win / Lose conditions in the simulation.
+
+  - size/used for memory buffers, num/max_num for object arrays.
+  
+  @TODO, @NOTE, @INCOMPLETE, @HACK, @HARDCODE, @FRAGILE, @CLEANUP
 
  */
 #ifndef _rockets_h
@@ -63,7 +66,7 @@ typedef struct {
     int num_entities;
     int max_entities;
     Entity* first_free_entity;
-    
+
 } GameState;
 
 #endif

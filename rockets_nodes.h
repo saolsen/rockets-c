@@ -45,12 +45,12 @@ typedef struct {
 
 #define NAH -1
 
-// @NOTE: Using a union for this makes the memory management really easy with 1 freelist.
 typedef struct node {
     int id;
     NodeType type;
     V2 position;
 
+    // @NOTE: Using a union for this makes the memory management really easy with 1 freelist.
     union {
         SensorNode sensor;
         ConstantNode constant;
@@ -61,9 +61,16 @@ typedef struct node {
 
     int current_value; // yo if this is -1 then NAHHHHH
 
+
     struct node* next_in_hash;
+
+    // Keep track of number of nodes that depend on this to make topological iteration easier.
+    int num_dependencies;
+    struct node* next_in_q;
+    
 } Node;
 
+// @NOTE: I'm not sure I really need the id or the hash.
 typedef struct {
     int last_used_id;
     

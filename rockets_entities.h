@@ -21,4 +21,3 @@ typedef struct entity_ {
 } Entity;
 
 #endif
-
