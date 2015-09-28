@@ -1,14 +1,4 @@
-/*
-  @TODO:
-    - Node eval. 
-    - Entity selection in sensor node.
-    - levels.
-    - Win / Lose level.
-
-    - Set the debug stuff back up.
-  
-  * Try out a flying sauser ship see how much easier that is.
-
+/*  
   Prototype 2
   - 5 levels.
   - GUI that shows some feedback.
@@ -17,7 +7,19 @@
   - Win / Lose conditions in the simulation.
 
   - size/used for memory buffers, num/max_num for object arrays.
+
+  Rockets is almost playable!
+  @TODO
+  - Show thruster selector on thruster node.
+  - Integrate entity into sensor node. (selector and make it work)
+  - Do the grid area math to support ^
+  - More than 1 level.
+  - Lose conditions.
+  - Animation.
+
   
+  * Try out a flying sauser ship see how much easier that is.
+
   @TODO, @NOTE, @INCOMPLETE, @HACK, @HARDCODE, @FRAGILE, @CLEANUP
 
  */

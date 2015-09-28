@@ -493,9 +493,11 @@ game_update_and_render(void* gamestate,
     };
 
     Color button_color = state->level_status == RUNNING ? RED : GREEN;
-    
-    if (gui_button(state->gui_state, 650, 4, 20, 20, button_color, GUI_ICON_NONE)) {
-        state->level_status = state->level_status == RUNNING ? PAUSED : RUNNING;
+
+    if (state->level_status == RUNNING || state->level_status == PAUSED) {
+        if (gui_button(state->gui_state, 650, 4, 20, 20, button_color, GUI_ICON_NONE)) {
+            state->level_status = state->level_status == RUNNING ? PAUSED : RUNNING;
+        }
     }
 
     if (gui_button(state->gui_state, 775, 4, 20, 20, BLUE, GUI_ICON_NONE)) {
@@ -528,8 +530,14 @@ game_update_and_render(void* gamestate,
     if (state->running_time > state->next_tick) {
         tick_frame = true;
         state->next_tick += tick_length;
+    }
+
+    if (tick_frame || state->level_status == PAUSED) {
         state->calculated_thrusters = nodestore_eval(state);
     }
+
+    Entity* ship_entity = NULL;
+    Entity* goal_entity = NULL;
 
     for (int i=0; i<state->num_entities; i++) {
         Entity* entity = state->entities + i;
@@ -537,16 +545,17 @@ game_update_and_render(void* gamestate,
 
         switch(entity->type) {
         case(EntityType_SHIP): {
+            ship_entity = entity;
+            
             if (tick_frame) {
                 // Move to next position.
                 entity->position = entity->next_position;
-
-                // Set thrusters to calculated thrusters.
-                entity->thrusters = state->calculated_thrusters;
-
-                // Calculate next position.
-                entity->next_position = next_ship_position(entity->position, entity->thrusters);
             }
+            // Set thrusters to calculated thrusters.
+            entity->thrusters = state->calculated_thrusters;
+
+            // Calculate next position.
+            entity->next_position = next_ship_position(entity->position, entity->thrusters);
             
             V2 center = gridV_to_pixel(grid, entity->next_position.tile);
 
@@ -555,10 +564,18 @@ game_update_and_render(void* gamestate,
         } break;
 
         case(EntityType_GOAL): {
+            goal_entity = entity;
             draw_goal(grid, entity->position, YELLOW);
         } break;
         }
+    }
 
+    // Must have a ship and a goal.
+    assert(ship_entity && goal_entity);
+    if (ship_entity->position.tile.x == goal_entity->position.tile.x &&
+        ship_entity->position.tile.y == goal_entity->position.tile.y &&
+        ship_entity->position.tile.z == goal_entity->position.tile.z) {
+        state->level_status = WON;
     }
 
     /* draw_hex(grid, mouse_over, CYAN); */
