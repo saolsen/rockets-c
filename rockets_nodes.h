@@ -1,7 +1,16 @@
 #ifndef _rockets_nodes_h
 #define _rockets_nodes_h
 
-typedef enum { SENSOR, CONSTANT, PREDICATE, GATE, THRUSTER } NodeType;
+typedef enum { SENSOR=0, CONSTANT=1, PREDICATE=2, GATE=3, THRUSTER=4 } NodeType;
+
+char* node_type_str[] = {
+    "SENSOR",
+    "CONSTANT",
+    "PREDICATE",
+    "GATE",
+    "THRUSTER",
+};
+
 struct node;
 
 typedef struct {

@@ -185,14 +185,15 @@ nodestore_eval(GameState* state)
         Node* node = state->node_store->node_buffer_base + i;
         if (node->id == 0) continue;
 
+        log_info("put %s on q", node_type_str[node->type]);
+
         // @TODO: Is this the best way to determine this is the first valid node?
         if (!(top_q_begin && top_q_end)) {
             top_q_begin = node;
             top_q_end = node;
-
         } else {
             top_q_end->next_in_q = node;
-            top_q_end = node;
+            top_q_end = node;    
         }
         
         node->next_in_q = NULL;
@@ -201,6 +202,8 @@ nodestore_eval(GameState* state)
     
     for (int i=0; i<state->node_store->node_buffer_used; i++) {
         Node* node = state->node_store->node_buffer_base + i;
+        if (node->id == 0) continue;
+
         switch(node->type) {
         case(SENSOR): {
             // nah
@@ -233,17 +236,22 @@ nodestore_eval(GameState* state)
     }
 
     uint32_t thrusters = 0;
-    
+
+    log_info("eval begin");
     // Iterate topologically.
     for (Node* node = top_q_begin;
         node;
-        node = node->next_in_hash) {
+        /* node = node->next_in_q */) {
         if (node->num_dependencies != 0) {
             // Put back on queue.
+            log_info("Put %s back on q", node_type_str[node->type]);
             top_q_end->next_in_q = node;
+            Node* next_in_q = node->next_in_q;
             node->next_in_q = NULL;
             top_q_end = node;
+            node = next_in_q;
         } else {
+            log_info("Eval: %s", node_type_str[node->type]);
             // Evaluate.
             switch(node->type) {
             case(SENSOR): {
@@ -259,6 +267,7 @@ nodestore_eval(GameState* state)
             } break;
             case(PREDICATE): {
                 if (node->predicate.lhs && node->predicate.rhs) {
+                    log_info("eval connected predicate");
                     switch(node->predicate.predicate) {
                     case(EQ):
                         node->current_value =
@@ -287,6 +296,7 @@ nodestore_eval(GameState* state)
                     };
                     
                 } else {
+                    log_info("eval non connected predicate");
                     node->current_value = false;
                 }
 
@@ -347,7 +357,10 @@ nodestore_eval(GameState* state)
                 }
             } break;
             };
+            node = node->next_in_q;
         }
+
     }
+    log_info("eval end");
     return thrusters;
 }

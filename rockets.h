@@ -58,7 +58,7 @@ typedef struct {
 
     // Current Level
     LevelStatus level_status;
-    int current_level;;
+    int current_level;
 
     // Entities.
     int last_used_entity_id;

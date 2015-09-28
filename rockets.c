@@ -35,6 +35,7 @@ load_level(GameState* state, int level)
     goal->next_position = goal->position;
 }
 
+
 static void*
 game_setup(void* game_state, NVGcontext* vg)
 {
@@ -522,7 +523,7 @@ game_update_and_render(void* gamestate,
 
     float tick_length = 1.0;
     bool tick_frame = false;
-    
+
     // If enough time as passed 
     if (state->running_time > state->next_tick) {
         tick_frame = true;
