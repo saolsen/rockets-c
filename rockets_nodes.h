@@ -3,7 +3,7 @@
 
 typedef enum { SENSOR=0, CONSTANT=1, PREDICATE=2, GATE=3, THRUSTER=4 } NodeType;
 
-char* node_type_str[] = {
+char* nodetype_names[] = {
     "SENSOR",
     "CONSTANT",
     "PREDICATE",
@@ -25,6 +25,15 @@ typedef struct {
 
 typedef enum { EQ=0, NEQ=1, LT=2, GT=3, LEQ=4, GEQ=5 } Predicate;
 
+char* predicate_names[] = {
+    "==",
+    "<>",
+    "<",
+    ">",
+    "<=",
+    ">="
+};
+
 typedef struct {
     Predicate predicate;
     struct node* lhs;
@@ -32,6 +41,12 @@ typedef struct {
 } PredicateNode;
 
 typedef enum { AND=0, OR=1, NOT=2 } Gate;
+
+char* gate_names[] = {
+    "AND",
+    "OR",
+    "NOT"
+};
 
 typedef struct {
     Gate gate;
@@ -69,7 +84,6 @@ typedef struct node {
     };
 
     int current_value; // yo if this is -1 then NAHHHHH
-
 
     struct node* next_in_hash;
 

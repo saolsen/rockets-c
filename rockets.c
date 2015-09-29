@@ -29,10 +29,12 @@ load_level(GameState* state, int level)
     Entity* ship = push_entity(state, EntityType_SHIP);
     ship->position.tile = gridV(6, -2, -4);
     ship->next_position = ship->position;
+    state->ship_entity = ship;
     
     Entity* goal = push_entity(state, EntityType_GOAL);
     goal->position.tile = gridV(6, 8, -14);
     goal->next_position = goal->position;
+    state->goal_entity = goal;
 }
 
 
@@ -61,6 +63,9 @@ game_setup(void* game_state, NVGcontext* vg)
     state->max_entities = 128;
     state->first_free_entity = NULL;
 
+    state->ship_entity = NULL;
+    state->goal_entity = NULL;
+    // Must set ship and goal entity.
     load_level(state, 1);
     
     // @TODO: If you have more than one font you need to store a
@@ -145,6 +150,9 @@ game_update_and_render(void* gamestate,
 
     int numeric_node = 1;
     int boolean_node = 2;
+
+    TileSet hilight_region = TILESET_EMPTY;
+    bool show_hilight_region = false;
     
     for (int i=0; i<state->node_store->node_buffer_used; i++) {
         Node* node = state->node_store->node_buffer_base + i;
@@ -196,8 +204,9 @@ game_update_and_render(void* gamestate,
             // Mouse over
             GridV mouse_over = pixel_to_gridV(sensor_grid, v2(input.mouse_x, input.mouse_y));
             bool select_on_grid = false;
+            Direction hilighted_direction;
             for (int i=0; i<ARRAY_COUNT(directional_tiles); i++) {
-                draw_hex(sensor_grid, directional_tiles[i], WHITE);
+                draw_hex(sensor_grid, directional_tiles[i], WHITE, true);
                 
                 if (i != node->sensor.sensor_direction &&
                     directional_tiles[i].x == mouse_over.x &&
@@ -206,6 +215,7 @@ game_update_and_render(void* gamestate,
                     select_on_grid = true;
 
                     // button here
+                    hilighted_direction = i;
                     if (gui_button(state->gui_state,
                                    node->position.x + 5, node->position.y + 11,
                                    42, 44, BLACK, GUI_ICON_NONE)) {
@@ -215,15 +225,28 @@ game_update_and_render(void* gamestate,
             }
 
             // Draw current direction.
-            draw_hex(sensor_grid, directional_tiles[node->sensor.sensor_direction], YELLOW);
+            draw_hex(sensor_grid, directional_tiles[node->sensor.sensor_direction], YELLOW, true);
 
             // Draw possible selected direction.
             if (select_on_grid) {
-                draw_hex(sensor_grid, mouse_over, MAGENTA);
+                draw_hex(sensor_grid, mouse_over, MAGENTA, true);
+                // Show region this would pertain to.
+                hilight_region = tileset_above(grid,
+                                               state->ship_entity->position.tile,
+                                               rotate_direction(state->ship_entity->position.facing,
+                                                                hilighted_direction));
+                show_hilight_region = true;
+            } else if (mouse_over_node) {
+                // Show region this node pertains to.
+                hilight_region = tileset_above(grid,
+                                               state->ship_entity->position.tile,
+                                               rotate_direction(state->ship_entity->position.facing,
+                                                                node->sensor.sensor_direction));
+                show_hilight_region = true;
             }
 
             // Ship, center.
-            draw_hex(sensor_grid, gridV(0,0,0), RED);
+            draw_hex(sensor_grid, gridV(0,0,0), RED, true);
 
             if (gui_button(state->gui_state,
                            node->position.x+85, node->position.y+30,
@@ -236,7 +259,7 @@ game_update_and_render(void* gamestate,
                             node->position.x, node->position.y, 100, 60);
 
             // On hover, show on the main map what tiles it's looking at and what number they are.
-            
+
             // On hover also show the other entities in the scene and where they are.
 
             // Have an entity selector, a sensor node is specific to an entity?
@@ -244,29 +267,6 @@ game_update_and_render(void* gamestate,
         } break;
 
         case(PREDICATE): {
-            // Start really dumb simple.
-            char* pred;
-            switch(node->predicate.predicate) {
-            case(EQ):
-                pred = "==";
-                break;
-            case(NEQ):
-                pred = "<>";
-                break;
-            case(LT):
-                pred = "<";
-                break;
-            case(GT):
-                pred = ">";
-                break;
-            case(LEQ):
-                pred = "<=";
-                break;
-            case(GEQ):
-                pred = ">=";
-                break;
-            }
-
             if (gui_button(state->gui_state,
                            node->position.x+47.5, node->position.y+45,
                            10, 10, MAGENTA, GUI_ICON_DESTROY)) {
@@ -274,7 +274,9 @@ game_update_and_render(void* gamestate,
             }
 
             // @TODO: Center the text, this looks really bad.
-            draw_formatted_text(v2(node->position.x + 43, node->position.y+ 35), 24, WHITE, pred);
+            draw_formatted_text(v2(node->position.x + 43,
+                                   node->position.y+ 35),
+                                24, WHITE, predicate_names[node->predicate.predicate]);
 
             gui_drag_target(state->gui_state, node, boolean_node,
                             node->position.x, node->position.y, 100, 60);
@@ -357,13 +359,6 @@ game_update_and_render(void* gamestate,
         } break;
 
         case(GATE): {
-            // Start really dumb simple.
-            char* gate_words[] = {
-                "AND",
-                "OR",
-                "NOT"
-            };
-
             if (gui_button(state->gui_state,
                            node->position.x+47.5, node->position.y+45,
                            10, 10, MAGENTA, GUI_ICON_DESTROY)) {
@@ -372,7 +367,7 @@ game_update_and_render(void* gamestate,
 
             // @TODO: Center the text, this looks really bad.
             draw_formatted_text(v2(node->position.x + 37, node->position.y+ 35), 20, WHITE,
-                gate_words[node->gate.gate]);
+                gate_names[node->gate.gate]);
 
             gui_drag_target(state->gui_state, node, boolean_node,
                             node->position.x, node->position.y, 100, 60);
@@ -475,22 +470,71 @@ game_update_and_render(void* gamestate,
             
         }   
     }
-
     draw_base_grid(grid);
+
+    if (show_hilight_region) {
+        // Region Inequalities
+        // 0 UP         y >= z
+        // 1 LEFT_UP    y >= x
+        // 2 LEFT_DOWN  z >= x
+        // 3 DOWN       z >= y
+        // 4 RIGHT_DOWN x >= y
+        // 5 RIGHT_UP   x >= z
+
+        GridV ship_pos = state->ship_entity->position.tile;
+
+        // @TODO: Calculate the bounds of the grid.
+        for (int x=ship_pos.x-20; x<=ship_pos.x+20; x++) {
+            for (int y=ship_pos.y-20; y<=ship_pos.y+20; y++) {
+                for (int z=ship_pos.z-20; z<=ship_pos.z+20; z++) {
+                    GridV tile = gridV(x,y,z);
+                    if (x + y + z == 0 && point_on_grid(grid, tile)) {
+
+                        GridV check_point = gridV_minus(tile,
+                                                        ship_pos);
+
+                        // @OPTOMIZE, compute this part before looping.
+                        bool in_region = false;
+                        switch(hilight_region.direction) {
+                        case(UP):
+                            in_region = check_point.y >= check_point.z;
+                            break;
+                        case(LEFT_UP):
+                            in_region = check_point.y >= check_point.x;
+                            break;
+                        case(LEFT_DOWN):
+                            in_region = check_point.z >= check_point.x;
+                            break;
+                        case(DOWN):
+                            in_region = check_point.z >= check_point.y;
+                            break;
+                        case(RIGHT_DOWN):
+                            in_region = check_point.x >= check_point.y;
+                            break;
+                        case(RIGHT_UP):
+                            in_region = check_point.x >= check_point.z;
+                            break;
+                        };
+                        
+                        if (in_region) {
+                            draw_hex(grid, tile, BLUE, false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
     draw_hex_grid(grid);
+
+    /* // draw hilighted_region */
+    /* V2 arrow_center = gridV_to_pixel(grid, hilight_region.position); */
+    /* draw_grid_arrow(arrow_center, hilight_region.direction, BLUE); */
 
     // Simulation.
     // Next positon, next position time, swap over.
     // Start by just showing where ya going. Later animate that movement.
-
-    // play / pause, reset
-
-    char* status_names[] = {
-        "RUNNING",
-        "PAUSED",
-        "WON",
-        "DIED",
-    };
+    // @INCOMPLETE
 
     Color button_color = state->level_status == RUNNING ? RED : GREEN;
 
@@ -504,7 +548,7 @@ game_update_and_render(void* gamestate,
         load_level(state, state->current_level);
     }
     
-    draw_formatted_text(v2(675, 20), 24, WHITE, status_names[state->level_status]);
+    draw_formatted_text(v2(675, 20), 24, WHITE, levelstatus_names[state->level_status]);
     draw_formatted_text(v2(800, 20), 24, WHITE, "RESET");
 
     if (gui_button(state->gui_state, 1200, 4, 20, 20, MAGENTA, GUI_ICON_NONE)) {
@@ -536,17 +580,12 @@ game_update_and_render(void* gamestate,
         state->calculated_thrusters = nodestore_eval(state);
     }
 
-    Entity* ship_entity = NULL;
-    Entity* goal_entity = NULL;
-
     for (int i=0; i<state->num_entities; i++) {
         Entity* entity = state->entities + i;
         if (entity->id == 0) { continue; }
 
         switch(entity->type) {
         case(EntityType_SHIP): {
-            ship_entity = entity;
-            
             if (tick_frame) {
                 // Move to next position.
                 entity->position = entity->next_position;
@@ -564,18 +603,23 @@ game_update_and_render(void* gamestate,
         } break;
 
         case(EntityType_GOAL): {
-            goal_entity = entity;
             draw_goal(grid, entity->position, YELLOW);
         } break;
         }
     }
 
     // Must have a ship and a goal.
-    assert(ship_entity && goal_entity);
-    if (ship_entity->position.tile.x == goal_entity->position.tile.x &&
-        ship_entity->position.tile.y == goal_entity->position.tile.y &&
-        ship_entity->position.tile.z == goal_entity->position.tile.z) {
+    assert(state->ship_entity && state->goal_entity);
+    if (state->ship_entity->position.tile.x == state->goal_entity->position.tile.x &&
+        state->ship_entity->position.tile.y == state->goal_entity->position.tile.y &&
+        state->ship_entity->position.tile.z == state->goal_entity->position.tile.z) {
         state->level_status = WON;
+    }
+
+    // @DEBUG: Draw where the region is supossed to be.
+    if (show_hilight_region) {
+        V2 arrow_center = gridV_to_pixel(grid, hilight_region.position);
+        draw_grid_arrow(arrow_center, hilight_region.direction, CYAN);
     }
 
     /* draw_hex(grid, mouse_over, CYAN); */

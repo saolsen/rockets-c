@@ -1,4 +1,4 @@
-/*  
+/*
   Prototype 2
   - 5 levels.
   - GUI that shows some feedback.
@@ -16,12 +16,10 @@
   - More than 1 level.
   - Lose conditions.
   - Animation.
-
   
   * Try out a flying sauser ship see how much easier that is.
 
   @TODO, @NOTE, @INCOMPLETE, @HACK, @HARDCODE, @FRAGILE, @CLEANUP
-
  */
 #ifndef _rockets_h
 #define _rockets_h
@@ -40,6 +38,16 @@
 /* #include "rockets_debug.h" */
 /* #include "rockets_levels.h" */
 
+// swaps a and b if a is > b
+void sort(int* a, int* b)
+{
+    if (*a > *b) {
+        int temp = *a;
+        *a = *b;
+        *b = temp;
+    }
+}
+
 bool
 thrusters_on(uint32_t ship_thrusters, uint32_t check_thrusters)
 {
@@ -47,6 +55,13 @@ thrusters_on(uint32_t ship_thrusters, uint32_t check_thrusters)
 }
 
 typedef enum {RUNNING=0, PAUSED=1, WON=2, DIED=3} LevelStatus;
+
+char* levelstatus_names[] = {
+        "RUNNING",
+        "PAUSED",
+        "WON",
+        "DIED",
+};
 
 typedef struct {
     MemoryArena persistent_store;
@@ -61,6 +76,9 @@ typedef struct {
     // Current Level
     LevelStatus level_status;
     int current_level;
+
+    Entity* ship_entity;
+    Entity* goal_entity;
 
     // Entities.
     int last_used_entity_id;

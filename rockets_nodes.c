@@ -252,7 +252,6 @@ nodestore_eval(GameState* state)
             case(SENSOR): {
                 // @TODO: Calculate sensor value;
                 // This is still kinda sketch so lets just start with the goal.
-                
                 node->current_value = 1;
                 
             } break;

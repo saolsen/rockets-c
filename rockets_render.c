@@ -67,7 +67,7 @@ draw_base_grid(HexagonGrid grid)
 
 // @TODO: take a Color instead of an NVGcolor
 void
-draw_hex(HexagonGrid grid, GridV tile, Color color)
+draw_hex(HexagonGrid grid, GridV tile, Color color, bool stroke)
 {
     float width = grid.hexagon_size * 2;
     float height = sqrt(3)/2 * width;
@@ -75,7 +75,7 @@ draw_hex(HexagonGrid grid, GridV tile, Color color)
     V2 hex_center = gridV_to_pixel(grid, tile);
 
     nvgSave(current_vg);
-    nvgStrokeColor(current_vg, get_color(color));
+
     
     nvgBeginPath(current_vg);
     nvgMoveTo(current_vg, hex_center.x - width/2, hex_center.y);
@@ -85,8 +85,14 @@ draw_hex(HexagonGrid grid, GridV tile, Color color)
     nvgLineTo(current_vg, hex_center.x + width/4, hex_center.y - height/2);
     nvgLineTo(current_vg, hex_center.x - width/4, hex_center.y - height/2);
     nvgLineTo(current_vg, hex_center.x - width/2, hex_center.y);
-    nvgStroke(current_vg);
 
+    if (stroke) {
+        nvgStrokeColor(current_vg, get_color(color));
+        nvgStroke(current_vg);
+    } else {
+        nvgFillColor(current_vg, get_color(color));
+        nvgFill(current_vg);
+    }
     nvgRestore(current_vg);
 }
 

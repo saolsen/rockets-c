@@ -33,6 +33,15 @@ gridV_plus(GridV a, GridV b)
     return a;
 }
 
+GridV
+gridV_minus(GridV a, GridV b)
+{
+    a.x -= b.x;
+    a.y -= b.y;
+    a.z -= b.z;
+    return a;
+}
+
 
 int
 gridV_distance(GridV a, GridV b)
@@ -124,6 +133,17 @@ GridV round_to_gridV(float x, float y, float z)
     }
 
     return gridV(rx, ry, rz);
+}
+
+
+// Returns true if v is on grid.
+// @TODO: Need a good way to get iteration bounds.
+bool point_on_grid(HexagonGrid grid, GridV v)
+{
+    return (v.y - v.z >= 0 &&
+            v.y - v.z < grid.rows*2 &&
+            v.x >= v.z + v.y &&
+            v.x < grid.columns);
 }
 
 // @TODO: This can be a matrix multiplication if I had matrixes. Figure out what the most common
